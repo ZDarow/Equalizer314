@@ -11,7 +11,7 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
+import com.bearinmind.equalizer314.EqBaseActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -35,7 +35,7 @@ import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import kotlin.math.pow
 
-class  MainActivity : AppCompatActivity() {
+class  MainActivity : EqBaseActivity() {
 
     companion object {
         private const val TAG = "Equalizer314"
@@ -255,8 +255,6 @@ class  MainActivity : AppCompatActivity() {
     private lateinit var bandDbInput: com.google.android.material.textfield.TextInputEditText
     private lateinit var bandQInput: com.google.android.material.textfield.TextInputEditText
     private lateinit var bandQInputLayout: com.google.android.material.textfield.TextInputLayout
-    private var isUpdatingInputs = false
-
     // Settings views
     private lateinit var preampSlider: Slider
     private lateinit var preampText: EditText
@@ -801,138 +799,47 @@ class  MainActivity : AppCompatActivity() {
                 strokeWidth = (1 * density).toInt()
             }
             saveCurrentBtn.setOnClickListener {
-                // Find next Custom # number
                 var nextNum = 1
                 for (n in presetNames) {
                     val match = Regex("Custom #(\\d+)").find(n)
                     if (match != null) nextNum = maxOf(nextNum, match.groupValues[1].toInt() + 1)
                 }
-                // Build custom dialog layout (Launcher314 style: side-by-side Cancel/Save)
-                val dialogView = android.widget.LinearLayout(this).apply {
-                    orientation = android.widget.LinearLayout.VERTICAL
-                    setPadding((24 * density).toInt(), (20 * density).toInt(), (24 * density).toInt(), (16 * density).toInt())
-                }
-                val title = android.widget.TextView(this).apply {
-                    text = getString(R.string.dialog_save_custom_preset)
-                    setTextColor(0xFFE2E2E2.toInt())
-                    textSize = 20f
-                    setPadding(0, 0, 0, (12 * density).toInt())
-                }
-                val inputBox = android.widget.FrameLayout(this).apply {
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                        bottomMargin = (16 * density).toInt()
-                    }
-                    background = android.graphics.drawable.GradientDrawable().apply {
-                        setColor(0x00000000)
-                        setStroke((1 * density).toInt(), 0xFF555555.toInt())
-                        cornerRadius = 12 * density
-                    }
-                }
                 val defaultName = getString(R.string.msg_custom_preset_prefix, nextNum)
-                val input = android.widget.EditText(this).apply {
-                    hint = defaultName
-                    setTextColor(0xFFFFFFFF.toInt())
-                    setHintTextColor(0xFF888888.toInt())
-                    inputType = android.text.InputType.TYPE_CLASS_TEXT
-                    background = null
-                    val pad = (14 * density).toInt()
-                    setPadding(pad, pad, pad, pad)
-                    isSingleLine = true
-                }
-                inputBox.addView(input)
-                val btnRow = android.widget.LinearLayout(this).apply {
-                    orientation = android.widget.LinearLayout.HORIZONTAL
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
-                }
-                val cancelBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                    text = getString(R.string.action_cancel)
-                    layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                        marginEnd = (3 * density).toInt()
-                    }
-                    cornerRadius = (12 * density).toInt()
-                    setTextColor(0xFFEF9A9A.toInt())
-                    strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                    strokeWidth = (1 * density).toInt()
-                    setBackgroundColor(0x00000000)
-                    insetTop = 0; insetBottom = 0
-                }
-                val saveDialogBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                    text = getString(R.string.action_ok)
-                    layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                        marginStart = (3 * density).toInt()
-                    }
-                    cornerRadius = (12 * density).toInt()
-                    setTextColor(0xFFDDDDDD.toInt())
-                    setBackgroundColor(0x00000000)
-                    strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                    strokeWidth = (1 * density).toInt()
-                    insetTop = 0; insetBottom = 0
-                }
-                btnRow.addView(cancelBtn)
-                btnRow.addView(saveDialogBtn)
-                val divider = android.view.View(this).apply {
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (1 * density).toInt()).apply {
-                        bottomMargin = (12 * density).toInt()
-                    }
-                    setBackgroundColor(0xFF444444.toInt())
-                }
-                dialogView.addView(title)
-                dialogView.addView(inputBox)
-                dialogView.addView(divider)
-                dialogView.addView(btnRow)
-
-                val dialog = android.app.AlertDialog.Builder(this, R.style.Theme_Equalizer314_Dialog)
-                    .setView(dialogView)
-                    .create()
-                cancelBtn.setOnClickListener { dialog.dismiss() }
-                saveDialogBtn.setOnClickListener {
-                    val name = input.text.toString().trim().ifEmpty { defaultName }
-                    if (name.isNotEmpty()) {
-                        stateManager.eqPrefs.saveState(stateManager.parametricEq)
-                        stateManager.persistLeftRightIfCse()
-                        fun serialize(eq: com.bearinmind.equalizer314.dsp.ParametricEqualizer): org.json.JSONArray {
-                            val arr = org.json.JSONArray()
-                            for (b in eq.getAllBands()) {
-                                arr.put(org.json.JSONObject().apply {
-                                    put("frequency", b.frequency)
-                                    put("gain", b.gain)
-                                    put("q", b.q)
-                                    put("filterType", b.filterType.name)
-                                    put("enabled", b.enabled)
-                                })
-                            }
-                            return arr
+                showSaveDialog(defaultName = defaultName, onSave = { name ->
+                    stateManager.eqPrefs.saveState(stateManager.parametricEq)
+                    stateManager.persistLeftRightIfCse()
+                    fun serialize(eq: com.bearinmind.equalizer314.dsp.ParametricEqualizer): org.json.JSONArray {
+                        val arr = org.json.JSONArray()
+                        for (b in eq.getAllBands()) {
+                            arr.put(org.json.JSONObject().apply {
+                                put("frequency", b.frequency)
+                                put("gain", b.gain)
+                                put("q", b.q)
+                                put("filterType", b.filterType.name)
+                                put("enabled", b.enabled)
+                            })
                         }
-                        val json = org.json.JSONObject()
-                        json.put("preamp", stateManager.preampGainDb)
-                        val cseOn = eqPrefs.getChannelSideEqEnabled()
-                        json.put("channelSideEqEnabled", cseOn)
-                        if (cseOn) {
-                            val (lEq, rEq) = stateManager.getChannelEqs()
-                            json.put("leftBands", serialize(lEq))
-                            json.put("rightBands", serialize(rEq))
-                            // Back-compat: also write the currently-active EQ
-                            // under the legacy "bands" key so older builds
-                            // still see something.
-                            json.put("bands", serialize(stateManager.parametricEq))
-                        } else {
-                            json.put("bands", serialize(stateManager.parametricEq))
-                        }
-                        prefs.edit()
-                            .putString("preset_$name", json.toString())
-                            .putStringSet("preset_names", (presetNames.toMutableSet() + name))
-                            .apply()
-                        populatePresetPicker()
-                        android.widget.Toast.makeText(this, getString(R.string.msg_saved, name), android.widget.Toast.LENGTH_SHORT).show()
+                        return arr
                     }
-                    dialog.dismiss()
-                }
-                dialog.show()
+                    val json = org.json.JSONObject()
+                    json.put("preamp", stateManager.preampGainDb)
+                    val cseOn = eqPrefs.getChannelSideEqEnabled()
+                    json.put("channelSideEqEnabled", cseOn)
+                    if (cseOn) {
+                        val (lEq, rEq) = stateManager.getChannelEqs()
+                        json.put("leftBands", serialize(lEq))
+                        json.put("rightBands", serialize(rEq))
+                        json.put("bands", serialize(stateManager.parametricEq))
+                    } else {
+                        json.put("bands", serialize(stateManager.parametricEq))
+                    }
+                    prefs.edit()
+                        .putString("preset_$name", json.toString())
+                        .putStringSet("preset_names", (presetNames.toMutableSet() + name))
+                        .apply()
+                    populatePresetPicker()
+                    Toast.makeText(this, getString(R.string.msg_saved, name), Toast.LENGTH_SHORT).show()
+                })
             }
             presetPickerContainer.addView(saveCurrentBtn)
 
@@ -1113,78 +1020,13 @@ class  MainActivity : AppCompatActivity() {
                     strokeWidth = (1 * density).toInt()
                 }
                 deleteBtn.setOnClickListener {
-                    val d = resources.displayMetrics.density
-                    val dlgView = android.widget.LinearLayout(this).apply {
-                        orientation = android.widget.LinearLayout.VERTICAL
-                        setPadding((24 * d).toInt(), (20 * d).toInt(), (24 * d).toInt(), (16 * d).toInt())
-                    }
-                    val dlgTitle = android.widget.TextView(this).apply {
-                        text = getString(R.string.action_delete)
-                        setTextColor(0xFFE2E2E2.toInt())
-                        textSize = 20f
-                        setPadding(0, 0, 0, (12 * d).toInt())
-                    }
-                    val dlgMsg = android.widget.TextView(this).apply {
-                        text = getString(R.string.dialog_delete_preset, name)
-                        setTextColor(0xFFAAAAAA.toInt())
-                        textSize = 14f
-                        setPadding(0, 0, 0, (16 * d).toInt())
-                    }
-                    val dlgDiv = android.view.View(this).apply {
-                        layoutParams = android.widget.LinearLayout.LayoutParams(
-                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (1 * d).toInt()).apply {
-                            bottomMargin = (12 * d).toInt()
-                        }
-                        setBackgroundColor(0xFF444444.toInt())
-                    }
-                    val dlgBtnRow = android.widget.LinearLayout(this).apply {
-                        orientation = android.widget.LinearLayout.HORIZONTAL
-                        layoutParams = android.widget.LinearLayout.LayoutParams(
-                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
-                    }
-                    val dlgDeleteBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                        text = getString(R.string.action_delete)
-                        layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                            marginEnd = (3 * d).toInt()
-                        }
-                        cornerRadius = (12 * d).toInt()
-                        setTextColor(0xFFEF9A9A.toInt())
-                        strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                        strokeWidth = (1 * d).toInt()
-                        setBackgroundColor(0x00000000)
-                        insetTop = 0; insetBottom = 0
-                    }
-                    val dlgCancelBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                        text = getString(R.string.action_cancel)
-                        layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                            marginStart = (3 * d).toInt()
-                        }
-                        cornerRadius = (12 * d).toInt()
-                        setTextColor(0xFFDDDDDD.toInt())
-                        setBackgroundColor(0x00000000)
-                        strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                        strokeWidth = (1 * d).toInt()
-                        insetTop = 0; insetBottom = 0
-                    }
-                    dlgBtnRow.addView(dlgDeleteBtn)
-                    dlgBtnRow.addView(dlgCancelBtn)
-                    dlgView.addView(dlgTitle)
-                    dlgView.addView(dlgMsg)
-                    dlgView.addView(dlgDiv)
-                    dlgView.addView(dlgBtnRow)
-                    val dlg = android.app.AlertDialog.Builder(this, R.style.Theme_Equalizer314_Dialog)
-                        .setView(dlgView).create()
-                    dlgCancelBtn.setOnClickListener { dlg.dismiss() }
-                    dlgDeleteBtn.setOnClickListener {
+                    showDeleteDialog(itemName = name, onDelete = {
                         prefs.edit()
                             .remove("preset_$name")
                             .putStringSet("preset_names", (presetNames.toMutableSet() - name))
                             .apply()
                         populatePresetPicker()
-                        dlg.dismiss()
-                    }
-                    dlg.show()
+                    })
                 }
                 // Export button
                 val exportBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
@@ -1393,73 +1235,8 @@ class  MainActivity : AppCompatActivity() {
         }
         // Reset button: reset EQ to flat
         resetBtn.setOnClickListener {
-            val density = resources.displayMetrics.density
-            val dialogView = android.widget.LinearLayout(this).apply {
-                orientation = android.widget.LinearLayout.VERTICAL
-                setPadding((24 * density).toInt(), (20 * density).toInt(), (24 * density).toInt(), (16 * density).toInt())
-            }
-            val title = android.widget.TextView(this).apply {
-                text = getString(R.string.action_reset)
-                setTextColor(0xFFE2E2E2.toInt())
-                textSize = 20f
-                setPadding(0, 0, 0, (12 * density).toInt())
-            }
-            val message = android.widget.TextView(this).apply {
-                text = getString(R.string.dialog_reset_all_values)
-                setTextColor(0xFFAAAAAA.toInt())
-                textSize = 14f
-                setPadding(0, 0, 0, (16 * density).toInt())
-            }
-            val divider = android.view.View(this).apply {
-                layoutParams = android.widget.LinearLayout.LayoutParams(
-                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (1 * density).toInt()).apply {
-                    bottomMargin = (12 * density).toInt()
-                }
-                setBackgroundColor(0xFF444444.toInt())
-            }
-            val btnRow = android.widget.LinearLayout(this).apply {
-                orientation = android.widget.LinearLayout.HORIZONTAL
-                layoutParams = android.widget.LinearLayout.LayoutParams(
-                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
-            }
-            val resetDialogBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                text = getString(R.string.action_reset)
-                layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginEnd = (3 * density).toInt()
-                }
-                cornerRadius = (12 * density).toInt()
-                setTextColor(0xFFEF9A9A.toInt())
-                strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                strokeWidth = (1 * density).toInt()
-                setBackgroundColor(0x00000000)
-                insetTop = 0; insetBottom = 0
-            }
-            val cancelBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                text = getString(R.string.action_cancel)
-                layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginStart = (3 * density).toInt()
-                }
-                cornerRadius = (12 * density).toInt()
-                setTextColor(0xFFDDDDDD.toInt())
-                setBackgroundColor(0x00000000)
-                strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                strokeWidth = (1 * density).toInt()
-                insetTop = 0; insetBottom = 0
-            }
-            btnRow.addView(resetDialogBtn)
-            btnRow.addView(cancelBtn)
-            dialogView.addView(title)
-            dialogView.addView(message)
-            dialogView.addView(divider)
-            dialogView.addView(btnRow)
-
-            val dialog = android.app.AlertDialog.Builder(this, R.style.Theme_Equalizer314_Dialog)
-                .setView(dialogView)
-                .create()
-            cancelBtn.setOnClickListener { dialog.dismiss() }
-            resetDialogBtn.setOnClickListener {
-                val eq = stateManager.parametricEq ?: return@setOnClickListener
+            showResetDialog(onReset = {
+                val eq = stateManager.parametricEq ?: return@showResetDialog
                 eq.clearBands()
                 val defaultFreqs = com.bearinmind.equalizer314.dsp.ParametricEqualizer.logSpacedFrequencies(16)
                 for (i in 0..3) {
@@ -1467,8 +1244,6 @@ class  MainActivity : AppCompatActivity() {
                 }
                 eqGraphView.setParametricEqualizer(eq)
                 stateManager.eqPrefs.saveState(eq)
-                // Reset wipes the shared EQ — drop any stored L/R divergence
-                // so re-enabling CSE forks from the fresh defaults.
                 stateManager.eqPrefs.clearLeftRightBands()
                 stateManager.initBandSlots()
                 bandToggleManager.setupToggles()
@@ -1478,10 +1253,8 @@ class  MainActivity : AppCompatActivity() {
                         svc.dynamicsManager.start(eq)
                     }
                 }
-                android.widget.Toast.makeText(this, getString(R.string.msg_eq_reset), android.widget.Toast.LENGTH_SHORT).show()
-                dialog.dismiss()
-            }
-            dialog.show()
+                Toast.makeText(this, getString(R.string.msg_eq_reset), Toast.LENGTH_SHORT).show()
+            })
         }
         // Edit mode toggle — undo/redo pop out from edit button position
         var editMode = false
@@ -2323,27 +2096,27 @@ class  MainActivity : AppCompatActivity() {
     @SuppressLint("ClickableViewAccessibility")
     private fun setupBandSliderListeners() {
         bandHzSlider.addOnChangeListener { _, value, fromUser ->
-            if (!fromUser || isUpdatingInputs) return@addOnChangeListener
+            if (!fromUser || isUpdating) return@addOnChangeListener
             val hz = sliderToHz(value)
-            isUpdatingInputs = true
+            isUpdating = true
             bandHzInput.setText(formatHzValue(hz))
-            isUpdatingInputs = false
+            isUpdating = false
             applyBandHz(hz)
         }
 
         bandDbSlider.addOnChangeListener { _, value, fromUser ->
-            if (!fromUser || isUpdatingInputs) return@addOnChangeListener
-            isUpdatingInputs = true
+            if (!fromUser || isUpdating) return@addOnChangeListener
+            isUpdating = true
             bandDbInput.setText(String.format("%.1f", value))
-            isUpdatingInputs = false
+            isUpdating = false
             applyBandDb(value)
         }
 
         qSlider.addOnChangeListener { _, value, fromUser ->
-            if (!fromUser || isUpdatingInputs) return@addOnChangeListener
-            isUpdatingInputs = true
+            if (!fromUser || isUpdating) return@addOnChangeListener
+            isUpdating = true
             bandQInput.setText(String.format("%.2f", value))
-            isUpdatingInputs = false
+            isUpdating = false
             val bandIndex = eqGraphView.getActiveBandIndex() ?: return@addOnChangeListener
             eqGraphView.setQ(bandIndex, value.toDouble())
             stateManager.pushEqUpdate()
@@ -2358,12 +2131,14 @@ class  MainActivity : AppCompatActivity() {
             bandHzSlider.value = hzToSlider(defaultHz)
             bandHzInput.setText(formatHzValue(defaultHz))
             applyBandHz(defaultHz)
+            eqGraphView.invalidate()
         }
 
         addDoubleTapReset(bandDbSlider) {
             bandDbSlider.value = 0f
             bandDbInput.setText("0.0")
             applyBandDb(0f)
+            eqGraphView.invalidate()
         }
 
         addDoubleTapReset(qSlider) {
@@ -2373,34 +2148,7 @@ class  MainActivity : AppCompatActivity() {
             val bandIndex = eqGraphView.getActiveBandIndex() ?: return@addDoubleTapReset
             eqGraphView.setQ(bandIndex, defaultQ.toDouble())
             stateManager.pushEqUpdate()
-        }
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private fun addDoubleTapReset(slider: Slider, onReset: () -> Unit) {
-        var lastTapTime = 0L
-        var consumeUntilUp = false
-        slider.setOnTouchListener { v, event ->
-            if (consumeUntilUp) {
-                if (event.action == android.view.MotionEvent.ACTION_UP || event.action == android.view.MotionEvent.ACTION_CANCEL) {
-                    consumeUntilUp = false
-                }
-                return@setOnTouchListener true
-            }
-            if (event.action == android.view.MotionEvent.ACTION_DOWN) {
-                val now = System.currentTimeMillis()
-                if (now - lastTapTime < 300) {
-                    isUpdatingInputs = true
-                    onReset()
-                    isUpdatingInputs = false
-                    eqGraphView.invalidate()
-                    lastTapTime = 0L
-                    consumeUntilUp = true
-                    return@setOnTouchListener true
-                }
-                lastTapTime = now
-            }
-            false
+            eqGraphView.invalidate()
         }
     }
 
@@ -2430,32 +2178,32 @@ class  MainActivity : AppCompatActivity() {
     }
 
     private fun applyBandHzFromInput() {
-        if (isUpdatingInputs) return
+        if (isUpdating) return
         val hz = bandHzInput.text.toString().toFloatOrNull() ?: return
         val clamped = hz.coerceIn(10f, 20000f)
-        isUpdatingInputs = true
+        isUpdating = true
         bandHzSlider.value = hzToSlider(clamped)
-        isUpdatingInputs = false
+        isUpdating = false
         applyBandHz(clamped)
     }
 
     private fun applyBandDbFromInput() {
-        if (isUpdatingInputs) return
+        if (isUpdating) return
         val db = bandDbInput.text.toString().toFloatOrNull() ?: return
         val clamped = db.coerceIn(-12f, 12f)
-        isUpdatingInputs = true
+        isUpdating = true
         bandDbSlider.value = clamped
-        isUpdatingInputs = false
+        isUpdating = false
         applyBandDb(clamped)
     }
 
     private fun applyBandQFromInput() {
-        if (isUpdatingInputs) return
+        if (isUpdating) return
         val q = bandQInput.text.toString().toDoubleOrNull() ?: return
         val clamped = q.coerceIn(0.1, 12.0)
-        isUpdatingInputs = true
+        isUpdating = true
         qSlider.value = clamped.toFloat()
-        isUpdatingInputs = false
+        isUpdating = false
         val bandIndex = eqGraphView.getActiveBandIndex() ?: return
         eqGraphView.setQ(bandIndex, clamped)
         stateManager.pushEqUpdate()
@@ -2520,7 +2268,7 @@ class  MainActivity : AppCompatActivity() {
     }
 
     private fun updateBandInputs(bandIndex: Int?) {
-        isUpdatingInputs = true
+        isUpdating = true
         val idx = bandIndex ?: stateManager.selectedBandIndex ?: 0
         val band = stateManager.parametricEq.getBand(idx)
         if (band != null) {
@@ -2573,7 +2321,7 @@ class  MainActivity : AppCompatActivity() {
             bandQInput.alpha = 1f
         }
         updateColorSwatches(bandIndex)
-        isUpdatingInputs = false
+        isUpdating = false
     }
 
     private fun setupColorSwatches() {

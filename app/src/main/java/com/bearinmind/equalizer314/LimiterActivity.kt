@@ -7,7 +7,8 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.widget.EditText
-import androidx.appcompat.app.AppCompatActivity
+import android.widget.Toast
+import com.bearinmind.equalizer314.EqBaseActivity
 import com.bearinmind.equalizer314.audio.EqService
 import com.bearinmind.equalizer314.state.EqPreferencesManager
 import com.bearinmind.equalizer314.ui.LimiterCeilingView
@@ -17,7 +18,7 @@ import com.google.android.material.slider.Slider
 import kotlin.math.log10
 import kotlin.math.pow
 
-class LimiterActivity : AppCompatActivity() {
+class LimiterActivity : EqBaseActivity() {
 
     private lateinit var eqPrefs: EqPreferencesManager
     private lateinit var masterSwitch: MaterialSwitch
@@ -46,7 +47,6 @@ class LimiterActivity : AppCompatActivity() {
     @Volatile private var isMusicPlaying = true
     private var wasMusicPlaying = true
 
-    private var isUpdating = false
     private var eqService: EqService? = null
     private var serviceBound = false
 
@@ -124,7 +124,7 @@ class LimiterActivity : AppCompatActivity() {
             }
             val on = svc.dynamicsManager.isActive
             com.bearinmind.equalizer314.ui.BottomNavHelper.setPowerState(this, eqPrefs, on)
-            android.widget.Toast.makeText(this, if (on) getString(R.string.msg_dsp_start) else getString(R.string.msg_dsp_stop), android.widget.Toast.LENGTH_SHORT).show()
+            toastDsp(on)
         }
 
         // Waveform / level meter
@@ -180,72 +180,7 @@ class LimiterActivity : AppCompatActivity() {
         }
         // Reset button: reset limiter to defaults
         limResetBtn.setOnClickListener {
-            val dialogView = android.widget.LinearLayout(this).apply {
-                orientation = android.widget.LinearLayout.VERTICAL
-                setPadding((24 * density).toInt(), (20 * density).toInt(), (24 * density).toInt(), (16 * density).toInt())
-            }
-            val titleTv = android.widget.TextView(this).apply {
-                text = getString(R.string.action_reset)
-                setTextColor(0xFFE2E2E2.toInt())
-                textSize = 20f
-                setPadding(0, 0, 0, (12 * density).toInt())
-            }
-            val messageTv = android.widget.TextView(this).apply {
-                text = getString(R.string.dialog_reset_all_values)
-                setTextColor(0xFFAAAAAA.toInt())
-                textSize = 14f
-                setPadding(0, 0, 0, (16 * density).toInt())
-            }
-            val divider = android.view.View(this).apply {
-                layoutParams = android.widget.LinearLayout.LayoutParams(
-                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (1 * density).toInt()).apply {
-                    bottomMargin = (12 * density).toInt()
-                }
-                setBackgroundColor(0xFF444444.toInt())
-            }
-            val btnRow = android.widget.LinearLayout(this).apply {
-                orientation = android.widget.LinearLayout.HORIZONTAL
-                layoutParams = android.widget.LinearLayout.LayoutParams(
-                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
-            }
-            val resetDialogBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                text = getString(R.string.action_reset)
-                layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginEnd = (3 * density).toInt()
-                }
-                cornerRadius = (12 * density).toInt()
-                setTextColor(0xFFEF9A9A.toInt())
-                strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                strokeWidth = (1 * density).toInt()
-                setBackgroundColor(0x00000000)
-                insetTop = 0; insetBottom = 0
-            }
-            val cancelBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                text = getString(R.string.action_cancel)
-                layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginStart = (3 * density).toInt()
-                }
-                cornerRadius = (12 * density).toInt()
-                setTextColor(0xFFDDDDDD.toInt())
-                setBackgroundColor(0x00000000)
-                strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                strokeWidth = (1 * density).toInt()
-                insetTop = 0; insetBottom = 0
-            }
-            btnRow.addView(resetDialogBtn)
-            btnRow.addView(cancelBtn)
-            dialogView.addView(titleTv)
-            dialogView.addView(messageTv)
-            dialogView.addView(divider)
-            dialogView.addView(btnRow)
-
-            val dialog = android.app.AlertDialog.Builder(this, R.style.Theme_Equalizer314_Dialog)
-                .setView(dialogView)
-                .create()
-            cancelBtn.setOnClickListener { dialog.dismiss() }
-            resetDialogBtn.setOnClickListener {
-                isUpdating = true
+            showResetDialog(onReset = {
                 eqPrefs.saveLimiterThreshold(0f)
                 eqPrefs.saveLimiterRatio(2f)
                 eqPrefs.saveLimiterAttack(0.01f)
@@ -258,12 +193,9 @@ class LimiterActivity : AppCompatActivity() {
                 postGainSlider.value = 0f; postGainText.setText("0.0")
                 waveformView.ceilingDb = 0f
                 ceilingView.ceilingDb = 0f
-                isUpdating = false
                 pushToService()
-                android.widget.Toast.makeText(this, getString(R.string.msg_limiter_reset), android.widget.Toast.LENGTH_SHORT).show()
-                dialog.dismiss()
-            }
-            dialog.show()
+                Toast.makeText(this, getString(R.string.msg_limiter_reset), Toast.LENGTH_SHORT).show()
+            })
         }
         fun updateVizStyle(active: Boolean) {
             if (active) {
@@ -406,33 +338,6 @@ class LimiterActivity : AppCompatActivity() {
             eqPrefs.saveLimiterPostGain(0f)
             postGainSlider.value = 0f; postGainText.setText("0.0")
             pushToService()
-        }
-    }
-
-    @android.annotation.SuppressLint("ClickableViewAccessibility")
-    private fun addDoubleTapReset(slider: com.google.android.material.slider.Slider, onReset: () -> Unit) {
-        var lastTapTime = 0L
-        var consumeUntilUp = false
-        slider.setOnTouchListener { _, event ->
-            if (consumeUntilUp) {
-                if (event.action == android.view.MotionEvent.ACTION_UP || event.action == android.view.MotionEvent.ACTION_CANCEL) {
-                    consumeUntilUp = false
-                }
-                return@setOnTouchListener true
-            }
-            if (event.action == android.view.MotionEvent.ACTION_DOWN) {
-                val now = System.currentTimeMillis()
-                if (now - lastTapTime < 300) {
-                    isUpdating = true
-                    onReset()
-                    isUpdating = false
-                    lastTapTime = 0L
-                    consumeUntilUp = true
-                    return@setOnTouchListener true
-                }
-                lastTapTime = now
-            }
-            false
         }
     }
 
