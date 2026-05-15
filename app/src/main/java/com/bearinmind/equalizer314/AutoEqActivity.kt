@@ -45,7 +45,7 @@ class AutoEqActivity : AppCompatActivity() {
             val text = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return@registerForActivityResult
             val profile = AutoEqParser.parse(text)
             if (profile == null || profile.filters.isEmpty()) {
-                Toast.makeText(this, "Could not parse APO preset", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, getString(R.string.msg_parse_apo_failed), Toast.LENGTH_LONG).show()
                 return@registerForActivityResult
             }
             val fileName = contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
@@ -55,7 +55,7 @@ class AutoEqActivity : AppCompatActivity() {
             // Imported successfully
             performSearch(searchInput.text?.toString() ?: "")
         } catch (e: Exception) {
-            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.msg_error) + e.message, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -176,13 +176,13 @@ class AutoEqActivity : AppCompatActivity() {
         }
 
         if (profile == null) {
-            Toast.makeText(this, "Failed to load profile", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.msg_failed_load_profile), Toast.LENGTH_SHORT).show()
             return
         }
 
         applyProfile(entry, profile)
         lastAppliedProfile = profile
-        Toast.makeText(this, "Applied: ${entry.name}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.msg_applied) + entry.name, Toast.LENGTH_SHORT).show()
         updateActiveCard()
     }
 
@@ -283,12 +283,12 @@ class AutoEqActivity : AppCompatActivity() {
             setPadding((24 * density).toInt(), (20 * density).toInt(), (24 * density).toInt(), (16 * density).toInt())
         }
         val title = android.widget.TextView(this).apply {
-            text = "Delete"
+            text = getString(R.string.action_delete)
             setTextColor(0xFFE2E2E2.toInt()); textSize = 20f
             setPadding(0, 0, 0, (12 * density).toInt())
         }
         val message = android.widget.TextView(this).apply {
-            text = "Delete \"$name\"?"
+            text = getString(R.string.dialog_delete_item, name)
             setTextColor(0xFFAAAAAA.toInt()); textSize = 14f
             setPadding(0, 0, 0, (16 * density).toInt())
         }
@@ -305,13 +305,13 @@ class AutoEqActivity : AppCompatActivity() {
                 android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
         }
         val deleteBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = "Delete"; layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = (3 * density).toInt() }
+            text = getString(R.string.action_delete); layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = (3 * density).toInt() }
             cornerRadius = (12 * density).toInt(); setTextColor(0xFFEF9A9A.toInt())
             strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt()); strokeWidth = (1 * density).toInt()
             setBackgroundColor(0x00000000); insetTop = 0; insetBottom = 0
         }
         val cancelBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = "Cancel"; layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = (3 * density).toInt() }
+            text = getString(R.string.action_cancel); layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = (3 * density).toInt() }
             cornerRadius = (12 * density).toInt(); setTextColor(0xFFDDDDDD.toInt())
             setBackgroundColor(0x00000000); strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt()); strokeWidth = (1 * density).toInt()
             insetTop = 0; insetBottom = 0

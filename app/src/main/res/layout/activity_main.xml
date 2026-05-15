@@ -47,7 +47,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginEnd="4dp"
-                        android:text="Parametric"
+                        android:text="@string/eq_mode_parametric"
                         android:textSize="12sp"
                         app:cornerRadius="12dp" />
 
@@ -59,7 +59,7 @@
                         android:layout_weight="1"
                         android:layout_marginStart="4dp"
                         android:layout_marginEnd="4dp"
-                        android:text="Graphic"
+                        android:text="@string/eq_mode_graphic"
                         android:textSize="12sp"
                         app:cornerRadius="12dp" />
 
@@ -70,7 +70,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="4dp"
-                        android:text="Table"
+                        android:text="@string/eq_mode_table"
                         android:textSize="12sp"
                         app:cornerRadius="12dp" />
                 </LinearLayout>
@@ -115,7 +115,7 @@
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.MbcEqButton"
                             app:strokeColor="#FF444444"
                             app:strokeWidth="1dp"
-                            android:contentDescription="Toggle band points" />
+                            android:contentDescription="@string/cd_toggle_band_points" />
 
 <com.google.android.material.button.MaterialButton
                             android:id="@+id/savePresetButton"
@@ -137,7 +137,7 @@
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
                             app:strokeColor="#FF444444"
                             app:strokeWidth="1dp"
-                            android:contentDescription="Save preset" />
+                            android:contentDescription="@string/cd_save_preset" />
 
 <com.google.android.material.button.MaterialButton
                             android:id="@+id/altRouteButton"
@@ -159,7 +159,7 @@
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
                             app:strokeColor="#FF444444"
                             app:strokeWidth="1dp"
-                            android:contentDescription="Toggle channel routing" />
+                            android:contentDescription="@string/cd_toggle_channel_routing" />
 
                         <!-- Tiny L/R badge overlaid on the altRouteButton's
                              top-right corner, visible only when Channel Side
@@ -206,7 +206,7 @@
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
                             app:strokeColor="#FF444444"
                             app:strokeWidth="1dp"
-                            android:contentDescription="Open Settings" />
+                            android:contentDescription="@string/cd_open_settings" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/channelLButton"
@@ -221,14 +221,14 @@
                             android:minWidth="0dp"
                             android:minHeight="0dp"
                             android:padding="3dp"
-                            android:text="L"
+                            android:text="@string/channel_l"
                             android:textColor="#FFBBBBBB"
                             android:textSize="12sp"
                             android:visibility="gone"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
                             app:strokeColor="#FF444444"
                             app:strokeWidth="1dp"
-                            android:contentDescription="Left channel" />
+                            android:contentDescription="@string/cd_left_channel" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/channelRButton"
@@ -243,14 +243,14 @@
                             android:minWidth="0dp"
                             android:minHeight="0dp"
                             android:padding="3dp"
-                            android:text="R"
+                            android:text="@string/channel_r"
                             android:textColor="#FFBBBBBB"
                             android:textSize="12sp"
                             android:visibility="gone"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
                             app:strokeColor="#FF444444"
                             app:strokeWidth="1dp"
-                            android:contentDescription="Right channel" />
+                            android:contentDescription="@string/cd_right_channel" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/resetButton"
@@ -271,7 +271,7 @@
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
                             app:strokeColor="#FF444444"
                             app:strokeWidth="1dp"
-                            android:contentDescription="Reset to defaults" />
+                            android:contentDescription="@string/cd_reset_to_defaults" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/undoButton"
@@ -292,7 +292,7 @@
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
                             app:strokeColor="#FF444444"
                             app:strokeWidth="1dp"
-                            android:contentDescription="Undo" />
+                            android:contentDescription="@string/cd_undo" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/redoButton"
@@ -313,7 +313,7 @@
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
                             app:strokeColor="#FF444444"
                             app:strokeWidth="1dp"
-                            android:contentDescription="Redo" />
+                            android:contentDescription="@string/cd_redo" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/editButton"
@@ -333,7 +333,7 @@
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
                             app:strokeColor="#FF444444"
                             app:strokeWidth="1dp"
-                            android:contentDescription="Edit" />
+                            android:contentDescription="@string/cd_edit" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/visualizerToggle"
@@ -353,7 +353,7 @@
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.SpectrumButton"
                             app:strokeColor="#FF444444"
                             app:strokeWidth="1dp"
-                            android:contentDescription="Toggle visualizer" />
+                            android:contentDescription="@string/cd_toggle_visualizer" />
                     </FrameLayout>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -471,7 +471,7 @@
                                 <TextView
                                     android:layout_width="28dp"
                                     android:layout_height="wrap_content"
-                                    android:text="Hz"
+                                    android:text="@string/hz_label"
                                     android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                                     android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -515,7 +515,7 @@
                                 <TextView
                                     android:layout_width="28dp"
                                     android:layout_height="wrap_content"
-                                    android:text="dB"
+                                    android:text="@string/db_label"
                                     android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                                     android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -561,7 +561,7 @@
                                     android:id="@+id/qValueText"
                                     android:layout_width="28dp"
                                     android:layout_height="wrap_content"
-                                    android:text="Q"
+                                    android:text="@string/q_label"
                                     android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                                     android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -657,7 +657,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:layout_marginEnd="4dp"
-                                android:text="Hz"
+                                android:text="@string/hz_label"
                                 android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                                 android:textColor="?attr/colorOnSurfaceVariant"
                                 android:gravity="center" />
@@ -667,7 +667,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:layout_marginEnd="4dp"
-                                android:text="dB"
+                                android:text="@string/db_label"
                                 android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                                 android:textColor="?attr/colorOnSurfaceVariant"
                                 android:gravity="center" />
@@ -676,7 +676,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="Q"
+                                android:text="@string/q_label"
                                 android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                                 android:textColor="?attr/colorOnSurfaceVariant"
                                 android:gravity="center" />
@@ -730,7 +730,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Preamp (dB)"
+                            android:text="@string/preamp_label"
                             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -835,7 +835,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Settings"
+                        android:text="@string/title_settings"
                         android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -874,7 +874,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="AutoEQ &amp; Presets"
+                            android:text="@string/title_autoeq_presets"
                             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                             android:textColor="?attr/colorOnSurface" />
 
@@ -882,7 +882,7 @@
                             android:id="@+id/autoEqStatusText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Select or import a preset"
+                            android:text="@string/status_select_or_import_preset"
                             android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:paddingTop="4dp" />
@@ -909,7 +909,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Generate Custom EQ"
+                            android:text="@string/title_generate_custom_eq"
                             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                             android:textColor="?attr/colorOnSurface" />
 
@@ -917,7 +917,7 @@
                             android:id="@+id/targetStatusText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Import a measurement and match to a specific target"
+                            android:text="@string/status_import_measurement_match_target"
                             android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:paddingTop="4dp" />
@@ -944,7 +944,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Spectrum Control"
+                            android:text="@string/title_spectrum_control"
                             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                             android:textColor="?attr/colorOnSurface"
                             android:paddingBottom="4dp" />
@@ -952,7 +952,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Control FFT smoothness &amp; other misc spectrum settings"
+                            android:text="@string/status_control_fft_settings"
                             android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -986,14 +986,14 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Simple EQ"
+                                android:text="@string/simple_eq_mode"
                                 android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                                 android:textColor="?attr/colorOnSurface" />
 
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Simple 10 band graphic EQ"
+                                android:text="@string/settings_simple_eq_desc"
                                 android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                                 android:textColor="?attr/colorOnSurfaceVariant"
                                 android:paddingTop="4dp" />
@@ -1036,14 +1036,14 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Channel Side Options"
-                                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                                android:textColor="?attr/colorOnSurface" />
+android:text="@string/title_channel_side_options"
+                                 android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                                 android:textColor="?attr/colorOnSurface" />
 
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Balance, per-channel EQ, and channel swap"
+                             <TextView
+                                 android:layout_width="match_parent"
+                                 android:layout_height="wrap_content"
+                                 android:text="@string/settings_channel_side_desc"
                                 android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                                 android:textColor="?attr/colorOnSurfaceVariant"
                                 android:paddingTop="4dp" />
@@ -1081,14 +1081,14 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Convert to APO format"
-                                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                                android:textColor="?attr/colorOnSurface" />
+android:text="@string/title_convert_to_apo"
+                                 android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                                 android:textColor="?attr/colorOnSurface" />
 
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Convert wavelet &amp; poweramp eq exports to APO format"
+                             <TextView
+                                 android:layout_width="match_parent"
+                                 android:layout_height="wrap_content"
+                                 android:text="@string/convert_desc"
                                 android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                                 android:textColor="?attr/colorOnSurfaceVariant"
                                 android:paddingTop="4dp" />
@@ -1127,14 +1127,14 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Audio Effects Pipeline - NOT READY"
+                                android:text="@string/settings_pipeline_title"
                                 android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                                 android:textColor="?attr/colorOnSurface" />
 
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Configure session based audio effects pipeline"
+                                android:text="@string/settings_pipeline_desc"
                                 android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                                 android:textColor="?attr/colorOnSurfaceVariant"
                                 android:paddingTop="4dp" />
@@ -1168,14 +1168,14 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Experimental"
-                                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                                android:textColor="?attr/colorOnSurface" />
+android:text="@string/title_experimental"
+                                 android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                                 android:textColor="?attr/colorOnSurface" />
 
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="probably don&apos;t touch this shit (yet)"
+                             <TextView
+                                 android:layout_width="match_parent"
+                                 android:layout_height="wrap_content"
+                                 android:text="@string/settings_experimental_desc"
                                 android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                                 android:textColor="?attr/colorOnSurfaceVariant"
                                 android:paddingTop="4dp" />
@@ -1190,7 +1190,7 @@
                             android:src="@drawable/ic_lock"
                             android:background="@drawable/bg_icon_outline_ripple"
                             android:scaleType="centerInside"
-                            android:contentDescription="Lock Experimental"
+                            android:contentDescription="@string/cd_lock_experimental"
                             app:tint="#FFBBBBBB" />
 
                         <!-- Hidden views kept for code references -->
@@ -1253,10 +1253,10 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="DP Band Count"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                            android:textColor="?attr/colorOnSurface"
-                            android:paddingBottom="4dp" />
+android:text="@string/experimental_dp_band_count"
+                             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                             android:textColor="?attr/colorOnSurface"
+                             android:paddingBottom="4dp" />
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -1320,19 +1320,19 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Preamp (dB)"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                            android:textColor="?attr/colorOnSurface"
-                            android:paddingBottom="4dp" />
+android:text="@string/preamp_label"
+                             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                             android:textColor="?attr/colorOnSurface"
+                             android:paddingBottom="4dp" />
 
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
+                         <LinearLayout
+                             android:layout_width="match_parent"
+                             android:layout_height="wrap_content"
+                             android:orientation="horizontal"
+                             android:gravity="center_vertical">
 
-                            <com.google.android.material.slider.Slider
-                                android:id="@+id/preampSlider"
+                             <com.google.android.material.slider.Slider
+                                 android:id="@+id/preampSlider"
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
@@ -1393,9 +1393,9 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="Auto-Gain"
-                                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                                android:textColor="?attr/colorOnSurface" />
+android:text="@string/settings_auto_gain"
+                                 android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                                 android:textColor="?attr/colorOnSurface" />
 
                             <com.google.android.material.materialswitch.MaterialSwitch
                                 android:id="@+id/autoGainSwitch"
@@ -1406,7 +1406,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Automatically reduces gain to prevent clipping"
+                            android:text="@string/settings_auto_gain_desc"
                             android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:paddingTop="4dp" />

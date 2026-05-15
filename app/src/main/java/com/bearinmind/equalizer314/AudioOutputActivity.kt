@@ -291,11 +291,11 @@ class AudioOutputActivity : AppCompatActivity() {
             return
         }
         val knownNames = listCustomPresetNames()
-        val currentSelection = binding?.presetName ?: "(none)"
+        val currentSelection = binding?.presetName ?: getString(R.string.output_none)
         val missing = binding != null && binding.presetName !in knownNames
         val entries = buildPresetEntries(if (missing) binding!!.presetName else null)
         currentDeviceDropdown.setText(
-            if (missing) "${binding!!.presetName} (missing)" else currentSelection,
+            if (missing) "${binding!!.presetName}${getString(R.string.output_missing)}" else currentSelection,
             false,
         )
         currentDeviceDropdown.setAdapter(PresetDropdownAdapter(this, entries))
@@ -303,16 +303,16 @@ class AudioOutputActivity : AppCompatActivity() {
             val pick = entries[position].displayName
             val label = activeLabel ?: ""
             when {
-                pick == "(none)" -> {
+                pick == getString(R.string.output_none) -> {
                     eqPrefs.removeDeviceBinding(key)
-                    Toast.makeText(this, "Unbound $label", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.output_unbound) + "$label", Toast.LENGTH_SHORT).show()
                 }
-                pick.endsWith(" (missing)") -> {
+                pick.endsWith(getString(R.string.output_missing)) -> {
                     // dangling — keep as-is
                 }
                 else -> {
                     eqPrefs.saveDeviceBinding(EqPreferencesManager.Binding(key, label, pick))
-                    Toast.makeText(this, "Bound \"$pick\" to $label", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.output_bound, pick, label), Toast.LENGTH_SHORT).show()
                 }
             }
             // Drop focus so the TextInputLayout returns to its idle
@@ -422,13 +422,13 @@ class AudioOutputActivity : AppCompatActivity() {
 
             val knownNames = listCustomPresetNames()
             val binding = eqPrefs.getDeviceBinding(key)
-            val currentSelection = binding?.presetName ?: "(none)"
+            val currentSelection = binding?.presetName ?: getString(R.string.output_none)
             val missing = binding != null && binding.presetName !in knownNames
             val entries = buildPresetEntries(if (missing) binding!!.presetName else null)
 
             val dropdown = holder.dropdown
             dropdown.setText(
-                if (missing) "${binding!!.presetName} (missing)" else currentSelection,
+                if (missing) "${binding!!.presetName}${getString(R.string.output_missing)}" else currentSelection,
                 false,
             )
             dropdown.setAdapter(PresetDropdownAdapter(this@AudioOutputActivity, entries))
@@ -453,16 +453,16 @@ class AudioOutputActivity : AppCompatActivity() {
             dropdown.setOnItemClickListener { _, _, pos, _ ->
                 val pick = entries[pos].displayName
                 when {
-                    pick == "(none)" -> {
+                    pick == getString(R.string.output_none) -> {
                         eqPrefs.removeDeviceBinding(key)
-                        Toast.makeText(this@AudioOutputActivity, "Unbound $label", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AudioOutputActivity, this@AudioOutputActivity.getString(R.string.output_unbound) + "$label", Toast.LENGTH_SHORT).show()
                     }
-                    pick.endsWith(" (missing)") -> {
+                    pick.endsWith(getString(R.string.output_missing)) -> {
                         // Picked the dangling entry — keep the binding as-is.
                     }
                     else -> {
                         eqPrefs.saveDeviceBinding(EqPreferencesManager.Binding(key, label, pick))
-                        Toast.makeText(this@AudioOutputActivity, "Bound \"$pick\" to $label", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AudioOutputActivity, this@AudioOutputActivity.getString(R.string.output_bound, pick, label), Toast.LENGTH_SHORT).show()
                     }
                 }
                 dropdown.clearFocus()
@@ -656,12 +656,12 @@ class AudioOutputActivity : AppCompatActivity() {
      *  sentinel for a dangling/missing binding. */
     private fun buildPresetEntries(missingPresetName: String?): List<PresetDropdownAdapter.Entry> {
         val out = mutableListOf<PresetDropdownAdapter.Entry>()
-        out.add(PresetDropdownAdapter.Entry("(none)", null))
+        out.add(PresetDropdownAdapter.Entry(getString(R.string.output_none), null))
         for (name in listCustomPresetNames()) {
             out.add(PresetDropdownAdapter.Entry(name, loadPresetJson(name)))
         }
         if (missingPresetName != null) {
-            out.add(PresetDropdownAdapter.Entry("$missingPresetName (missing)", null))
+            out.add(PresetDropdownAdapter.Entry("$missingPresetName${getString(R.string.output_missing)}", null))
         }
         return out
     }

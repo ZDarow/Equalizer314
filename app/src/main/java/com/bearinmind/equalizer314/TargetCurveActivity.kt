@@ -48,9 +48,9 @@ class TargetCurveActivity : AppCompatActivity() {
             try {
                 val apoText = resultText.text.toString().trim()
                 contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(apoText) }
-                Toast.makeText(this, "Exported successfully", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.msg_exported_success), Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                Toast.makeText(this, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.msg_export_failed) + e.message, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -187,7 +187,7 @@ class TargetCurveActivity : AppCompatActivity() {
         val measText = eqPrefs.getImportedMeasurementText(measName)
         val meas = if (measText != null) FreqResponseParser.parse(measText) else null
         if (meas == null) {
-            Toast.makeText(this, "Failed to load measurement", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.msg_failed_load_measurement), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -204,7 +204,7 @@ class TargetCurveActivity : AppCompatActivity() {
         }
 
         if (target == null) {
-            Toast.makeText(this, "Failed to load target curve", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.msg_failed_load_target), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -277,7 +277,7 @@ class TargetCurveActivity : AppCompatActivity() {
                     dotHandler.removeCallbacks(dotRunnable)
                     computeButton.text = "Generate EQ"
                     computeButton.isEnabled = true
-                    android.widget.Toast.makeText(this, "EQ generation failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                    android.widget.Toast.makeText(this, getString(R.string.msg_eq_generation_failed) + e.message, android.widget.Toast.LENGTH_LONG).show()
                 }
             }
         }.start()
@@ -303,7 +303,7 @@ class TargetCurveActivity : AppCompatActivity() {
             setPadding(0, 0, 0, (12 * density).toInt())
         }
         val title = android.widget.TextView(this).apply {
-            text = "Edit Generated EQ"
+            text = getString(R.string.dialog_edit_generated_eq)
             setTextColor(0xFFE2E2E2.toInt()); textSize = 20f
             layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
@@ -365,7 +365,7 @@ class TargetCurveActivity : AppCompatActivity() {
                 android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
         }
         val resetDlgBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = "Reset"
+            text = getString(R.string.action_reset)
             layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                 marginEnd = (3 * density).toInt()
             }
@@ -374,7 +374,7 @@ class TargetCurveActivity : AppCompatActivity() {
             insetTop = 0; insetBottom = 0
         }
         val saveBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = "Save"
+            text = getString(R.string.action_save)
             layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                 marginStart = (3 * density).toInt()
             }
@@ -442,25 +442,25 @@ class TargetCurveActivity : AppCompatActivity() {
     private fun showAddToPresetsDialog() {
         val apoText = resultText.text.toString().trim()
         if (apoText.isEmpty()) {
-            Toast.makeText(this, "Generate an EQ first", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.msg_generate_eq_first), Toast.LENGTH_SHORT).show()
             return
         }
         val density = resources.displayMetrics.density
         val measName = eqPrefs.getSelectedMeasurement()
         val defaultName = if (!measName.isNullOrBlank()) measName
-            else "Generated " + java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
+            else getString(R.string.msg_generated) + java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
 
         val dialogView = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
             setPadding((24 * density).toInt(), (20 * density).toInt(), (24 * density).toInt(), (16 * density).toInt())
         }
         val titleTv = android.widget.TextView(this).apply {
-            text = "Add to AutoEQ & Presets"
+            text = getString(R.string.autoeq_add_to_presets)
             setTextColor(0xFFE2E2E2.toInt()); textSize = 20f
             setPadding(0, 0, 0, (12 * density).toInt())
         }
         val messageTv = android.widget.TextView(this).apply {
-            text = "Add this EQ to the AutoEQ & Presets list"
+            text = getString(R.string.dialog_add_to_autoeq)
             setTextColor(0xFFAAAAAA.toInt()); textSize = 14f
             setPadding(0, 0, 0, (12 * density).toInt())
         }
@@ -499,7 +499,7 @@ class TargetCurveActivity : AppCompatActivity() {
         val cancelBtn = com.google.android.material.button.MaterialButton(
             this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle
         ).apply {
-            text = "Cancel"
+            text = getString(R.string.action_cancel)
             layoutParams = android.widget.LinearLayout.LayoutParams(
                 0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
             ).apply { marginEnd = (3 * density).toInt() }
@@ -513,7 +513,7 @@ class TargetCurveActivity : AppCompatActivity() {
         val addBtn = com.google.android.material.button.MaterialButton(
             this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle
         ).apply {
-            text = "Add"
+            text = getString(R.string.action_add)
             layoutParams = android.widget.LinearLayout.LayoutParams(
                 0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
             ).apply { marginStart = (3 * density).toInt() }
@@ -538,7 +538,7 @@ class TargetCurveActivity : AppCompatActivity() {
         addBtn.setOnClickListener {
             val name = nameInput.text.toString().trim().ifEmpty { defaultName }
             eqPrefs.addImportedPreset(name, apoText)
-            Toast.makeText(this, "Added \"$name\" to AutoEQ presets", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.msg_added_to_autoeq, name), Toast.LENGTH_SHORT).show()
             dialog.dismiss()
         }
         dialog.show()

@@ -1,4 +1,284 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- App -->
     <string name="app_name">Equalizer314</string>
+
+    <!-- EQ Mode Selector -->
+    <string name="eq_mode_parametric">Parametric</string>
+    <string name="eq_mode_graphic">Graphic</string>
+    <string name="eq_mode_table">Table</string>
+    <string name="simple_eq_mode">Simple EQ Mode</string>
+
+    <!-- Param Labels -->
+    <string name="hz_label">Hz</string>
+    <string name="db_label">dB</string>
+    <string name="q_label">Q</string>
+    <string name="preamp_label">Preamp (dB)</string>
+    <string name="offset_label">Offset: %.1f dB</string>
+
+    <!-- Navigation & Bottom Bar -->
+    <string name="nav_eq">EQ</string>
+    <string name="nav_multiband_compression">Multiband Compression</string>
+    <string name="nav_limiter">Limiter</string>
+    <string name="nav_power">Power</string>
+    <string name="nav_settings">Settings</string>
+    <string name="toggle_on">ON</string>
+    <string name="toggle_off">OFF</string>
+
+    <!-- Screen Titles -->
+    <string name="title_settings">Settings</string>
+    <string name="title_autoeq_presets">AutoEQ &amp; Presets</string>
+    <string name="title_generate_custom_eq">Generate Custom EQ</string>
+    <string name="title_spectrum_control">Spectrum Control</string>
+    <string name="title_experimental">Experimental</string>
+    <string name="title_custom_presets">Custom Presets</string>
+    <string name="title_channel_side_options">Channel Side Options</string>
+    <string name="title_convert_to_apo">Convert to APO format</string>
+    <string name="title_audio_output">Audio Output</string>
+    <string name="title_audio_effects_pipeline">Audio Effects Pipeline</string>
+    <string name="title_environmental_reverb">Environmental Reverb</string>
+    <string name="title_measurement">Measurement</string>
+    <string name="title_target">Target</string>
+
+    <!-- Common Actions -->
+    <string name="action_back">Back</string>
+    <string name="action_search">Search…</string>
+    <string name="action_import">Import</string>
+    <string name="action_export">Export</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_ok">OK</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_add">Add</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_redo">Redo</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_clear">Clear</string>
+
+    <!-- Content Descriptions -->
+    <string name="cd_toggle_band_points">Toggle band points</string>
+    <string name="cd_save_preset">Save preset</string>
+    <string name="cd_toggle_channel_routing">Toggle channel routing</string>
+    <string name="cd_open_settings">Open Settings</string>
+    <string name="cd_left_channel">Left channel</string>
+    <string name="cd_right_channel">Right channel</string>
+    <string name="cd_reset_to_defaults">Reset to defaults</string>
+    <string name="cd_undo">Undo</string>
+    <string name="cd_redo">Redo</string>
+    <string name="cd_edit">Edit</string>
+    <string name="cd_toggle_visualizer">Toggle visualizer</string>
+    <string name="cd_frequency_view">Frequency view</string>
+    <string name="cd_gr_trace_view">GR trace view</string>
+    <string name="cd_expand_reverb_params">Expand reverb parameters</string>
+    <string name="cd_drag_handle">Drag handle</string>
+
+    <!-- Status & Description Text -->
+    <string name="status_select_or_import_preset">Select or import a preset</string>
+    <string name="status_import_measurement_match_target">Import a measurement and match to a specific target</string>
+    <string name="status_control_fft_settings">Control FFT smoothness &amp; other misc spectrum settings</string>
+    <string name="status_no_measurement">No measurement selected</string>
+    <string name="status_no_target">No target selected</string>
+    <string name="status_no_file">No file selected</string>
+    <string name="status_no_active_device">No active device</string>
+    <string name="status_no_devices">No devices seen yet. Connect a device to start binding.</string>
+    <string name="status_no_custom_presets">No custom presets saved yet.\nTap the save icon on the EQ screen to save your current settings.</string>
+    <string name="status_current_device">Current Device</string>
+    <string name="status_devices">Devices</string>
+    <string name="status_clear_autoeq">Clear AutoEQ</string>
+    <string name="status_clear_measurement">Clear measurement</string>
+    <string name="status_clear_target">Clear target</string>
+
+    <!-- EQ Filters -->
+    <string name="filter_peak">PEAK</string>
+    <string name="filter_low_shelf">LSHELF</string>
+    <string name="filter_low_shelf_6db">LSHELF 6dB</string>
+    <string name="filter_high_shelf">HSHELF</string>
+    <string name="filter_high_shelf_6db">HSHELF 6dB</string>
+    <string name="filter_low_pass">LPF</string>
+    <string name="filter_low_pass_6db">LPF 6dB</string>
+    <string name="filter_high_pass">HPF</string>
+    <string name="filter_high_pass_6db">HPF 6dB</string>
+    <string name="filter_band_pass">BAND PASS</string>
+    <string name="filter_notch">NOTCH</string>
+    <string name="filter_bypass">BYPASS</string>
+
+    <!-- MBC / Limiter / Compressor Parameters -->
+    <string name="param_cutoff_hz">Cutoff (Hz)</string>
+    <string name="param_pre_gain_db">Pre-Gain (dB)</string>
+    <string name="param_post_gain_db">Post-Gain (dB)</string>
+    <string name="param_thresh_db">Thresh (dB)</string>
+    <string name="param_ratio">Ratio (X:1)</string>
+    <string name="param_knee_db">Knee (dB)</string>
+    <string name="param_attack_ms">Attack (ms)</string>
+    <string name="param_release_ms">Release (ms)</string>
+    <string name="param_post_gain">Post Gain (dB)</string>
+    <string name="param_gate_thresh_db">Gate Thresh (dB)</string>
+    <string name="param_gate_ratio">Gate Ratio (X:1)</string>
+    <string name="param_range_db">Range (dB)</string>
+    <string name="param_band_label">Band %d</string>
+
+    <!-- Channel Side EQ -->
+    <string name="channel_balance">Balance</string>
+    <string name="channel_l">L</string>
+    <string name="channel_r">R</string>
+    <string name="channel_percent_50">50%</string>
+    <string name="channel_percent_0">0%</string>
+    <string name="channel_preamp">Channel Preamp</string>
+    <string name="channel_preamp_l">Preamp (L)</string>
+    <string name="channel_preamp_r">Preamp (R)</string>
+    <string name="channel_side_eq">Channel Side EQ</string>
+
+    <!-- Environmental Reverb -->
+    <string name="reverb_room_level">Room Level</string>
+    <string name="reverb_parameters">Reverb Parameters</string>
+    <string name="reverb_pre_delay_ms">Pre-delay (ms)</string>
+    <string name="reverb_early_reflect_decay_ms">Early Reflect. Decay (ms)</string>
+    <string name="reverb_early_reflect_level_db">Early Reflect. Level (dB)</string>
+    <string name="reverb_delay_ms">Reverb Delay (ms)</string>
+    <string name="reverb_decay_ms">Reverb Decay (ms)</string>
+    <string name="reverb_level_db">Reverb Level (dB)</string>
+    <string name="reverb_hf_level_db">HF Level (dB)</string>
+    <string name="reverb_hf_damping">HF Damping</string>
+
+    <!-- Audio Output / Binding -->
+    <string name="output_bind_preset_hint">Bind a saved EQ preset to a specific output device…</string>
+    <string name="output_preset_label">Preset</string>
+    <string name="output_unbound">Unbound</string>
+    <string name="output_bound">Bound \"%1$s\" to %2$s</string>
+    <string name="output_none">(none)</string>
+    <string name="output_missing">(missing)</string>
+
+    <!-- Pipeline -->
+    <string name="pipeline_channel_input">Channel Input</string>
+    <string name="pipeline_channel_input_desc">System audio at session 0 — input to the effects chain</string>
+    <string name="pipeline_dynamics_processing">Dynamics Processing</string>
+    <string name="pipeline_dynamics_processing_desc">Main audio processing chain for EQ, MBC &amp; Limiting</string>
+    <string name="pipeline_environmental_reverb">Environmental Reverb</string>
+    <string name="pipeline_audio_output">Audio Output</string>
+    <string name="pipeline_audio_output_desc">Speakers, headphones, or other connected output</string>
+
+    <!-- AutoEQ / Target Curve / Measurement -->
+    <string name="autoeq_import_poweramp">Import Poweramp EQ .json</string>
+    <string name="autoeq_import_wavelet">Import Wavelet .txt</string>
+    <string name="autoeq_generated_eq">Generated EQ</string>
+    <string name="autoeq_converted_eq">Converted EQ</string>
+    <string name="autoeq_generate_eq">Generate EQ</string>
+    <string name="autoeq_filters_label">Filters</string>
+    <string name="autoeq_add_to_presets">Add to AutoEQ &amp; Presets</string>
+    <string name="autoeq_export_apo">Export as APO</string>
+    <string name="autoeq_8850_presets">8850 presets</string>
+    <string name="autoeq_77_targets">77 targets</string>
+    <string name="autoeq_0_measurements">0 measurements</string>
+
+    <!-- Spectrum Control -->
+    <string name="spectrum_ppo_smoothing">PPO Smoothing</string>
+    <string name="spectrum_ppo_desc">Uses raw FFT data by default when turned off; turning this on will give you control over the smoothing of the spectrum</string>
+    <string name="spectrum_color">Spectrum Color</string>
+
+    <!-- Experimental -->
+    <string name="experimental_dp_band_count">DP Band Count</string>
+    <string name="experimental_dp_engine">Experimental DP Engine</string>
+    <string name="experimental_dp_engine_desc">32 bands + time-resolution FFT (vs. legacy 128 bands + frequency-resolution). Aimed at fixing bass boom &amp; thin treble. Toggle restarts the audio engine.</string>
+    <string name="experimental_gain_compensation">Gain Compensation</string>
+    <string name="experimental_gain_compensation_desc">reduces highest gain to 0 dB to prevent clipping</string>
+
+    <!-- Dialogs -->
+    <string name="dialog_save_custom_preset">Save Custom Preset</string>
+    <string name="dialog_save_simple_eq_preset">Save Simple EQ Preset</string>
+    <string name="dialog_edit_generated_eq">Edit Generated EQ</string>
+    <string name="dialog_band_color">Band Color</string>
+    <string name="dialog_band_number">Band %1$d</string>
+    <string name="dialog_reset_all_values">Reset all values in this screen to their defaults?</string>
+    <string name="dialog_delete_preset">Delete preset \"%1$s\"?</string>
+    <string name="dialog_delete_item">Delete \"%1$s\"?</string>
+    <string name="dialog_add_to_autoeq">Add this EQ to the AutoEQ &amp; Presets list</string>
+
+    <!-- Colors -->
+    <string name="color_default">Default</string>
+    <string name="color_white">White</string>
+    <string name="color_green">Green</string>
+    <string name="color_blue">Blue</string>
+    <string name="color_yellow">Yellow</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_purple">Purple</string>
+    <string name="color_indigo">Indigo</string>
+
+    <!-- Visualizer Labels -->
+    <string name="viz_hf_level">HF Level</string>
+    <string name="viz_hf_damping">HF Damping</string>
+    <string name="viz_pre_delay">Pre-delay</string>
+    <string name="viz_early_reflections">Early Reflections</string>
+    <string name="viz_decay">Decay</string>
+    <string name="viz_reverb_tail">Reverb Tail</string>
+    <string name="viz_direct_sound">Direct Sound</string>
+    <string name="viz_amplitude">amplitude</string>
+    <string name="viz_time_ms">Time (ms)</string>
+    <string name="viz_gate_below_threshold">Gate (below threshold)</string>
+    <string name="viz_ceiling">Ceiling</string>
+    <string name="viz_khz">kHz</string>
+    <string name="viz_hz">Hz</string>
+
+    <!-- Toast & Status Messages -->
+    <string name="msg_eq_not_initialized">Parametric EQ not initialized</string>
+    <string name="msg_saved">Saved \"%1$s\"</string>
+    <string name="msg_loaded">Loaded \"%1$s\"</string>
+    <string name="msg_exported_success">Exported successfully</string>
+    <string name="msg_exported">Exported</string>
+    <string name="msg_export_failed">Export failed: %1$s</string>
+    <string name="msg_parse_apo_failed">Could not parse APO preset</string>
+    <string name="msg_applied_filters">Applied %1$d filters</string>
+    <string name="msg_error">Error: %1$s</string>
+    <string name="msg_eq_reset">EQ reset to defaults</string>
+    <string name="msg_mbc_reset">MBC reset to defaults</string>
+    <string name="msg_limiter_reset">Limiter reset to defaults</string>
+    <string name="msg_dsp_requires_api">DynamicsProcessing requires Android 9+</string>
+    <string name="msg_dsp_start">DynamicsProcessing Start</string>
+    <string name="msg_dsp_stop">DynamicsProcessing Stop</string>
+    <string name="msg_notifications_disabled">Notifications disabled — EQ will run without the Turn Off notification.</string>
+    <string name="msg_generate_eq_first">Generate an EQ first</string>
+    <string name="msg_added_to_autoeq">Added \"%1$s\" to AutoEQ presets</string>
+    <string name="msg_generated">Generated %1$s</string>
+    <string name="msg_failed_load_measurement">Failed to load measurement</string>
+    <string name="msg_failed_load_target">Failed to load target curve</string>
+    <string name="msg_eq_generation_failed">EQ generation failed: %1$s</string>
+    <string name="msg_failed_load_profile">Failed to load profile</string>
+    <string name="msg_applied">Applied: %1$s</string>
+    <string name="msg_parse_target_failed">Could not parse target file</string>
+    <string name="msg_parse_measurement_failed">Could not parse — need at least 10 frequency,dB pairs</string>
+    <string name="msg_target_label">Target: %1$s</string>
+    <string name="msg_measurement_label">Measurement: %1$s</string>
+    <string name="msg_error_reading_file">Error reading file: %1$s</string>
+    <string name="msg_apo_import">APO Import</string>
+    <string name="msg_custom_preset_prefix">Custom #%1$d</string>
+    <string name="msg_reset_label">RESET</string>
+    <string name="msg_12db">12 dB</string>
+
+    <!-- Import/Conversion -->
+    <string name="convert_import_poweramp">Import Poweramp EQ .json</string>
+    <string name="convert_import_wavelet">Import Wavelet .txt</string>
+    <string name="convert_to_apo">Convert to APO format</string>
+    <string name="convert_added_to_autoeq">Added \"%1$s\" to AutoEQ &amp; Presets</string>
+    <string name="convert_desc">Convert wavelet &amp; poweramp eq exports to APO format</string>
+
+    <!-- Settings cards -->
+    <string name="settings_simple_eq_desc">Simple 10 band graphic EQ</string>
+    <string name="settings_channel_side_desc">Balance, per-channel EQ, and channel swap</string>
+    <string name="settings_pipeline_title">Audio Effects Pipeline - NOT READY</string>
+    <string name="settings_pipeline_desc">Configure session based audio effects pipeline</string>
+    <string name="settings_experimental_desc">probably don\'t touch this shit (yet)</string>
+    <string name="cd_lock_experimental">Lock Experimental</string>
+    <string name="settings_auto_gain">Auto-Gain</string>
+    <string name="settings_auto_gain_desc">Automatically reduces gain to prevent clipping</string>
+    <string name="settings_offset_format">Offset: %.1f dB</string>
+
+    <!-- Pipeline long description -->
+    <string name="pipeline_reorder_desc">Drag the handle on the left of each effects card to re-order the order of the processing effects chain. The audio stream begins from Channel Input and ends at the Audio Output. DynamicsProcessing is the main EQ, MBC, Limiting that is exposed in the app, the other audio effects that can attach to the channel input can be clicked on and edited right here in a new screen.</string>
+
+    <!-- MBC extra -->
+    <string name="mbc_range_visual_only">Range (visual only)\nTo achieve this range, set threshold and ratio accordingly</string>
+
+    <!-- Spectrum extra -->
+    <string name="spectrum_release">Spectrum Release</string>
+    <string name="spectrum_release_desc">Controls how fast the spectrum falls after a peak. Lower = slower, smoother falloff</string>
 </resources>

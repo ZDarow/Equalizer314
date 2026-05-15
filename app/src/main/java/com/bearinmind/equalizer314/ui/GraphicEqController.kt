@@ -497,7 +497,7 @@ class GraphicEqController(
         val dbType = hzType or android.text.InputType.TYPE_NUMBER_FLAG_SIGNED
         val (hzInput, hzRow) = makeRow("Hz", String.format("%.0f", band.frequency), hzType, android.view.inputmethod.EditorInfo.IME_ACTION_NEXT)
         val (dbInput, dbRow) = makeRow("dB", String.format("%.1f", band.gain), dbType, android.view.inputmethod.EditorInfo.IME_ACTION_DONE, enabled = !isLpHp)
-        val (qInput, qRow) = makeRow("Q", String.format("%.2f", band.q), hzType, android.view.inputmethod.EditorInfo.IME_ACTION_DONE)
+        val (qInput, qRow) = makeRow(activity.getString(R.string.q_label), String.format("%.2f", band.q), hzType, android.view.inputmethod.EditorInfo.IME_ACTION_DONE)
 
         container.addView(hzRow)
         container.addView(makeDivider())
@@ -506,9 +506,9 @@ class GraphicEqController(
         container.addView(qRow)
 
         com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
-            .setTitle("Band $slotLabel")
+            .setTitle(activity.getString(R.string.dialog_band_number, slotLabel))
             .setView(container)
-            .setPositiveButton("OK") { _, _ ->
+            .setPositiveButton(activity.getString(R.string.action_ok)) { _, _ ->
                 val hz = hzInput.text.toString().toFloatOrNull()?.coerceIn(10f, 20000f) ?: band.frequency
                 val db = if (isLpHp) band.gain else dbInput.text.toString().toFloatOrNull()?.coerceIn(-12f, 12f) ?: band.gain
                 val q = qInput.text.toString().toDoubleOrNull()?.coerceIn(0.1, 12.0) ?: band.q
@@ -526,7 +526,7 @@ class GraphicEqController(
                 graphView.setParametricEqualizer(eq)
                 onEqChanged()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(activity.getString(R.string.action_cancel), null)
             .show()
     }
 
@@ -549,7 +549,7 @@ class GraphicEqController(
         }
 
         val title = TextView(activity).apply {
-            text = "Band Color"
+            text = activity.getString(R.string.dialog_band_color)
             textSize = 16f
             setTextColor(0xFFE2E2E2.toInt())
             setPadding(0, 0, 0, (12 * density).toInt())
@@ -563,7 +563,7 @@ class GraphicEqController(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
 
-        for ((color, _) in TableEqController.BAND_COLORS) {
+        for (color in TableEqController.BAND_COLORS) {
             val isNone = color == 0xFF333333.toInt()
             val size = (32 * density).toInt()
             val swatch = if (isNone) {

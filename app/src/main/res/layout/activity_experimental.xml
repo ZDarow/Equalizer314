@@ -28,13 +28,13 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:scaleType="centerInside"
                 app:tint="?attr/colorOnSurface"
-                android:contentDescription="Back" />
+                android:contentDescription="@string/action_back" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Experimental"
+                android:text="@string/title_experimental"
                 android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
                 android:textColor="?attr/colorOnSurface"
                 android:paddingStart="8dp" />
@@ -59,7 +59,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="DP Band Count"
+                    android:text="@string/experimental_dp_band_count"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                     android:textColor="?attr/colorOnSurface"
                     android:paddingBottom="4dp" />
@@ -131,14 +131,14 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Experimental DP Engine"
+                        android:text="@string/experimental_dp_engine"
                         android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="32 bands + time-resolution FFT (vs. legacy 128 bands + frequency-resolution). Aimed at fixing bass boom &amp; thin treble. Toggle restarts the audio engine."
+                        android:text="@string/experimental_dp_engine_desc"
                         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:paddingTop="4dp" />
@@ -178,14 +178,14 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Gain Compensation"
+                        android:text="@string/experimental_gain_compensation"
                         android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="reduces highest gain to 0 dB to prevent clipping"
+                        android:text="@string/experimental_gain_compensation_desc"
                         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:paddingTop="4dp" />

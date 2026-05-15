@@ -1,6 +1,7 @@
 package com.bearinmind.equalizer314.ui
 
 import android.app.Activity
+import com.bearinmind.equalizer314.R
 import android.view.View
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -17,15 +18,15 @@ class TableEqController(
 ) {
     companion object {
         val BAND_COLORS = listOf(
-            0xFF333333.toInt() to "Default",
-            0xFFFFFFFF.toInt() to "White",
-            0xFFEF9A9A.toInt() to "Red",
-            0xFFA5D6A7.toInt() to "Green",
-            0xFF90CAF9.toInt() to "Blue",
-            0xFFFFF59D.toInt() to "Yellow",
-            0xFFFFCC80.toInt() to "Orange",
-            0xFFCE93D8.toInt() to "Purple",
-            0xFF9FA8DA.toInt() to "Indigo"
+            0xFF333333.toInt(),
+            0xFFFFFFFF.toInt(),
+            0xFFEF9A9A.toInt(),
+            0xFFA5D6A7.toInt(),
+            0xFF90CAF9.toInt(),
+            0xFFFFF59D.toInt(),
+            0xFFFFCC80.toInt(),
+            0xFFCE93D8.toInt(),
+            0xFF9FA8DA.toInt()
         )
     }
 
@@ -115,13 +116,13 @@ class TableEqController(
         // BYPASS is the last entry and maps to ALL_PASS (matches the
         // Parametric-mode Bypass↔AP tie).
         val filterTypeNames = listOf(
-            "PEAK",
-            "LSHELF", "LSHELF 6dB",
-            "HSHELF", "HSHELF 6dB",
-            "LPF", "LPF 6dB",
-            "HPF", "HPF 6dB",
-            "BAND PASS", "NOTCH",
-            "BYPASS",
+            activity.getString(R.string.filter_peak),
+            activity.getString(R.string.filter_low_shelf), activity.getString(R.string.filter_low_shelf_6db),
+            activity.getString(R.string.filter_high_shelf), activity.getString(R.string.filter_high_shelf_6db),
+            activity.getString(R.string.filter_low_pass), activity.getString(R.string.filter_low_pass_6db),
+            activity.getString(R.string.filter_high_pass), activity.getString(R.string.filter_high_pass_6db),
+            activity.getString(R.string.filter_band_pass), activity.getString(R.string.filter_notch),
+            activity.getString(R.string.filter_bypass),
         )
         val filterTypeValues = listOf(
             BiquadFilter.FilterType.BELL,
@@ -199,7 +200,7 @@ class TableEqController(
             val light = isColorLight(curColor)
             numBox.setTextColor(if (!nowEnabled) 0xFF666666.toInt() else if (light) 0xFF222222.toInt() else 0xFFCCCCCC.toInt())
             filterBtn.text = when {
-                !nowEnabled -> "BYPASS"
+                !nowEnabled -> activity.getString(R.string.filter_bypass)
                 else -> filterTypeNames[filterTypeValues.indexOf(b.filterType).coerceAtLeast(0)]
             }
             graphView.setParametricEqualizer(eq)
@@ -290,7 +291,7 @@ class TableEqController(
         }
 
         val title = TextView(activity).apply {
-            text = "Band Color"
+            text = activity.getString(R.string.dialog_band_color)
             textSize = 16f
             setTextColor(0xFFE2E2E2.toInt())
             setPadding(0, 0, 0, (12 * density).toInt())
@@ -304,7 +305,7 @@ class TableEqController(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
 
-        for ((color, _) in BAND_COLORS) {
+        for (color in BAND_COLORS) {
             val isNone = color == 0xFF333333.toInt()
             val size = (32 * density).toInt()
             val swatch = if (isNone) {

@@ -59,9 +59,9 @@ class  MainActivity : AppCompatActivity() {
             val text = pendingExportText ?: return@registerForActivityResult
             try {
                 contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(text) }
-                android.widget.Toast.makeText(this, "Exported successfully", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(this, getString(R.string.msg_exported_success), android.widget.Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                android.widget.Toast.makeText(this, "Export failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(this, getString(R.string.msg_export_failed, e.message), android.widget.Toast.LENGTH_SHORT).show()
             }
             pendingExportText = null
         }
@@ -137,7 +137,7 @@ class  MainActivity : AppCompatActivity() {
             val text = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return@registerForActivityResult
             val profile = com.bearinmind.equalizer314.autoeq.AutoEqParser.parse(text)
             if (profile == null || profile.filters.isEmpty()) {
-                android.widget.Toast.makeText(this, "Could not parse APO preset", android.widget.Toast.LENGTH_LONG).show()
+                android.widget.Toast.makeText(this, getString(R.string.msg_parse_apo_failed), android.widget.Toast.LENGTH_LONG).show()
                 return@registerForActivityResult
             }
             fun toBandSpecs(filters: List<com.bearinmind.equalizer314.autoeq.AutoEqFilter>):
@@ -152,7 +152,7 @@ class  MainActivity : AppCompatActivity() {
                 }
 
             eqPrefs.savePreampGain(profile.preampDb)
-            eqPrefs.savePresetName("APO Import")
+            eqPrefs.savePresetName(getString(R.string.msg_apo_import))
             eqPrefs.saveAutoEqName("")
             eqPrefs.saveAutoEqSource("")
 
@@ -219,10 +219,10 @@ class  MainActivity : AppCompatActivity() {
                         svc.updateEqPerChannel(lEq, rEq)
                     }
                 }
-                android.widget.Toast.makeText(this, "Applied ${profile.filters.size} filters", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(this, getString(R.string.msg_applied_filters, profile.filters.size), android.widget.Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
-            android.widget.Toast.makeText(this, "Error: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(this, getString(R.string.msg_error, e.message), android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -813,7 +813,7 @@ class  MainActivity : AppCompatActivity() {
                     setPadding((24 * density).toInt(), (20 * density).toInt(), (24 * density).toInt(), (16 * density).toInt())
                 }
                 val title = android.widget.TextView(this).apply {
-                    text = "Save Custom Preset"
+                    text = getString(R.string.dialog_save_custom_preset)
                     setTextColor(0xFFE2E2E2.toInt())
                     textSize = 20f
                     setPadding(0, 0, 0, (12 * density).toInt())
@@ -830,7 +830,7 @@ class  MainActivity : AppCompatActivity() {
                         cornerRadius = 12 * density
                     }
                 }
-                val defaultName = "Custom #$nextNum"
+                val defaultName = getString(R.string.msg_custom_preset_prefix, nextNum)
                 val input = android.widget.EditText(this).apply {
                     hint = defaultName
                     setTextColor(0xFFFFFFFF.toInt())
@@ -849,7 +849,7 @@ class  MainActivity : AppCompatActivity() {
                         android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
                 }
                 val cancelBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                    text = "Cancel"
+                    text = getString(R.string.action_cancel)
                     layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                         marginEnd = (3 * density).toInt()
                     }
@@ -861,7 +861,7 @@ class  MainActivity : AppCompatActivity() {
                     insetTop = 0; insetBottom = 0
                 }
                 val saveDialogBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                    text = "OK"
+                    text = getString(R.string.action_ok)
                     layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                         marginStart = (3 * density).toInt()
                     }
@@ -928,7 +928,7 @@ class  MainActivity : AppCompatActivity() {
                             .putStringSet("preset_names", (presetNames.toMutableSet() + name))
                             .apply()
                         populatePresetPicker()
-                        android.widget.Toast.makeText(this, "Saved \"$name\"", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(this, getString(R.string.msg_saved, name), android.widget.Toast.LENGTH_SHORT).show()
                     }
                     dialog.dismiss()
                 }
@@ -1119,13 +1119,13 @@ class  MainActivity : AppCompatActivity() {
                         setPadding((24 * d).toInt(), (20 * d).toInt(), (24 * d).toInt(), (16 * d).toInt())
                     }
                     val dlgTitle = android.widget.TextView(this).apply {
-                        text = "Delete"
+                        text = getString(R.string.action_delete)
                         setTextColor(0xFFE2E2E2.toInt())
                         textSize = 20f
                         setPadding(0, 0, 0, (12 * d).toInt())
                     }
                     val dlgMsg = android.widget.TextView(this).apply {
-                        text = "Delete preset \"$name\"?"
+                        text = getString(R.string.dialog_delete_preset, name)
                         setTextColor(0xFFAAAAAA.toInt())
                         textSize = 14f
                         setPadding(0, 0, 0, (16 * d).toInt())
@@ -1144,7 +1144,7 @@ class  MainActivity : AppCompatActivity() {
                             android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
                     }
                     val dlgDeleteBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                        text = "Delete"
+                        text = getString(R.string.action_delete)
                         layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                             marginEnd = (3 * d).toInt()
                         }
@@ -1156,7 +1156,7 @@ class  MainActivity : AppCompatActivity() {
                         insetTop = 0; insetBottom = 0
                     }
                     val dlgCancelBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                        text = "Cancel"
+                        text = getString(R.string.action_cancel)
                         layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                             marginStart = (3 * d).toInt()
                         }
@@ -1334,7 +1334,7 @@ class  MainActivity : AppCompatActivity() {
                     saveBtn.setBackgroundColor(0x00000000)
                     saveBtn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
                     saveBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
-                    android.widget.Toast.makeText(this, "Loaded \"$name\"", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(this, getString(R.string.msg_loaded, name), android.widget.Toast.LENGTH_SHORT).show()
                 }
                 presetPickerContainer.addView(presetRow)
             }
@@ -1399,13 +1399,13 @@ class  MainActivity : AppCompatActivity() {
                 setPadding((24 * density).toInt(), (20 * density).toInt(), (24 * density).toInt(), (16 * density).toInt())
             }
             val title = android.widget.TextView(this).apply {
-                text = "Reset"
+                text = getString(R.string.action_reset)
                 setTextColor(0xFFE2E2E2.toInt())
                 textSize = 20f
                 setPadding(0, 0, 0, (12 * density).toInt())
             }
             val message = android.widget.TextView(this).apply {
-                text = "Reset all values in this screen to their defaults?"
+                text = getString(R.string.dialog_reset_all_values)
                 setTextColor(0xFFAAAAAA.toInt())
                 textSize = 14f
                 setPadding(0, 0, 0, (16 * density).toInt())
@@ -1424,7 +1424,7 @@ class  MainActivity : AppCompatActivity() {
                     android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
             }
             val resetDialogBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                text = "Reset"
+                text = getString(R.string.action_reset)
                 layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                     marginEnd = (3 * density).toInt()
                 }
@@ -1436,7 +1436,7 @@ class  MainActivity : AppCompatActivity() {
                 insetTop = 0; insetBottom = 0
             }
             val cancelBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                text = "Cancel"
+                text = getString(R.string.action_cancel)
                 layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                     marginStart = (3 * density).toInt()
                 }
@@ -1478,7 +1478,7 @@ class  MainActivity : AppCompatActivity() {
                         svc.dynamicsManager.start(eq)
                     }
                 }
-                android.widget.Toast.makeText(this, "EQ reset to defaults", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(this, getString(R.string.msg_eq_reset), android.widget.Toast.LENGTH_SHORT).show()
                 dialog.dismiss()
             }
             dialog.show()
@@ -1877,7 +1877,7 @@ class  MainActivity : AppCompatActivity() {
 
     private fun updateAutoGainOffsetText() {
         val offset = stateManager.getAutoGainOffset()
-        autoGainOffsetText.text = String.format("Offset: %.1f dB", offset)
+        autoGainOffsetText.text = getString(R.string.offset_label, offset)
     }
 
     // ---- EQ UI Mode Switching ----
@@ -2581,7 +2581,7 @@ class  MainActivity : AppCompatActivity() {
         val density = resources.displayMetrics.density
         val size = (22 * density).toInt()
 
-        for ((color, _) in TableEqController.BAND_COLORS) {
+        for (color in TableEqController.BAND_COLORS) {
             val isNone = color == 0xFF333333.toInt()
             val wrapper = FrameLayout(this).apply {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -2643,7 +2643,7 @@ class  MainActivity : AppCompatActivity() {
             val swatch = wrapper.getChildAt(0) ?: continue
             val bg = swatch.background as? android.graphics.drawable.GradientDrawable ?: continue
 
-            val swatchColor = TableEqController.BAND_COLORS[i].first
+            val swatchColor = TableEqController.BAND_COLORS[i]
             val isNone = swatchColor == 0xFF333333.toInt()
             val isSelected = if (isNone) currentColor == null else currentColor == swatchColor
 
@@ -2659,7 +2659,7 @@ class  MainActivity : AppCompatActivity() {
 
     private fun startProcessing() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-            Toast.makeText(this, "DynamicsProcessing requires Android 9+", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.msg_dsp_requires_api), Toast.LENGTH_LONG).show()
             return
         }
 
@@ -2711,7 +2711,7 @@ class  MainActivity : AppCompatActivity() {
     private fun showPowerSnackbar(on: Boolean) {
         eqPrefs.savePowerState(on)
         com.bearinmind.equalizer314.ui.BottomNavHelper.updatePowerFab(this, on)
-        val message = if (on) "DynamicsProcessing Start" else "DynamicsProcessing Stop"
+        val message = if (on) getString(R.string.msg_dsp_start) else getString(R.string.msg_dsp_stop)
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
@@ -2758,7 +2758,7 @@ class  MainActivity : AppCompatActivity() {
         // band is already in the peak family (PK / BP / NO / AP), a second
         // tap opens a dropdown to pick between those four sub-types.
         val peakBtn = buildFilterTypeButton(
-            label = "PEAK",
+            label = getString(R.string.filter_peak),
             defaultSubtitle = "",
             weightedWidth = true,
         )
@@ -2776,15 +2776,15 @@ class  MainActivity : AppCompatActivity() {
 
         // Shelves & passes — each has a 2-tap 12 dB / 6 dB slope popup.
         val shelfPassTypes = listOf(
-            "LSHELF" to BiquadFilter.FilterType.LOW_SHELF,
-            "HSHELF" to BiquadFilter.FilterType.HIGH_SHELF,
-            "LPF" to BiquadFilter.FilterType.LOW_PASS,
-            "HPF" to BiquadFilter.FilterType.HIGH_PASS,
+            getString(R.string.filter_low_shelf) to BiquadFilter.FilterType.LOW_SHELF,
+            getString(R.string.filter_high_shelf) to BiquadFilter.FilterType.HIGH_SHELF,
+            getString(R.string.filter_low_pass) to BiquadFilter.FilterType.LOW_PASS,
+            getString(R.string.filter_high_pass) to BiquadFilter.FilterType.HIGH_PASS,
         )
         for ((label, type) in shelfPassTypes) {
             val btn = buildFilterTypeButton(
                 label = label,
-                defaultSubtitle = "12 dB",
+                defaultSubtitle = getString(R.string.msg_12db),
                 weightedWidth = true,
             )
             btn.setOnClickListener { anchor ->
@@ -2806,7 +2806,7 @@ class  MainActivity : AppCompatActivity() {
         // BYPASS sets the band to ALL_PASS (flat magnitude on-device, exports
         // as `Filter N: ON AP ...`). No dropdown, single tap applies.
         val bypassBtn = buildFilterTypeButton(
-            label = "BYPASS",
+            label = getString(R.string.filter_bypass),
             defaultSubtitle = "",
             weightedWidth = true,
         )
@@ -2832,7 +2832,7 @@ class  MainActivity : AppCompatActivity() {
         // setupFilterTypeButtons: PEAK, LSHELF, HSHELF, LPF, HPF, BYPASS.
         data class Entry(val btn: MaterialButton, val label: String, val role: Role)
         val roles = listOf(Role.PEAK, Role.SHELF_PASS, Role.SHELF_PASS, Role.SHELF_PASS, Role.SHELF_PASS, Role.BYPASS)
-        val labels = listOf("PEAK", "LSHELF", "HSHELF", "LPF", "HPF", "BYPASS")
+        val labels = listOf(getString(R.string.filter_peak), getString(R.string.filter_low_shelf), getString(R.string.filter_high_shelf), getString(R.string.filter_low_pass), getString(R.string.filter_high_pass), getString(R.string.filter_bypass))
         val typesForHighlight = listOf(
             BiquadFilter.FilterType.BELL,
             BiquadFilter.FilterType.LOW_SHELF,
@@ -2883,8 +2883,8 @@ class  MainActivity : AppCompatActivity() {
             val subtitle: String = when (e.role) {
                 Role.PEAK -> ""
                 Role.SHELF_PASS -> when {
-                    sameFamily -> if (currentIs1st) "6 dB" else "12 dB"
-                    else -> "12 dB"
+                    sameFamily -> if (currentIs1st) "6 dB" else getString(R.string.msg_12db)
+                    else -> getString(R.string.msg_12db)
                 }
                 Role.BYPASS -> ""
             }
@@ -2897,10 +2897,10 @@ class  MainActivity : AppCompatActivity() {
      *  own filter category rather than a variant badge. "B. PASS" keeps the
      *  label short so the text stays at full size without shrinking. */
     private fun peakButtonLabel(current: BiquadFilter.FilterType, bandEnabled: Boolean): String = when {
-        !bandEnabled -> "PEAK"
+        !bandEnabled -> getString(R.string.filter_peak)
         current == BiquadFilter.FilterType.BAND_PASS -> "B. PASS"
         current == BiquadFilter.FilterType.NOTCH -> "NOTCH"
-        else -> "PEAK"
+        else -> getString(R.string.filter_peak)
     }
 
     private enum class Role { PEAK, SHELF_PASS, BYPASS }
@@ -3176,7 +3176,7 @@ class  MainActivity : AppCompatActivity() {
             container.addView(item)
         }
 
-        addItem("12 dB", !currentIs1st) { applyFilterTypeToBand(bandIndex, family2nd) }
+        addItem(getString(R.string.msg_12db), !currentIs1st) { applyFilterTypeToBand(bandIndex, family2nd) }
         val divider = View(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -3425,7 +3425,7 @@ class  MainActivity : AppCompatActivity() {
             ) {
                 Toast.makeText(
                     this,
-                    "Notifications disabled — EQ will run without the Turn Off notification.",
+                    getString(R.string.msg_notifications_disabled),
                     Toast.LENGTH_LONG
                 ).show()
             }

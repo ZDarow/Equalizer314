@@ -282,7 +282,7 @@ class SpectrumControlActivity : AppCompatActivity() {
         val savedColor = eqPrefs.getSpectrumColor()
         val size = (22 * density).toInt()
 
-        for ((color, _) in colors) {
+        for (color in colors) {
             val isDefault = color == 0xFF333333.toInt()
             val wrapper = android.widget.FrameLayout(this).apply {
                 layoutParams = android.widget.LinearLayout.LayoutParams(0,
@@ -336,7 +336,7 @@ class SpectrumControlActivity : AppCompatActivity() {
             val wrapper = swatchRow.getChildAt(i) as? android.widget.FrameLayout ?: continue
             val swatch = wrapper.getChildAt(0) ?: continue
             val bg = swatch.background as? android.graphics.drawable.GradientDrawable ?: continue
-            val swatchColor = colors[i].first
+            val swatchColor = colors[i]
             val isDefault = swatchColor == 0xFF333333.toInt()
             val displayColor = if (isDefault) 0xFFB4B4B4.toInt() else swatchColor
             val isSelected = displayColor == selectedColor

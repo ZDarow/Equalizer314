@@ -1,6 +1,7 @@
 package com.bearinmind.equalizer314.ui
 
 import android.content.Context
+import com.bearinmind.equalizer314.R
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
@@ -182,9 +183,9 @@ class SimpleEqBarsView @JvmOverloads constructor(
 
             // Frequency label below bar — moves down with the pop animation
             val freqText = if (FREQUENCIES[i] >= 1000f) {
-                "${(FREQUENCIES[i] / 1000f).toInt()} kHz"
+                "${(FREQUENCIES[i] / 1000f).toInt()} ${context.getString(R.string.viz_khz)}"
             } else {
-                "${FREQUENCIES[i].toInt()} Hz"
+                "${FREQUENCIES[i].toInt()} ${context.getString(R.string.viz_hz)}"
             }
             canvas.drawText(freqText, cx, barBottom + labelPaint.textSize + 2f * density, labelPaint)
         }

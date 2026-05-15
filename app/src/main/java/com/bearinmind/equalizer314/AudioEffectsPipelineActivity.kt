@@ -308,7 +308,7 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
                 setPadding(pad, pad, pad, pad)
                 isClickable = true
                 isFocusable = true
-                contentDescription = "Drag handle"
+                contentDescription = ctx.getString(R.string.cd_drag_handle)
             }
             row.addView(handle)
 

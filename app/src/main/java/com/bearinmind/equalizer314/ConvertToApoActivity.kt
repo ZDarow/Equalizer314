@@ -58,9 +58,9 @@ class ConvertToApoActivity : AppCompatActivity() {
         val uri = result.data?.data ?: return@registerForActivityResult
         try {
             contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(resultText.text.toString()) }
-            Toast.makeText(this, "Exported", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.msg_exported), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.msg_export_failed) + "${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -106,7 +106,7 @@ class ConvertToApoActivity : AppCompatActivity() {
             val apoText = resultText.text.toString().trim()
             if (apoText.isEmpty()) return@setOnClickListener
             eqPrefs.addImportedPreset(lastSourceName, apoText)
-            Toast.makeText(this, "Added \"$lastSourceName\" to AutoEQ & Presets", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.convert_added_to_autoeq, lastSourceName), Toast.LENGTH_SHORT).show()
         }
         exportButton.setOnClickListener {
             val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
@@ -142,7 +142,7 @@ class ConvertToApoActivity : AppCompatActivity() {
             }
             convertButton.isEnabled = text.isNotBlank()
         } catch (e: Exception) {
-            Toast.makeText(this, "Error reading file: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.msg_error_reading_file) + "${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 

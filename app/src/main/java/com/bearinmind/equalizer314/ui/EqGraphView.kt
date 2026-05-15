@@ -1,6 +1,7 @@
 package com.bearinmind.equalizer314.ui
 
 import android.content.Context
+import com.bearinmind.equalizer314.R
 import android.graphics.*
 import android.os.Handler
 import android.os.Looper
@@ -394,7 +395,7 @@ class EqGraphView @JvmOverloads constructor(
         super.onDraw(canvas)
 
         if (bandPoints.isEmpty()) {
-            val text = "Parametric EQ not initialized"
+            val text = context.getString(R.string.msg_eq_not_initialized)
             canvas.drawText(text, width / 2f - textPaint.measureText(text) / 2f, height / 2f, textPaint)
             return
         }

@@ -24,14 +24,14 @@
             android:layout_height="48dp"
             android:src="@drawable/ic_arrow_back"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Back"
+            android:contentDescription="@string/action_back"
             app:tint="?attr/colorOnSurface" />
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Generate Custom EQ"
+            android:text="@string/title_generate_custom_eq"
             android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
             android:textColor="?attr/colorOnSurface"
             android:paddingStart="8dp" />
@@ -70,7 +70,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Measurement"
+                        android:text="@string/title_measurement"
                         android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -78,7 +78,7 @@
                         android:id="@+id/measurementStatus"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="No measurement selected"
+                        android:text="@string/status_no_measurement"
                         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:paddingTop="4dp" />
@@ -92,7 +92,7 @@
                 style="@style/Widget.Material3.Button.TonalButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Import" />
+                android:text="@string/action_import" />
             -->
 
             <!-- Target Selection Card (clickable, opens TargetSelectActivity) -->
@@ -115,7 +115,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Target"
+                        android:text="@string/title_target"
                         android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -123,7 +123,7 @@
                         android:id="@+id/targetSelectStatus"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="No target selected"
+                        android:text="@string/status_no_target"
                         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:paddingTop="4dp" />
@@ -156,7 +156,7 @@
                         <TextView
                             android:layout_width="96dp"
                             android:layout_height="wrap_content"
-                            android:text="Filters"
+                            android:text="@string/autoeq_filters_label"
                             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -200,7 +200,7 @@
                 android:id="@+id/computeButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Generate EQ"
+                android:text="@string/autoeq_generate_eq"
                 android:enabled="false" />
 
             <!-- Result card (hidden until EQ generated) -->
@@ -237,7 +237,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Generated EQ"
+                                android:text="@string/autoeq_generated_eq"
                                 android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                                 android:textColor="?attr/colorOnSurface" />
 
@@ -303,7 +303,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Add to presets"
+                android:text="@string/autoeq_add_to_presets"
                 android:visibility="gone" />
 
             <!-- Export button (same style as Generate EQ button) -->
@@ -313,7 +313,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Export as APO"
+                android:text="@string/autoeq_export_apo"
                 android:visibility="gone" />
 
         </LinearLayout>

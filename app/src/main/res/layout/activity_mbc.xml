@@ -27,7 +27,7 @@
             android:layout_height="48dp"
             android:src="@drawable/ic_arrow_back"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Back"
+            android:contentDescription="@string/action_back"
             app:tint="?attr/colorOnSurface" />
         -->
 
@@ -35,7 +35,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Multiband Compression"
+            android:text="@string/nav_multiband_compression"
             android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
             android:textColor="?attr/colorOnSurface" />
 
@@ -100,7 +100,7 @@
                     app:shapeAppearanceOverlay="@style/ShapeAppearance.MbcEqButton"
                     app:strokeColor="#FF444444"
                     app:strokeWidth="1dp"
-                    android:contentDescription="Frequency view" />
+                    android:contentDescription="@string/cd_frequency_view" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/mbcGraphModeTime"
@@ -121,7 +121,7 @@
                     app:shapeAppearanceOverlay="@style/ShapeAppearance.MbcGrButton"
                     app:strokeColor="#FF444444"
                     app:strokeWidth="1dp"
-                    android:contentDescription="GR trace view" />
+                    android:contentDescription="@string/cd_gr_trace_view" />
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
@@ -143,7 +143,7 @@
                 app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
                 app:strokeColor="#FF444444"
                 app:strokeWidth="1dp"
-                android:contentDescription="Reset to defaults" />
+                android:contentDescription="@string/cd_reset_to_defaults" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/mbcVisualizerToggle"
@@ -163,7 +163,7 @@
                 app:shapeAppearanceOverlay="@style/ShapeAppearance.SpectrumButton"
                 app:strokeColor="#FF444444"
                 app:strokeWidth="1dp"
-                android:contentDescription="Toggle visualizer" />
+                android:contentDescription="@string/cd_toggle_visualizer" />
         </FrameLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -219,7 +219,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="start|center_vertical"
-                            android:text="Band 1"
+                            android:text="@string/param_band_label"
                             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                             android:textColor="?attr/colorOnSurface" />
 
@@ -251,7 +251,7 @@
                         <TextView
                             android:layout_width="96dp"
                             android:layout_height="wrap_content"
-                            android:text="Cutoff (Hz)"
+                            android:text="@string/param_cutoff_hz"
                             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -298,7 +298,7 @@
                         <TextView
                             android:layout_width="96dp"
                             android:layout_height="wrap_content"
-                            android:text="Pre-Gain (dB)"
+                            android:text="@string/param_pre_gain_db"
                             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -344,7 +344,7 @@
                         <TextView
                             android:layout_width="96dp"
                             android:layout_height="wrap_content"
-                            android:text="Post-Gain (dB)"
+                            android:text="@string/param_post_gain_db"
                             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -404,7 +404,7 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Range (dB)"
+                                android:text="@string/param_range_db"
                                 android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                                 android:textColor="?attr/colorOnSurfaceVariant"
                                 android:paddingStart="4dp"
@@ -532,7 +532,7 @@
                         <TextView
                             android:layout_width="96dp"
                             android:layout_height="wrap_content"
-                            android:text="Thresh (dB)"
+                            android:text="@string/param_thresh_db"
                             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -579,7 +579,7 @@
                         <TextView
                             android:layout_width="96dp"
                             android:layout_height="wrap_content"
-                            android:text="Ratio (X:1)"
+                            android:text="@string/param_ratio"
                             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -626,7 +626,7 @@
                         <TextView
                             android:layout_width="96dp"
                             android:layout_height="wrap_content"
-                            android:text="Knee (dB)"
+                            android:text="@string/param_knee_db"
                             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -673,7 +673,7 @@
                         <TextView
                             android:layout_width="96dp"
                             android:layout_height="wrap_content"
-                            android:text="Attack (ms)"
+                            android:text="@string/param_attack_ms"
                             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -720,7 +720,7 @@
                         <TextView
                             android:layout_width="96dp"
                             android:layout_height="wrap_content"
-                            android:text="Release (ms)"
+                            android:text="@string/param_release_ms"
                             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -826,7 +826,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginEnd="4dp"
-                                android:text="Gate Thresh (dB)"
+                                android:text="@string/param_gate_thresh_db"
                                 android:maxLines="1"
                                 android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                                 android:textColor="?attr/colorOnSurfaceVariant" />
@@ -874,7 +874,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginEnd="4dp"
-                                android:text="Gate Ratio (X:1)"
+                                android:text="@string/param_gate_ratio"
                                 android:maxLines="1"
                                 android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                                 android:textColor="?attr/colorOnSurfaceVariant" />
