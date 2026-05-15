@@ -1,0 +1,22 @@
+#!/bin/bash
+# Pre-commit hook — проверяет сборку перед коммитом
+# Запускает assembleDebug только если изменены исходники (.kt/.xml)
+
+CHANGED=$(git diff --cached --name-only --diff-filter=ACM | grep -cE '\.(kt|xml)$' || true)
+
+if [ "$CHANGED" -eq 0 ]; then
+    exit 0
+fi
+
+echo "🔍 Pre-commit: проверка сборки..."
+
+./gradlew assembleDebug --daemon 2>&1 | tail -5
+RESULT=${PIPESTATUS[0]}
+
+if [ "$RESULT" -ne 0 ]; then
+    echo "❌ Сборка сломана. Коммит отклонён."
+    echo "   Исправь ошибки и попробуй снова."
+    exit 1
+fi
+
+echo "✅ Сборка успешна. Коммит разрешён."
