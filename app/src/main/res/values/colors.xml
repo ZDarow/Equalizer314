@@ -14,4 +14,10 @@
          a row is known to us but silent. Same Material Red 200 the
          reset / delete buttons elsewhere in the app use. -->
     <color name="pulse_inactive_red">#FFEF9A9A</color>
+
+    <!-- Light yellow used for the "Not Priority" pill on the pipeline
+         cards (Channel Input / Audio Output) when neither scope is
+         currently driving the audio. Material Yellow 200, matched
+         shade to the Green 200 / Red 200 pair used elsewhere. -->
+    <color name="pill_priority_yellow">#FFFFF59D</color>
 </resources>

@@ -343,13 +343,37 @@ class ChannelInputActivity : AppCompatActivity() {
             // only one or two active sessions at a time, so the cost
             // is negligible and avoids holding a stale cache.
             val pm = packageManager
-            val rows = sessions.map { s ->
-                val (icon, label) = runCatching {
-                    val info = pm.getApplicationInfo(s.packageName, 0)
-                    pm.getApplicationIcon(info) to pm.getApplicationLabel(info).toString()
-                }.getOrElse { null to s.packageName }
-                SessionRow(s.sessionId, s.packageName, label, icon, s.presetName, s.source, s.isPlaying)
-            }.sortedBy { it.label.lowercase() }
+            // Coalesce by package — apps like Nyx Music Player open
+            // two AudioTracks at once for gapless playback and produce
+            // two SessionEffectManager entries. The user binds by
+            // package, so showing two rows for the same app is just
+            // noise. Pick the most-informative session per package:
+            //   - BROADCAST source beats DETECTED (authoritative)
+            //   - real positive sessionId beats synthetic negative
+            //   - isPlaying = OR of all sessions in the group
+            val rows = sessions
+                .groupBy { it.packageName }
+                .map { (pkg, group) ->
+                    val rep = group.sortedWith(
+                        compareByDescending<SessionEffectManager.ActiveSession> {
+                            it.source == SessionEffectManager.AttachSource.BROADCAST
+                        }.thenByDescending { it.sessionId > 0 }
+                    ).first()
+                    val (icon, label) = runCatching {
+                        val info = pm.getApplicationInfo(pkg, 0)
+                        pm.getApplicationIcon(info) to pm.getApplicationLabel(info).toString()
+                    }.getOrElse { null to pkg }
+                    SessionRow(
+                        sessionId = rep.sessionId,
+                        packageName = pkg,
+                        label = label,
+                        icon = icon,
+                        presetName = rep.presetName,
+                        source = rep.source,
+                        isPlaying = group.any { it.isPlaying },
+                    )
+                }
+                .sortedBy { it.label.lowercase() }
             sessionsAdapter.setItems(rows)
         }
     }

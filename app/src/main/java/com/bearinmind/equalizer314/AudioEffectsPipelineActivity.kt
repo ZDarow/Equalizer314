@@ -115,6 +115,7 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
                     else -> effect.description
                 }
             },
+            priorityFor = { effect -> currentPriorityFor(effect) },
         )
         recyclerView.adapter = adapter
         touchHelper.attachToRecyclerView(recyclerView)
@@ -251,6 +252,30 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
             else -> "System-wide"
         }
 
+    /** Computes which scope is currently driving the audio for the
+     *  pipeline-screen priority pill. The hierarchy (highest first):
+     *    1. Session-based routing → Channel Input is in charge.
+     *    2. System-wide + Device auto-switch ON → Audio Output is in
+     *       charge (overwrites the global preset on route changes).
+     *    3. System-wide + Device auto-switch OFF → neither card is
+     *       automatically in charge; both render the yellow
+     *       "Not Priority" pill so the user sees the manual state
+     *       at a glance.
+     *  Returns null for every effect outside the two relevant cards;
+     *  the adapter then hides all three indicators on that card. */
+    private fun currentPriorityFor(effect: EffectId): CardPriority? {
+        val sessionBased = eqPrefs.getAudioRoutingMode() == 1
+        val autoSwitch = eqPrefs.getDeviceAutoSwitchEnabled()
+        return when (effect) {
+            EffectId.AUDIO_INPUT ->
+                if (sessionBased) CardPriority.PRIORITY else CardPriority.NOT_PRIORITY
+            EffectId.AUDIO_OUTPUT ->
+                if (!sessionBased && autoSwitch) CardPriority.PRIORITY
+                else CardPriority.NOT_PRIORITY
+            else -> null
+        }
+    }
+
     /**
      * Picks the currently routed output via the same priority rules
      * the Audio Output screen uses (`DeviceIdentity.priority`) and
@@ -280,6 +305,11 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
 
     // ---- Adapter --------------------------------------------------------
 
+    /** Which card is currently driving the audio. Only Channel Input
+     *  and Audio Output participate; every other effect returns null
+     *  from [PipelineAdapter.priorityFor] and gets no indicator. */
+    private enum class CardPriority { PRIORITY, NOT_PRIORITY }
+
     private class PipelineAdapter(
         private val items: List<EffectId>,
         private val isEnabled: (EffectId) -> Boolean,
@@ -291,6 +321,10 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
          *  the static "Speakers, headphones, or other connected output"
          *  fallback. Defaults to the enum's `description`. */
         private val descriptionFor: (EffectId) -> String = { it.description },
+        /** Priority indicator for the Channel Input / Audio Output
+         *  cards. Returns null for every other effect (no indicator).
+         *  Resolved by the activity from routing-mode + auto-switch. */
+        private val priorityFor: (EffectId) -> CardPriority? = { null },
     ) : RecyclerView.Adapter<PipelineAdapter.ViewHolder>() {
 
         override fun getItemCount() = items.size
@@ -358,6 +392,7 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
                 ctx.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, tc, true)
                 setTextColor(tc.data)
             }
+            textCol.addView(title)
             val description = TextView(ctx).apply {
                 setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodySmall)
                 val tc = android.util.TypedValue()
@@ -365,9 +400,25 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
                 setTextColor(tc.data)
                 setPadding(0, (4 * density).toInt(), 0, 0)
             }
-            textCol.addView(title)
             textCol.addView(description)
             row.addView(textCol)
+
+            // Pill lives OUTSIDE textCol as a sibling of textCol in the
+            // horizontal row, so it inherits the row's CENTER_VERTICAL
+            // gravity — vertically centered against the combined height
+            // of (title + description), not pinned to the title's line.
+            val pill = TextView(ctx).apply {
+                setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_LabelSmall)
+                val padH = (12 * density).toInt()
+                val padV = (4 * density).toInt()
+                setPadding(padH, padV, padH, padV)
+                gravity = android.view.Gravity.CENTER
+                visibility = View.GONE
+            }
+            row.addView(pill, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { marginStart = (8 * density).toInt() })
 
             // Right-side power button — styled like the main Power FAB
             // (12dp rounded square with stroke). Background drawable is set
@@ -387,7 +438,7 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
             }
             row.addView(power)
 
-            return ViewHolder(card, title, description, handle, power)
+            return ViewHolder(card, title, description, handle, power, pill)
         }
 
         @SuppressLint("ClickableViewAccessibility")
@@ -445,6 +496,41 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
                 isClickable = true
                 isFocusable = true
             }
+
+            paintPriority(holder, priorityFor(effect))
+        }
+
+        /** Renders the priority affordance on a card. The card stroke
+         *  and left-edge stripe were considered earlier; both got
+         *  pulled in favor of just the outline-only pill, which carries
+         *  the same signal at a fraction of the visual noise. Cards
+         *  that don't participate (every effect except Channel Input /
+         *  Audio Output) pass [priority] = null and the pill collapses. */
+        private fun paintPriority(holder: ViewHolder, priority: CardPriority?) {
+            val ctx = holder.itemView.context
+            val density = ctx.resources.displayMetrics.density
+
+            if (priority == null) {
+                holder.pill.visibility = View.GONE
+                return
+            }
+
+            val green = androidx.core.content.ContextCompat.getColor(ctx, R.color.pulse_active_green)
+            val yellow = androidx.core.content.ContextCompat.getColor(ctx, R.color.pill_priority_yellow)
+            val active = priority == CardPriority.PRIORITY
+            val accent = if (active) green else yellow
+
+            // Outline-only pill, vertically centered against the card
+            // row. Transparent fill with a colored stroke and matching
+            // text color so the label reads against the card background.
+            holder.pill.visibility = View.VISIBLE
+            holder.pill.text = if (active) "Priority" else "Not Priority"
+            holder.pill.setTextColor(accent)
+            holder.pill.background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = 100 * density
+                setColor(0x00000000)
+                setStroke((1.5f * density).toInt(), accent)
+            }
         }
 
         private fun paintPower(view: ImageView, enabled: Boolean) {
@@ -477,6 +563,7 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
             val description: TextView,
             val handle: ImageView,
             val power: ImageView,
+            val pill: TextView,
         ) : RecyclerView.ViewHolder(view)
     }
 
