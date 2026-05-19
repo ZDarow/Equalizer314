@@ -172,15 +172,45 @@
                     android:textColor="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
 
-            <!-- Apps list header -->
-            <TextView
+            <!-- Apps section — collapsible header + body, mirrors the
+                 Devices section pattern from activity_audio_output. -->
+            <LinearLayout
+                android:id="@+id/appsHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Apps"
-                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:paddingStart="4dp"
-                android:paddingBottom="6dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/ripple_rounded_header"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Apps"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <TextView
+                    android:id="@+id/appsChevron"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="▸"
+                    android:textSize="22sp"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+
+            <!-- Collapsible body: list + empty state. -->
+            <LinearLayout
+                android:id="@+id/appsBody"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/appsList"
@@ -205,6 +235,7 @@
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:gravity="center"
                 android:padding="32dp" />
+            </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </LinearLayout>

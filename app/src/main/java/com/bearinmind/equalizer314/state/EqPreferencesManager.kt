@@ -696,4 +696,18 @@ class EqPreferencesManager(context: Context) {
     fun saveAudioRoutingMode(mode: Int) {
         appBindingsPrefs.edit().putInt("audio_routing_mode", mode).apply()
     }
+
+    /** Master toggle for device-binding auto-switching on the Audio
+     *  Output screen. When `true` (default), connecting a bound
+     *  output device auto-applies its preset via
+     *  [com.bearinmind.equalizer314.audio.RouteSwitchCoordinator]. When
+     *  `false`, route changes are ignored entirely — the user keeps
+     *  whatever preset is loaded. Bindings still persist, so flipping
+     *  this back on restores prior behaviour. */
+    fun getDeviceAutoSwitchEnabled(): Boolean =
+        appBindingsPrefs.getBoolean("device_auto_switch_enabled", true)
+
+    fun setDeviceAutoSwitchEnabled(enabled: Boolean) {
+        appBindingsPrefs.edit().putBoolean("device_auto_switch_enabled", enabled).apply()
+    }
 }

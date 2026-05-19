@@ -53,6 +53,9 @@ class AudioOutputActivity : AppCompatActivity() {
     private lateinit var activeDeviceLabel: TextView
     private lateinit var activeDeviceKey: TextView
     private lateinit var currentlyRoutedCard: MaterialCardView
+    private lateinit var deviceAutoSwitchCard: MaterialCardView
+    private lateinit var deviceAutoSwitchSwitch: com.google.android.material.materialswitch.MaterialSwitch
+    private lateinit var deviceAutoSwitchBody: TextView
     private lateinit var devicesHeader: LinearLayout
     private lateinit var devicesBody: LinearLayout
     private lateinit var devicesChevron: TextView
@@ -104,6 +107,22 @@ class AudioOutputActivity : AppCompatActivity() {
         eqPrefs = EqPreferencesManager(this)
 
         findViewById<ImageButton>(R.id.audioOutputBackButton).setOnClickListener { finish() }
+
+        // Device auto-switch toggle — twin of Channel Input's Session
+        // detection card. Tapping the switch flips the persisted flag
+        // synchronously so the next route change either applies the
+        // bound preset (on) or is treated as a no-op (off).
+        deviceAutoSwitchCard = findViewById(R.id.deviceAutoSwitchCard)
+        deviceAutoSwitchSwitch = findViewById(R.id.deviceAutoSwitchSwitch)
+        deviceAutoSwitchBody = findViewById(R.id.deviceAutoSwitchBody)
+        val toggleAutoSwitch = {
+            val next = !eqPrefs.getDeviceAutoSwitchEnabled()
+            eqPrefs.setDeviceAutoSwitchEnabled(next)
+            refreshDeviceAutoSwitchUi()
+        }
+        deviceAutoSwitchSwitch.setOnClickListener { toggleAutoSwitch() }
+        deviceAutoSwitchCard.setOnClickListener { toggleAutoSwitch() }
+
         currentlyRoutedCard = findViewById(R.id.currentlyRoutedCard)
         activeDeviceLabel = findViewById(R.id.activeDeviceLabel)
         activeDeviceKey = findViewById(R.id.activeDeviceKey)
@@ -213,6 +232,10 @@ class AudioOutputActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        // Sync the auto-switch card every time the screen surfaces —
+        // the user could have flipped the flag elsewhere (debug, ADB,
+        // future linked settings) and we don't want a stale toggle.
+        refreshDeviceAutoSwitchUi()
         // Bind to EqService — the same pattern MainActivity uses — so we
         // can read the live routing monitor and react to changes.
         bindService(Intent(this, EqService::class.java), serviceConnection, Context.BIND_AUTO_CREATE)
@@ -223,6 +246,16 @@ class AudioOutputActivity : AppCompatActivity() {
         // currently connected.
         scanCurrentlyConnectedOutputs()
         refreshDevices()
+    }
+
+    /** Pushes the persisted auto-switch state into the toggle card.
+     *  Body copy is fixed (matches the Session-detection card pattern
+     *  on the Channel Input screen — single line, no state branching);
+     *  the switch position alone communicates on / off. The toggle
+     *  gates [com.bearinmind.equalizer314.audio.RouteSwitchCoordinator]
+     *  — when off, route changes are tracked but no preset is applied. */
+    private fun refreshDeviceAutoSwitchUi() {
+        deviceAutoSwitchSwitch.isChecked = eqPrefs.getDeviceAutoSwitchEnabled()
     }
 
     private fun scanCurrentlyConnectedOutputs() {
@@ -723,32 +756,85 @@ class AudioOutputActivity : AppCompatActivity() {
         }
     }
 
-    /** Mirror of the AppDrawer launcher's collapsible-section feel:
-     *  250 ms expand, 200 ms collapse, chevron rotates 0 → 90° via
-     *  property animator. The View-system equivalent of Compose's
-     *  AnimatedVisibility is `TransitionManager.beginDelayedTransition`
-     *  with `AutoTransition` (which combines fade + bounds). */
+    /** Smooth Compose-style expand/collapse, matching the AppDrawer
+     *  launcher's `AnimatedVisibility` feel: pure height interpolation
+     *  via [android.animation.ValueAnimator] driving
+     *  `layoutParams.height`. No Transition fade, no visibility blink.
+     *  300 ms symmetric, FastOutSlowInInterpolator (Compose default).
+     *  Chevron rotates in lockstep. */
     private fun applyDevicesExpanded(animate: Boolean) {
-        if (animate) {
-            val parent = devicesBody.parent as ViewGroup
-            TransitionManager.beginDelayedTransition(
-                parent,
-                AutoTransition().apply {
-                    duration = if (devicesExpanded) 250L else 200L
-                },
-            )
-        }
-        devicesBody.visibility = if (devicesExpanded) View.VISIBLE else View.GONE
         val targetRotation = if (devicesExpanded) 90f else 0f
-        if (animate) {
-            devicesChevron.animate().rotation(targetRotation).setDuration(200).start()
-        } else {
+        if (!animate) {
+            devicesBody.visibility = if (devicesExpanded) View.VISIBLE else View.GONE
+            if (devicesExpanded) {
+                devicesBody.layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                devicesBody.requestLayout()
+            }
             devicesChevron.rotation = targetRotation
+            return
+        }
+        animateDevicesBody(devicesExpanded)
+        devicesChevron.animate()
+            .rotation(targetRotation)
+            .setDuration(EXPAND_DURATION_MS)
+            .setInterpolator(androidx.interpolator.view.animation.FastOutSlowInInterpolator())
+            .start()
+    }
+
+    private fun animateDevicesBody(expand: Boolean) {
+        val interp = androidx.interpolator.view.animation.FastOutSlowInInterpolator()
+        if (expand) {
+            devicesBody.visibility = View.VISIBLE
+            val widthSpec = View.MeasureSpec.makeMeasureSpec(
+                (devicesBody.parent as View).width, View.MeasureSpec.EXACTLY,
+            )
+            val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            devicesBody.measure(widthSpec, heightSpec)
+            val target = devicesBody.measuredHeight
+            android.animation.ValueAnimator.ofInt(0, target).apply {
+                duration = EXPAND_DURATION_MS
+                interpolator = interp
+                addUpdateListener {
+                    devicesBody.layoutParams.height = it.animatedValue as Int
+                    devicesBody.requestLayout()
+                }
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        devicesBody.layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                        devicesBody.requestLayout()
+                    }
+                })
+                start()
+            }
+        } else {
+            val start = devicesBody.height
+            android.animation.ValueAnimator.ofInt(start, 0).apply {
+                duration = EXPAND_DURATION_MS
+                interpolator = interp
+                addUpdateListener {
+                    devicesBody.layoutParams.height = it.animatedValue as Int
+                    devicesBody.requestLayout()
+                }
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        devicesBody.visibility = View.GONE
+                        devicesBody.layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                        devicesBody.requestLayout()
+                    }
+                })
+                start()
+            }
         }
     }
 
     companion object {
         private const val REQ_BT_CONNECT = 300
         private const val PREF_DEVICES_EXPANDED = "devicesExpanded"
+        /** Symmetric duration for the Devices section open/close.
+         *  Bumped past Compose's 300 ms `AnimatedVisibility` default
+         *  toward Material's "Emphasized" timing (≈500 ms) so the
+         *  slide reads as a deliberate motion rather than a quick
+         *  reveal. */
+        private const val EXPAND_DURATION_MS = 500L
     }
 }

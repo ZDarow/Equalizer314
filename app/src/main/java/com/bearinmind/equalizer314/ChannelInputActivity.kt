@@ -64,6 +64,16 @@ class ChannelInputActivity : AppCompatActivity() {
     private lateinit var currentSessionEmpty: TextView
     private lateinit var sessionsAdapter: ActiveSessionsAdapter
 
+    // Collapsible "Apps" section — mirrors the Devices section
+    // pattern from AudioOutputActivity. Header is clickable; body is
+    // visibility-toggled with an AutoTransition for the open/close
+    // animation. Expanded state persists in this activity's local
+    // SharedPreferences.
+    private lateinit var appsHeader: LinearLayout
+    private lateinit var appsBody: LinearLayout
+    private lateinit var appsChevron: TextView
+    private var appsExpanded = true
+
     // Persistent "Session detection" toggle card. Always visible —
     // the switch reflects the current system Notification access
     // state, and tapping it routes the user to system Settings (the
@@ -148,6 +158,21 @@ class ChannelInputActivity : AppCompatActivity() {
         currentSessionList.adapter = sessionsAdapter
         currentSessionList.isNestedScrollingEnabled = false
 
+        // Collapsible Apps section — header click animates the body
+        // open/closed via AutoTransition (same look as AudioOutput's
+        // Devices section). Expanded state persists per-screen.
+        appsHeader = findViewById(R.id.appsHeader)
+        appsBody = findViewById(R.id.appsBody)
+        appsChevron = findViewById(R.id.appsChevron)
+        appsExpanded = getPreferences(MODE_PRIVATE).getBoolean(PREF_APPS_EXPANDED, true)
+        applyAppsExpanded(animate = false)
+        appsHeader.setOnClickListener {
+            appsExpanded = !appsExpanded
+            getPreferences(MODE_PRIVATE)
+                .edit().putBoolean(PREF_APPS_EXPANDED, appsExpanded).apply()
+            applyAppsExpanded(animate = true)
+        }
+
         enableDetectionCard = findViewById(R.id.enableDetectionCard)
         enableDetectionTitle = findViewById(R.id.enableDetectionTitle)
         enableDetectionBody = findViewById(R.id.enableDetectionBody)
@@ -200,6 +225,81 @@ class ChannelInputActivity : AppCompatActivity() {
         // User may have toggled the listener in Settings while we were
         // in the background — re-check on every return.
         refreshDetectionCtaVisibility()
+    }
+
+    /** Smooth, Compose-style expand/collapse for the Apps section.
+     *  Matches the AppDrawer launcher's [`AnimatedVisibility +
+     *  expandVertically/shrinkVertically`] feel using a [ValueAnimator]
+     *  on the body's `layoutParams.height` — no Transition fade, no
+     *  visibility blink. 300 ms symmetric, FastOutSlowInInterpolator
+     *  (Compose's default). Chevron rotates in lockstep. */
+    private fun applyAppsExpanded(animate: Boolean) {
+        val targetRotation = if (appsExpanded) 90f else 0f
+        if (!animate) {
+            appsBody.visibility = if (appsExpanded) View.VISIBLE else View.GONE
+            if (appsExpanded) restoreWrapContentHeight(appsBody)
+            appsChevron.rotation = targetRotation
+            return
+        }
+        animateCollapse(appsBody, appsExpanded)
+        appsChevron.animate()
+            .rotation(targetRotation)
+            .setDuration(EXPAND_DURATION_MS)
+            .setInterpolator(androidx.interpolator.view.animation.FastOutSlowInInterpolator())
+            .start()
+    }
+
+    /** Animates [body]'s height between 0 and its measured natural
+     *  height. Used by every collapsible section on this screen so the
+     *  feel stays consistent. After [expand]ing, height is restored to
+     *  WRAP_CONTENT so the section adapts when its contents change. */
+    private fun animateCollapse(body: View, expand: Boolean) {
+        val interp = androidx.interpolator.view.animation.FastOutSlowInInterpolator()
+        if (expand) {
+            body.visibility = View.VISIBLE
+            val widthSpec = View.MeasureSpec.makeMeasureSpec(
+                (body.parent as View).width, View.MeasureSpec.EXACTLY,
+            )
+            val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            body.measure(widthSpec, heightSpec)
+            val target = body.measuredHeight
+            android.animation.ValueAnimator.ofInt(0, target).apply {
+                duration = EXPAND_DURATION_MS
+                interpolator = interp
+                addUpdateListener {
+                    body.layoutParams.height = it.animatedValue as Int
+                    body.requestLayout()
+                }
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        restoreWrapContentHeight(body)
+                    }
+                })
+                start()
+            }
+        } else {
+            val start = body.height
+            android.animation.ValueAnimator.ofInt(start, 0).apply {
+                duration = EXPAND_DURATION_MS
+                interpolator = interp
+                addUpdateListener {
+                    body.layoutParams.height = it.animatedValue as Int
+                    body.requestLayout()
+                }
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        body.visibility = View.GONE
+                        restoreWrapContentHeight(body)
+                    }
+                })
+                start()
+            }
+        }
+    }
+
+    private fun restoreWrapContentHeight(v: View) {
+        v.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        v.requestLayout()
     }
 
     private fun isNotificationListenerGranted(): Boolean =
@@ -430,22 +530,18 @@ class ChannelInputActivity : AppCompatActivity() {
             // tint metadata stays consistent across the loop.
             val pulse = holder.pulse.drawable as? android.graphics.drawable.AnimationDrawable
             if (pulse != null) {
+                val tintColor = androidx.core.content.ContextCompat.getColor(
+                    this@ChannelInputActivity,
+                    if (r.isPlaying) R.color.pulse_active_green
+                    else R.color.pulse_inactive_red,
+                )
+                holder.pulse.imageTintList =
+                    android.content.res.ColorStateList.valueOf(tintColor)
                 if (r.isPlaying) {
-                    holder.pulse.imageTintList = android.content.res.ColorStateList.valueOf(
-                        androidx.core.content.ContextCompat.getColor(
-                            this@ChannelInputActivity, R.color.pulse_active_green,
-                        )
-                    )
                     if (!pulse.isRunning) pulse.start()
                 } else {
                     pulse.stop()
                     pulse.selectDrawable(0)
-                    holder.pulse.imageTintList = android.content.res.ColorStateList.valueOf(
-                        com.google.android.material.color.MaterialColors.getColor(
-                            holder.pulse,
-                            com.google.android.material.R.attr.colorOnSurfaceVariant,
-                        )
-                    )
                 }
             }
 
@@ -624,5 +720,14 @@ class ChannelInputActivity : AppCompatActivity() {
                 return true
             }
         })
+    }
+
+    companion object {
+        private const val PREF_APPS_EXPANDED = "appsExpanded"
+        /** Symmetric duration for the Apps section open/close. Bumped
+         *  past Compose's 300 ms `AnimatedVisibility` default toward
+         *  Material's "Emphasized" timing (≈500 ms) so the slide reads
+         *  as a deliberate motion rather than a quick reveal. */
+        private const val EXPAND_DURATION_MS = 500L
     }
 }

@@ -42,6 +42,15 @@ class RouteSwitchCoordinator(
         // list for the user to bind to manually later.
         eqPrefs.rememberSeenDevice(change.key, change.label)
 
+        // Master gate. When the user has flipped the "Device auto-switch"
+        // toggle off on the Audio Output screen, route changes still
+        // populate the seen-devices list (above) but never overwrite the
+        // currently-loaded preset.
+        if (!eqPrefs.getDeviceAutoSwitchEnabled()) {
+            Log.d(TAG, "Auto-switch disabled — keeping current preset on route change to '${change.label}'")
+            return
+        }
+
         val binding = eqPrefs.getDeviceBinding(change.key) ?: return
         val preset = loadCustomPreset(binding.presetName)
         if (preset == null) {

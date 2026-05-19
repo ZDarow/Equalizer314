@@ -9,4 +9,9 @@
          a row is actively outputting audio. Same Material Green 200
          the MBC band picker uses for its green band. -->
     <color name="pulse_active_green">#FFA5D6A7</color>
+
+    <!-- Light red used to tint the "Now playing" speaker pulse when
+         a row is known to us but silent. Same Material Red 200 the
+         reset / delete buttons elsewhere in the app use. -->
+    <color name="pulse_inactive_red">#FFEF9A9A</color>
 </resources>
