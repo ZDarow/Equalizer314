@@ -515,10 +515,15 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
                 return
             }
 
+            // Red for Not Priority stands out harder than yellow on
+            // the dark surface — flagged scopes shout, current scope
+            // affirms (green). Reuses the same Material Red 200 the
+            // "Now playing" idle-speaker icon uses, so the palette
+            // stays consistent.
             val green = androidx.core.content.ContextCompat.getColor(ctx, R.color.pulse_active_green)
-            val yellow = androidx.core.content.ContextCompat.getColor(ctx, R.color.pill_priority_yellow)
+            val red = androidx.core.content.ContextCompat.getColor(ctx, R.color.pulse_inactive_red)
             val active = priority == CardPriority.PRIORITY
-            val accent = if (active) green else yellow
+            val accent = if (active) green else red
 
             // Outline-only pill, vertically centered against the card
             // row. Transparent fill with a colored stroke and matching
