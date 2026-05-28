@@ -346,16 +346,37 @@ class  MainActivity : AppCompatActivity() {
         eqPrefs = EqPreferencesManager(this)
         stateManager = EqStateManager(this, eqPrefs)
 
-        // On fresh app launch, reset power state — EXCEPT when the
-        // global DP is actually running (e.g. user toggled it on via
-        // the QS tile while the activity wasn't alive). EqService is a
-        // foreground service that survives MainActivity death, so its
-        // `isDpRunning` flag is the source of truth. If we blindly
-        // reset to false here, returning to the app would show OFF
-        // while audio is still being EQ'd.
+        // On fresh app launch, decide what to do about DP power state.
+        // Three cases:
+        //   1. Service is already running (QS tile or boot receiver
+        //      started it while MainActivity was dead) — keep the
+        //      persisted pref aligned with that.
+        //   2. Service isn't running but the persisted pref says it
+        //      should be on (last session ended with DP on; user
+        //      rebooted on an OEM that strips BOOT_COMPLETED, or
+        //      force-stopped the app). Auto-start the service —
+        //      ACTION_AUTO_START is idempotent.
+        //   3. Truly off — leave the pref at false.
+        // The earlier behaviour (always overwriting with the live
+        // service flag) wiped the persisted `powerOn=true` on every
+        // cold launch after a reboot, which made the EQ appear to
+        // "turn off by itself" (issue #28).
         if (savedInstanceState == null) {
             val dpAlreadyRunning = EqService.isDpRunning
-            eqPrefs.savePowerState(dpAlreadyRunning)
+            val persistedPowerOn = eqPrefs.getPowerState()
+            when {
+                dpAlreadyRunning -> eqPrefs.savePowerState(true)
+                persistedPowerOn -> {
+                    val svc = Intent(this, EqService::class.java)
+                        .setAction(EqService.ACTION_AUTO_START)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        startForegroundService(svc)
+                    } else {
+                        startService(svc)
+                    }
+                }
+                else -> eqPrefs.savePowerState(false)
+            }
             stateManager.pendingStartEq = false
             // Also re-lock the Experimental settings on every fresh launch
             eqPrefs.saveExperimentalUnlocked(false)

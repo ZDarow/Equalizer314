@@ -30,6 +30,13 @@ class EqService : Service() {
          *  EQ state and starts DynamicsProcessing without needing
          *  MainActivity to be running. */
         const val ACTION_START_FROM_TILE = "com.bearinmind.equalizer314.START_FROM_TILE"
+        /** Idempotent headless start. Fired by [BootCompletedReceiver]
+         *  after a device reboot, and by MainActivity.onCreate as a
+         *  fallback when the persisted `powerOn` pref is true but the
+         *  service isn't running (OEMs that strip BOOT_COMPLETED).
+         *  Unlike [ACTION_START_FROM_TILE] this never toggles off —
+         *  it's start-or-no-op. */
+        const val ACTION_AUTO_START = "com.bearinmind.equalizer314.AUTO_START"
         const val ACTION_EQ_STOPPED = "com.bearinmind.equalizer314.EQ_STOPPED"
         /** Broadcast on a successful start from the QS tile (or any
          *  other headless start path), so MainActivity can re-sync its
@@ -334,6 +341,43 @@ class EqService : Service() {
                     }
                 } else {
                     Log.w(TAG, "ACTION_START_FROM_TILE: no persisted bands to start with")
+                }
+                return START_STICKY
+            }
+            ACTION_AUTO_START -> {
+                Log.d(TAG, "ACTION_AUTO_START — boot/cold-open restore, dynamicsManager.isActive=${dynamicsManager.isActive}")
+                startForeground(NOTIFICATION_ID, buildNotification())
+                if (dynamicsManager.isActive) return START_STICKY
+                val eq = loadPersistedParametricEq()
+                if (eq != null) {
+                    val p = EqPreferencesManager(this)
+                    with(dynamicsManager) {
+                        preampGainDb = p.getPreampGain()
+                        autoGainEnabled = p.getAutoGainEnabled()
+                        channelBalancePercent = p.getChannelBalancePercent()
+                        leftChannelGainDb = p.getLeftChannelGainDb()
+                        rightChannelGainDb = p.getRightChannelGainDb()
+                        limiterEnabled = p.getLimiterEnabled()
+                        limiterAttackMs = p.getLimiterAttack()
+                        limiterReleaseMs = p.getLimiterRelease()
+                        limiterRatio = p.getLimiterRatio()
+                        limiterThresholdDb = p.getLimiterThreshold()
+                        limiterPostGainDb = p.getLimiterPostGain()
+                        mbcEnabled = p.getMbcEnabled()
+                        mbcBandCount = p.getMbcBandCount()
+                    }
+                    dynamicsManager.start(eq)
+                    if (dynamicsManager.isActive) {
+                        p.savePowerState(true)
+                        setDpRunning(true)
+                        syncSystemSoundBypassFromCurrent()
+                        showDpStateToast(started = true)
+                        sendBroadcast(Intent(ACTION_EQ_STARTED).setPackage(packageName))
+                    } else {
+                        Log.w(TAG, "ACTION_AUTO_START: dynamicsManager.start failed silently")
+                    }
+                } else {
+                    Log.w(TAG, "ACTION_AUTO_START: no persisted bands to start with")
                 }
                 return START_STICKY
             }

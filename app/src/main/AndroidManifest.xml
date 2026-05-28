@@ -8,6 +8,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- BootCompletedReceiver listens for ACTION_BOOT_COMPLETED so the
+         global DP engine can be restored automatically when the user
+         had it on before the device powered off. Without this the
+         user has to open the app and tap Power after every reboot. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Needed to list installed apps in the Channel Input screen so
          the user can pre-assign EQ presets to apps that have not yet
          broadcast an audio-effect session. Required on API 30+. -->
@@ -149,6 +154,18 @@
             <intent-filter>
                 <action android:name="android.media.action.OPEN_AUDIO_EFFECT_CONTROL_SESSION" />
                 <action android:name="android.media.action.CLOSE_AUDIO_EFFECT_CONTROL_SESSION" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Restores the global DP engine after a device reboot if
+             the user had it on. Reads EqPreferencesManager.getPowerState
+             and sends ACTION_AUTO_START to EqService when true. -->
+        <receiver
+            android:name="com.bearinmind.equalizer314.audio.BootCompletedReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
 
