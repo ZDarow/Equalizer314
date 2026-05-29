@@ -43,6 +43,13 @@ class EqService : Service() {
          *  so the Preset line flips immediately even when DP is off
          *  and MainActivity isn't currently bound to the service. */
         const val ACTION_NOTIFICATION_REFRESH = "com.bearinmind.equalizer314.NOTIFICATION_REFRESH"
+        /** Fired by AudioOutputActivity whenever a device binding is
+         *  added, changed, or removed. The service re-runs the route
+         *  coordinator for the currently-routed device so a binding
+         *  edit takes effect immediately on the live DP — without it
+         *  the user has to disconnect/reconnect the device or restart
+         *  the app to see the new preset apply. */
+        const val ACTION_REAPPLY_DEVICE_BINDING = "com.bearinmind.equalizer314.REAPPLY_DEVICE_BINDING"
         const val ACTION_EQ_STOPPED = "com.bearinmind.equalizer314.EQ_STOPPED"
         /** Broadcast on a successful start from the QS tile (or any
          *  other headless start path), so MainActivity can re-sync its
@@ -211,9 +218,20 @@ class EqService : Service() {
     /** Listens for RouteSwitchCoordinator's "I just applied a bound
      *  preset" broadcast and refreshes the notification so the
      *  Preset + Device lines reflect the new state without waiting
-     *  for the next volume tick. */
+     *  for the next volume tick. Also handles ACTION_NOTIFICATION_REFRESH
+     *  (preset-name pref changed) and ACTION_REAPPLY_DEVICE_BINDING
+     *  (user just edited a binding in AudioOutputActivity). */
     private val routePresetReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == ACTION_REAPPLY_DEVICE_BINDING) {
+                // Re-run the coordinator for the currently-routed
+                // device. If its binding was just edited, the new
+                // preset takes effect on live DP immediately. If the
+                // edit was for a different (non-routed) device, this
+                // is a harmless no-op (same binding, same outcome).
+                reapplyCurrentDeviceBinding()
+                return
+            }
             intent?.getStringExtra(RouteSwitchCoordinator.EXTRA_DEVICE_LABEL)?.let {
                 lastDeviceLabel = it
             }
@@ -308,6 +326,7 @@ class EqService : Service() {
                 IntentFilter().apply {
                     addAction(RouteSwitchCoordinator.ACTION_ROUTE_PRESET_APPLIED)
                     addAction(ACTION_NOTIFICATION_REFRESH)
+                    addAction(ACTION_REAPPLY_DEVICE_BINDING)
                 },
                 RECEIVER_NOT_EXPORTED
             )
@@ -322,6 +341,7 @@ class EqService : Service() {
                 IntentFilter().apply {
                     addAction(RouteSwitchCoordinator.ACTION_ROUTE_PRESET_APPLIED)
                     addAction(ACTION_NOTIFICATION_REFRESH)
+                    addAction(ACTION_REAPPLY_DEVICE_BINDING)
                 }
             )
         }
@@ -431,6 +451,7 @@ class EqService : Service() {
                         setDpRunning(true)
                         syncSystemSoundBypassFromCurrent()
                         applyPersistedMbcConfig()
+                        reapplyCurrentDeviceBinding()
                         showDpStateToast(started = true)
                         sendBroadcast(Intent(ACTION_EQ_STARTED).setPackage(packageName))
                         updateNotification()
@@ -470,6 +491,7 @@ class EqService : Service() {
                         setDpRunning(true)
                         syncSystemSoundBypassFromCurrent()
                         applyPersistedMbcConfig()
+                        reapplyCurrentDeviceBinding()
                         showDpStateToast(started = true)
                         sendBroadcast(Intent(ACTION_EQ_STARTED).setPackage(packageName))
                         updateNotification()
@@ -579,12 +601,34 @@ class EqService : Service() {
         setDpRunning(active)
         if (active) {
             syncSystemSoundBypassFromCurrent()
+            // Override the bands we just started with the bound preset
+            // for the current output device, if any. Without this the
+            // first audio frame after Power-on plays through whatever
+            // EQ was on the main screen — the route monitor's
+            // short-circuit on same-key prevents `onRouteChange` from
+            // firing again on a warm start (service was already alive),
+            // so the binding never reaches DP via the normal path.
+            reapplyCurrentDeviceBinding()
             // Flip the persistent notification from "Offline" to "Online"
             // immediately rather than waiting for the next volume-change
             // tick to repost it.
             updateNotification()
         }
         return active
+    }
+
+    /** Push the current output device's bound preset into the live DP,
+     *  if a binding exists. Used after every DP-start path (FAB / tile
+     *  / boot) to compensate for AudioRoutingMonitor short-circuiting
+     *  on same-key events — when the service was already alive and DP
+     *  was off, the monitor doesn't re-emit on Power-on, so the
+     *  coordinator never gets a chance to apply the binding. No-op when
+     *  the current device has no binding (coordinator handles that
+     *  internally with an early-return on `getDeviceBinding == null`). */
+    private fun reapplyCurrentDeviceBinding() {
+        val key = lastDeviceKey ?: return
+        val label = lastDeviceLabel ?: ""
+        routeCoordinator?.onRouteChange(AudioRoutingMonitor.RouteChange(key, label))
     }
 
     fun updateEq(eq: ParametricEqualizer) {

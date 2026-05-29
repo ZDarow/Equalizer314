@@ -364,6 +364,7 @@ class AudioOutputActivity : AppCompatActivity() {
             when {
                 pick == "(none)" -> {
                     eqPrefs.removeDeviceBinding(key)
+                    notifyBindingChanged()
                     Toast.makeText(this, "Unbound $label", Toast.LENGTH_SHORT).show()
                 }
                 pick.endsWith(" (missing)") -> {
@@ -371,6 +372,18 @@ class AudioOutputActivity : AppCompatActivity() {
                 }
                 else -> {
                     eqPrefs.saveDeviceBinding(EqPreferencesManager.Binding(key, label, pick))
+                    // This dropdown only edits the active device, so the
+                    // pick IS now the preset driving audio (or about to,
+                    // when DP starts). Write the preset name pref
+                    // directly here in addition to the broadcast — the
+                    // broadcast path runs RouteSwitchCoordinator which
+                    // also calls savePresetName, but only when
+                    // auto-switch is enabled. Writing directly here
+                    // makes the chip/notification reflect the user's
+                    // explicit binding action regardless of the
+                    // auto-switch toggle's state.
+                    eqPrefs.savePresetName(pick)
+                    notifyBindingChanged()
                     Toast.makeText(this, "Bound \"$pick\" to $label", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -514,6 +527,7 @@ class AudioOutputActivity : AppCompatActivity() {
                 when {
                     pick == "(none)" -> {
                         eqPrefs.removeDeviceBinding(key)
+                        notifyBindingChanged()
                         Toast.makeText(this@AudioOutputActivity, "Unbound $label", Toast.LENGTH_SHORT).show()
                     }
                     pick.endsWith(" (missing)") -> {
@@ -521,6 +535,15 @@ class AudioOutputActivity : AppCompatActivity() {
                     }
                     else -> {
                         eqPrefs.saveDeviceBinding(EqPreferencesManager.Binding(key, label, pick))
+                        // If this row IS the currently-active device,
+                        // make the pick take effect on the preset name
+                        // pref immediately. Mirrors the top dropdown's
+                        // behaviour and bypasses RouteSwitchCoordinator's
+                        // auto-switch gate for explicit user actions.
+                        if (key == activeKey) {
+                            eqPrefs.savePresetName(pick)
+                        }
+                        notifyBindingChanged()
                         Toast.makeText(this@AudioOutputActivity, "Bound \"$pick\" to $label", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -535,6 +558,7 @@ class AudioOutputActivity : AppCompatActivity() {
                     setOnMenuItemClickListener {
                         eqPrefs.forgetSeenDevice(key)
                         eqPrefs.removeDeviceBinding(key)
+                        notifyBindingChanged()
                         refreshDevices()
                         true
                     }
@@ -687,6 +711,17 @@ class AudioOutputActivity : AppCompatActivity() {
                 return true
             }
         })
+    }
+
+    /** Tell EqService to re-run the route coordinator for the currently-
+     *  routed device. Called after any binding add/change/remove so the
+     *  new binding takes effect on live DP immediately, instead of
+     *  waiting for a disconnect/reconnect to trigger a route change. */
+    private fun notifyBindingChanged() {
+        sendBroadcast(
+            Intent(com.bearinmind.equalizer314.audio.EqService.ACTION_REAPPLY_DEVICE_BINDING)
+                .setPackage(packageName)
+        )
     }
 
     private fun listCustomPresetNames(): List<String> {
