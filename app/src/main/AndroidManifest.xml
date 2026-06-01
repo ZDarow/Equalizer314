@@ -52,6 +52,21 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Registers Equalizer314 as an audio-effect control panel,
+                 so it appears in the system / OEM "which app handles
+                 sound effects" chooser (Samsung "Sound quality and
+                 effects", the DISPLAY_AUDIO_EFFECT_CONTROL_PANEL
+                 picker) alongside Wavelet / Poweramp / JamesDSP / etc.
+                 Picking it here launches MainActivity. When chosen as
+                 the handler, music apps that respect the global effect
+                 session route OPEN/CLOSE_AUDIO_EFFECT_CONTROL_SESSION
+                 broadcasts to us — already handled by
+                 AudioSessionReceiver. Complementary to the dumpsys
+                 detection; does not affect global session-0 DP. -->
+            <intent-filter>
+                <action android:name="android.media.action.DISPLAY_AUDIO_EFFECT_CONTROL_PANEL" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <activity
