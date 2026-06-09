@@ -1741,10 +1741,21 @@ class  MainActivity : AppCompatActivity() {
             if (editMode) {
                 val offsetY = -(editBtn.height.toFloat() + gapPx)
 
-                // Show reset, undo, redo — all pop out from edit button
+                // Show reset, undo, redo — all pop out from edit button.
                 resetBtn.visibility = android.view.View.VISIBLE
                 undoBtn.visibility = android.view.View.VISIBLE
                 redoBtn.visibility = android.view.View.VISIBLE
+                // Reset shares the slot with the EQ ON/OFF toggle (left of
+                // Edit). Bring the edit-mode buttons to the front, AND fade
+                // the ON/OFF toggle out — reset's background is transparent,
+                // so without fading the toggle's text would show through.
+                // The toggle fades back in when edit mode closes.
+                resetBtn.bringToFront()
+                undoBtn.bringToFront()
+                redoBtn.bringToFront()
+                eqPowerToggle.isClickable = false
+                eqPowerToggle.animate().alpha(0f).setDuration(200)
+                    .setInterpolator(android.view.animation.AccelerateInterpolator()).start()
                 resetBtn.alpha = 0f; resetBtn.scaleX = 0.3f; resetBtn.scaleY = 0.3f; resetBtn.translationY = offsetY
                 undoBtn.alpha = 0f; undoBtn.scaleX = 0.3f; undoBtn.scaleY = 0.3f; undoBtn.translationY = offsetY
                 redoBtn.alpha = 0f; redoBtn.scaleX = 0.3f; redoBtn.scaleY = 0.3f; redoBtn.translationY = offsetY
@@ -1771,6 +1782,11 @@ class  MainActivity : AppCompatActivity() {
                 resetBtn.animate().alpha(0f).scaleX(0.3f).scaleY(0.3f).translationY(offsetY)
                     .setDuration(200).setStartDelay(80).setInterpolator(android.view.animation.AccelerateInterpolator())
                     .withEndAction { resetBtn.visibility = android.view.View.GONE; resetBtn.translationY = 0f }.start()
+
+                // Fade the EQ ON/OFF toggle back in as the popouts collapse.
+                eqPowerToggle.animate().alpha(1f).setStartDelay(80).setDuration(220)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .withEndAction { eqPowerToggle.isClickable = true }.start()
 
                 editBtn.setBackgroundColor(0x00000000)
                 editBtn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
