@@ -11,29 +11,34 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.bearinmind.equalizer314.audio.EqService
 import com.bearinmind.equalizer314.dsp.BiquadFilter
 import com.bearinmind.equalizer314.dsp.ParametricToDpConverter
 import com.bearinmind.equalizer314.state.EqPreferencesManager
 import com.bearinmind.equalizer314.state.EqStateManager
+import com.bearinmind.equalizer314.state.EqViewModel
 import com.bearinmind.equalizer314.ui.BandToggleManager
 import com.bearinmind.equalizer314.ui.EqGraphView
 import com.bearinmind.equalizer314.ui.GraphicEqController
+import com.bearinmind.equalizer314.ui.GraphOverlayLayoutManager
 import com.bearinmind.equalizer314.ui.SimpleEqController
 import com.bearinmind.equalizer314.ui.TableEqController
-
-import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import kotlin.math.pow
+import kotlinx.coroutines.launch
 
 class  MainActivity : AppCompatActivity() {
 
@@ -41,9 +46,15 @@ class  MainActivity : AppCompatActivity() {
         private const val TAG = "Equalizer314"
     }
 
-    // State manager
-    private lateinit var stateManager: EqStateManager
-    private lateinit var eqPrefs: EqPreferencesManager
+    // ViewModel — lifecycle-aware wrapper around EqStateManager
+    private val eqViewModel: EqViewModel by lazy {
+        androidx.lifecycle.ViewModelProvider(this)[EqViewModel::class.java]
+    }
+
+    // Backward-compatible aliases so the rest of MainActivity compiles
+    // without changes. New code should prefer eqViewModel.
+    private val stateManager: EqStateManager get() = eqViewModel.stateManager
+    private val eqPrefs: EqPreferencesManager get() = eqViewModel.eqPrefs
 
     private var pendingExportText: String? = null
     // Once-per-process gate so we don't fire the POST_NOTIFICATIONS
@@ -82,6 +93,7 @@ class  MainActivity : AppCompatActivity() {
     private lateinit var tableController: TableEqController
     private lateinit var simpleEqController: SimpleEqController
     private lateinit var bandToggleManager: BandToggleManager
+    private val graphOverlayLayoutManager = GraphOverlayLayoutManager()
     private val visualizerHelper = com.bearinmind.equalizer314.audio.VisualizerHelper()
 
     private fun reloadEqFromPrefs() {
@@ -310,9 +322,6 @@ class  MainActivity : AppCompatActivity() {
             WindowInsetsCompat.CONSUMED
         }
 
-        eqPrefs = EqPreferencesManager(this)
-        stateManager = EqStateManager(this, eqPrefs)
-
         // On fresh app launch, reset power state — user must explicitly turn on
         if (savedInstanceState == null) {
             eqPrefs.savePowerState(false)
@@ -481,7 +490,7 @@ class  MainActivity : AppCompatActivity() {
     }
 
     private fun initEQ() {
-        stateManager.initEq(eqGraphView)
+        eqViewModel.init(eqGraphView)
 
         val savedPreset = eqPrefs.getPresetName()
         presetDropdown.setText(savedPreset, false)
@@ -538,166 +547,28 @@ class  MainActivity : AppCompatActivity() {
         val settingsGearBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.settingsGearButton)
         val channelLBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.channelLButton)
         val channelRBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.channelRButton)
+        val gapPx = (2 * resources.displayMetrics.density).toInt()
         val vizDensity = resources.displayMetrics.density
-        val gapPx = (2 * vizDensity).toInt()
         eqGraphView.post {
-            val viewWidth = eqGraphView.width
-            val vPadPx = 80
-            val gridLine10k = (viewWidth * 3.0 / 3.301).toInt()
-            val btnTop = gapPx
-            val btnBottom = vPadPx - gapPx
-            val btnHeight = btnBottom - btnTop
-            val specWidth = (viewWidth - gapPx) - (gridLine10k + gapPx)
-
-            // Spectrum button: between 10kHz line and right edge
-            val specLeft = gridLine10k + gapPx
-            val specLp = vizToggle.layoutParams as android.widget.FrameLayout.LayoutParams
-            specLp.width = specWidth
-            specLp.height = btnHeight
-            specLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-            specLp.leftMargin = specLeft
-            specLp.topMargin = btnTop
-            vizToggle.layoutParams = specLp
-            vizToggle.minimumWidth = 0; vizToggle.minimumHeight = 0
-            vizToggle.setPadding(0, 0, 0, 0)
-
-            // Edit button: to the left of spectrum
-            val editLeft = specLeft - gapPx - specWidth
-            val editLp = editBtn.layoutParams as android.widget.FrameLayout.LayoutParams
-            editLp.width = specWidth
-            editLp.height = btnHeight
-            editLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-            editLp.leftMargin = editLeft.coerceAtLeast(gapPx)
-            editLp.topMargin = btnTop
-            editBtn.layoutParams = editLp
-            editBtn.minimumWidth = 0; editBtn.minimumHeight = 0
-            editBtn.setPadding(0, 0, 0, 0)
-
-            // Reset button: to the left of edit
-            val resetLeft = editLeft - gapPx - specWidth
-            val resetLp = resetBtn.layoutParams as android.widget.FrameLayout.LayoutParams
-            resetLp.width = specWidth
-            resetLp.height = btnHeight
-            resetLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-            resetLp.leftMargin = resetLeft.coerceAtLeast(gapPx)
-            resetLp.topMargin = btnTop
-            resetBtn.layoutParams = resetLp
-            resetBtn.minimumWidth = 0; resetBtn.minimumHeight = 0
-            resetBtn.setPadding(0, 0, 0, 0)
-            resetBtn.visibility = android.view.View.GONE
-
-            // Undo button: below reset
-            val undoLp = undoBtn.layoutParams as android.widget.FrameLayout.LayoutParams
-            undoLp.width = specWidth
-            undoLp.height = btnHeight
-            undoLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-            undoLp.leftMargin = resetLeft.coerceAtLeast(gapPx)
-            undoLp.topMargin = btnTop + btnHeight + gapPx
-            undoBtn.layoutParams = undoLp
-            undoBtn.minimumWidth = 0; undoBtn.minimumHeight = 0
-            undoBtn.setPadding(0, 0, 0, 0)
-
-            // Redo button: below edit
-            val redoLp = redoBtn.layoutParams as android.widget.FrameLayout.LayoutParams
-            redoLp.width = specWidth
-            redoLp.height = btnHeight
-            redoLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-            redoLp.leftMargin = editLeft.coerceAtLeast(gapPx)
-            redoLp.topMargin = btnTop + btnHeight + gapPx
-            redoBtn.layoutParams = redoLp
-            redoBtn.minimumWidth = 0; redoBtn.minimumHeight = 0
-            redoBtn.setPadding(0, 0, 0, 0)
-
-            // Band points toggle: top-left, same size
-            val bpLp = bandPtsBtn.layoutParams as android.widget.FrameLayout.LayoutParams
-            bpLp.width = specWidth
-            bpLp.height = btnHeight
-            bpLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-            bpLp.leftMargin = gapPx
-            bpLp.topMargin = btnTop
-            bandPtsBtn.layoutParams = bpLp
-            bandPtsBtn.minimumWidth = 0; bandPtsBtn.minimumHeight = 0
-            bandPtsBtn.setPadding(0, 0, 0, 0)
-
-            // Save preset button: right next to eye button
-            val saveLeft = gapPx + specWidth + gapPx
-            val saveLp = saveBtn.layoutParams as android.widget.FrameLayout.LayoutParams
-            saveLp.width = specWidth
-            saveLp.height = btnHeight
-            saveLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-            saveLp.leftMargin = saveLeft
-            saveLp.topMargin = btnTop
-            saveBtn.layoutParams = saveLp
-            saveBtn.minimumWidth = 0; saveBtn.minimumHeight = 0
-            saveBtn.setPadding(0, 0, 0, 0)
-
-            // Alt-route button: right after save preset button
-            val altRouteLeft = saveLeft + specWidth + gapPx
-            val altRouteLp = altRouteBtn.layoutParams as android.widget.FrameLayout.LayoutParams
-            altRouteLp.width = specWidth
-            altRouteLp.height = btnHeight
-            altRouteLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-            altRouteLp.leftMargin = altRouteLeft
-            altRouteLp.topMargin = btnTop
-            altRouteBtn.layoutParams = altRouteLp
-            altRouteBtn.minimumWidth = 0; altRouteBtn.minimumHeight = 0
-            altRouteBtn.setPadding(0, 0, 0, 0)
-
+            graphOverlayLayoutManager.layoutButtons(
+                graphView = eqGraphView,
+                R.id.visualizerToggle to GraphOverlayLayoutManager.LayoutPosition.VISUALIZER,
+                R.id.editButton to GraphOverlayLayoutManager.LayoutPosition.EDIT,
+                R.id.resetButton to GraphOverlayLayoutManager.LayoutPosition.RESET,
+                R.id.undoButton to GraphOverlayLayoutManager.LayoutPosition.UNDO,
+                R.id.redoButton to GraphOverlayLayoutManager.LayoutPosition.REDO,
+                R.id.bandPointsToggle to GraphOverlayLayoutManager.LayoutPosition.BAND_POINTS,
+                R.id.savePresetButton to GraphOverlayLayoutManager.LayoutPosition.SAVE_PRESET,
+                R.id.altRouteButton to GraphOverlayLayoutManager.LayoutPosition.ALT_ROUTE,
+                R.id.settingsGearButton to GraphOverlayLayoutManager.LayoutPosition.SETTINGS_GEAR,
+                R.id.channelLButton to GraphOverlayLayoutManager.LayoutPosition.CHANNEL_L,
+                R.id.channelRButton to GraphOverlayLayoutManager.LayoutPosition.CHANNEL_R,
+            )
             // Mini L/R badge overlaid on the top-right of altRouteButton.
-            // "Correct" offsets tuned by hand against the Samsung Z Flip7 UI —
-            // if the user asks to revisit L/R badge positioning, these are the
-            // baseline values:
-            //   leftMargin = altRouteLeft + specWidth - badgeWidth - 6dp
-            //   topMargin  = btnTop + 5dp
-            //   translationZ = 16dp   (+ bringToFront) so it layers above the
-            //                         MaterialButton's icon drawing layer.
-            // Increasing the leftMargin dp-offset moves the badge LEFT (away
-            // from the button's right edge); decreasing it moves the badge
-            // RIGHT. Same direction convention used in prior tweaks.
             val badge = findViewById<android.widget.TextView>(R.id.altRouteChannelBadge)
-            badgeAnchorAltRouteLeft = altRouteLeft
-            badgeAnchorSpecWidth = specWidth
-            badgeAnchorBtnTop = btnTop
-            repositionChannelBadge(badge)
-            // Force the badge above the MaterialButton's drawing layer. Both
-            // translationZ and bringToFront are needed — Material components
-            // can out-Z siblings at the same elevation.
-            badge.translationZ = 16f * vizDensity
+            graphOverlayLayoutManager.repositionChannelBadge(badge)
+            badge.translationZ = 16f * resources.displayMetrics.density
             badge.bringToFront()
-
-            // Settings gear button: directly to the right of the alt-route button
-            val settingsLeft = altRouteLeft + specWidth + gapPx
-            val settingsLp = settingsGearBtn.layoutParams as android.widget.FrameLayout.LayoutParams
-            settingsLp.width = specWidth
-            settingsLp.height = btnHeight
-            settingsLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-            settingsLp.leftMargin = settingsLeft
-            settingsLp.topMargin = btnTop
-            settingsGearBtn.layoutParams = settingsLp
-            settingsGearBtn.minimumWidth = 0; settingsGearBtn.minimumHeight = 0
-            settingsGearBtn.setPadding(0, 0, 0, 0)
-
-            // L / R popout sit on row 2 directly below alt-route and settings.
-            val row2Top = btnTop + btnHeight + gapPx
-            val lLeft = altRouteLeft
-            val rLeft = settingsLeft
-
-            val lLp = channelLBtn.layoutParams as android.widget.FrameLayout.LayoutParams
-            lLp.width = specWidth; lLp.height = btnHeight
-            lLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-            lLp.leftMargin = lLeft; lLp.topMargin = row2Top
-            channelLBtn.layoutParams = lLp
-            channelLBtn.minimumWidth = 0; channelLBtn.minimumHeight = 0
-            channelLBtn.setPadding(0, 0, 0, 0)
-
-            val rLp = channelRBtn.layoutParams as android.widget.FrameLayout.LayoutParams
-            rLp.width = specWidth; rLp.height = btnHeight
-            rLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-            rLp.leftMargin = rLeft; rLp.topMargin = row2Top
-            channelRBtn.layoutParams = rLp
-            channelRBtn.minimumWidth = 0; channelRBtn.minimumHeight = 0
-            channelRBtn.setPadding(0, 0, 0, 0)
-
             refreshChannelPopoutDim()
         }
 
@@ -1987,56 +1858,20 @@ class  MainActivity : AppCompatActivity() {
             // Now that it's VISIBLE again, we need to re-layout after the view has
             // its real width.
             eqGraphView.post {
-                val viewWidth = eqGraphView.width
-                if (viewWidth <= 0) return@post
-                val vizDensity = resources.displayMetrics.density
-                val gapPx = (2 * vizDensity).toInt()
-                val vPadPx = 80
-                val gridLine10k = (viewWidth * 3.0 / 3.301).toInt()
-                val btnTop = gapPx
-                val btnHeight = vPadPx - 2 * gapPx
-                val specWidth = (viewWidth - gapPx) - (gridLine10k + gapPx)
-                val specLeft = gridLine10k + gapPx
-
-                fun reposition(btn: View, leftMargin: Int, topMargin: Int = btnTop) {
-                    val lp = btn.layoutParams as? android.widget.FrameLayout.LayoutParams ?: return
-                    lp.width = specWidth; lp.height = btnHeight
-                    lp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-                    lp.leftMargin = leftMargin; lp.topMargin = topMargin
-                    btn.layoutParams = lp
-                }
-
-                val vizToggle = findViewById<View>(R.id.visualizerToggle)
-                val editBtn = findViewById<View>(R.id.editButton)
-                val resetBtn = findViewById<View>(R.id.resetButton)
-                val undoBtn = findViewById<View>(R.id.undoButton)
-                val redoBtn = findViewById<View>(R.id.redoButton)
-                val bandPtsBtn = findViewById<View>(R.id.bandPointsToggle)
-                val saveBtn = findViewById<View>(R.id.savePresetButton)
-
-                val editLeftPx = (specLeft - gapPx - specWidth).coerceAtLeast(gapPx)
-                val resetLeftPx = (specLeft - 2 * (gapPx + specWidth)).coerceAtLeast(gapPx)
-                val row2Top = btnTop + btnHeight + gapPx
-
-                reposition(vizToggle, specLeft)
-                reposition(editBtn, editLeftPx)
-                reposition(resetBtn, resetLeftPx)
-                // Undo sits directly below reset; redo sits directly below edit
-                reposition(undoBtn, resetLeftPx, row2Top)
-                reposition(redoBtn, editLeftPx, row2Top)
-                reposition(bandPtsBtn, gapPx)
-                val saveLeftPx = gapPx + specWidth + gapPx
-                reposition(saveBtn, saveLeftPx)
-
-                // Alt-route button: after save on row 1
-                val altRouteLeftPx = saveLeftPx + specWidth + gapPx
-                reposition(findViewById(R.id.altRouteButton), altRouteLeftPx)
-                // Settings gear: right of alt-route on row 1 (popout member)
-                val settingsLeftPx = altRouteLeftPx + specWidth + gapPx
-                reposition(findViewById(R.id.settingsGearButton), settingsLeftPx)
-                // L / R popout on row 2 — L below alt-route, R below settings
-                reposition(findViewById(R.id.channelLButton), altRouteLeftPx, row2Top)
-                reposition(findViewById(R.id.channelRButton), settingsLeftPx, row2Top)
+                graphOverlayLayoutManager.layoutButtons(
+                    graphView = eqGraphView,
+                    R.id.visualizerToggle to GraphOverlayLayoutManager.LayoutPosition.VISUALIZER,
+                    R.id.editButton to GraphOverlayLayoutManager.LayoutPosition.EDIT,
+                    R.id.resetButton to GraphOverlayLayoutManager.LayoutPosition.RESET,
+                    R.id.undoButton to GraphOverlayLayoutManager.LayoutPosition.UNDO,
+                    R.id.redoButton to GraphOverlayLayoutManager.LayoutPosition.REDO,
+                    R.id.bandPointsToggle to GraphOverlayLayoutManager.LayoutPosition.BAND_POINTS,
+                    R.id.savePresetButton to GraphOverlayLayoutManager.LayoutPosition.SAVE_PRESET,
+                    R.id.altRouteButton to GraphOverlayLayoutManager.LayoutPosition.ALT_ROUTE,
+                    R.id.settingsGearButton to GraphOverlayLayoutManager.LayoutPosition.SETTINGS_GEAR,
+                    R.id.channelLButton to GraphOverlayLayoutManager.LayoutPosition.CHANNEL_L,
+                    R.id.channelRButton to GraphOverlayLayoutManager.LayoutPosition.CHANNEL_R,
+                )
             }
         }
 
@@ -3207,14 +3042,7 @@ class  MainActivity : AppCompatActivity() {
     /** Geometry cached on first layout so `repositionChannelBadge` can
      *  re-anchor the badge whenever its text changes (L vs R glyphs can
      *  differ in width at very small font sizes, and the XML placeholder
-     *  may measure slightly differently from the runtime value). */
-    private var badgeAnchorAltRouteLeft: Int = 0
-    private var badgeAnchorSpecWidth: Int = 0
-    private var badgeAnchorBtnTop: Int = 0
-
-    /** Position the L/R badge in the top-right corner of the split icon,
-     *  accounting for the badge's actual measured width so the right edge
-     *  sits a consistent 6 dp inside the button regardless of glyph width.
+     *  may measure slightly differently from the runtime value).
      *  "Correct" offsets tuned by hand against the Samsung Z Flip7 UI —
      *  if the user asks to revisit L/R badge positioning, these are the
      *  baseline values:
@@ -3222,18 +3050,6 @@ class  MainActivity : AppCompatActivity() {
      *    topMargin  = btnTop + 5 dp
      *  Increasing the leftMargin dp-offset moves the badge LEFT; decreasing
      *  it moves RIGHT. */
-    private fun repositionChannelBadge(badge: android.widget.TextView) {
-        val density = resources.displayMetrics.density
-        badge.measure(
-            android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED),
-            android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED),
-        )
-        val lp = badge.layoutParams as? android.widget.FrameLayout.LayoutParams ?: return
-        lp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-        lp.leftMargin = badgeAnchorAltRouteLeft + badgeAnchorSpecWidth - badge.measuredWidth - (6 * density).toInt()
-        lp.topMargin = badgeAnchorBtnTop + (5 * density).toInt()
-        badge.layoutParams = lp
-    }
 
     private fun paintChannelButtonStyles() {
         val enabled = eqPrefs.getChannelSideEqEnabled()
@@ -3272,7 +3088,7 @@ class  MainActivity : AppCompatActivity() {
             }
             // Re-measure and re-anchor the badge so a subtle width change
             // between "L" and "R" doesn't shove it past the button edge.
-            if (it.visibility == View.VISIBLE) repositionChannelBadge(it)
+            if (it.visibility == View.VISIBLE) graphOverlayLayoutManager.repositionChannelBadge(it)
         }
         // Swap the split-arrow for the single-branch variant when in L/R mode
         // so the icon reflects the single channel being routed.
@@ -3443,7 +3259,7 @@ class  MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         if (stateManager.serviceBound && stateManager.eqService != null) {
@@ -3452,7 +3268,7 @@ class  MainActivity : AppCompatActivity() {
             stateManager.isProcessing = false
         }
         // Check if we should show settings page
-        if (intent?.getBooleanExtra("showSettings", false) == true) {
+        if (intent.getBooleanExtra("showSettings", false)) {
             pageEq.visibility = View.GONE
             pageSettings.visibility = View.VISIBLE
             updateBottomBarHighlight(isEqPage = false)

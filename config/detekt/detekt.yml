@@ -1,0 +1,38 @@
+# Detekt configuration for Equalizer314
+# See https://detekt.dev/docs/introduction/configurations
+
+build:
+  maxIssues: 0  # Fail on any issue in CI; baseline suppresses existing ones
+
+complexity:
+  LongParameterList:
+    constructorThreshold: 8
+    functionThreshold: 8
+    ignoreDefaultParameters: true
+  LargeClass:
+    threshold: 2000
+  TooManyFunctions:
+    thresholdInFiles: 40
+    thresholdInClasses: 40
+
+style:
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    active: false
+  UnusedPrivateMember:
+    active: false
+
+potential-bugs:
+  active: true
+
+coroutines:
+  active: true
+
+exceptions:
+  active: true
+
+naming:
+  active: true
+  FunctionMaxLength:
+    active: false

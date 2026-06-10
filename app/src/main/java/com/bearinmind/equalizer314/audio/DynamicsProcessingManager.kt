@@ -269,10 +269,7 @@ class DynamicsProcessingManager {
         // Auto-gain: bring the loudest band to ≤ 0 dB. Applied as a flat
         // shift to all bands so it preserves EQ shape.
         if (autoGainEnabled) {
-            var peak = Float.NEGATIVE_INFINITY
-            for (g in leftGains) if (g > peak) peak = g
-            for (g in rightGains) if (g > peak) peak = g
-            lastAutoGainOffset = if (peak > 0f) -peak else 0f
+            lastAutoGainOffset = ChannelMath.computeAutoGainOffset(leftGains, rightGains)
             if (lastAutoGainOffset != 0f) {
                 for (i in leftGains.indices) leftGains[i] += lastAutoGainOffset
                 for (i in rightGains.indices) rightGains[i] += lastAutoGainOffset
@@ -286,7 +283,9 @@ class DynamicsProcessingManager {
         // gains. Wavelet's a6/b0.smali pattern: setInputGainbyChannel
         // (0, leftSum) and (1, rightSum). Keeps band gains as pure EQ
         // shape so DP's headroom logic doesn't compete with balance.
-        val (leftOffsetDb, rightOffsetDb) = computeChannelOffsets()
+        val (leftOffsetDb, rightOffsetDb) = ChannelMath.computeChannelOffsets(
+            channelBalancePercent, leftChannelGainDb, rightChannelGainDb,
+        )
 
         Log.d(TAG, "[DUMP] preamp=${"%.2f".format(preampGainDb)} dB, " +
             "autoGain=$autoGainEnabled (offset=${"%.2f".format(lastAutoGainOffset)} dB), " +
@@ -356,33 +355,6 @@ class DynamicsProcessingManager {
         pendingApply?.let { workerHandler.removeCallbacks(it) }
         pendingApply = job
         workerHandler.post(job)
-    }
-
-    /**
-     * Compute the flat dB offset to apply to each channel via the
-     * input-gain stage, combining per-channel preamp gain with balance
-     * attenuation.
-     *
-     * Balance semantics: the side being panned TOWARD stays at 0 dB
-     * relative to preamp; the opposite side is attenuated. Pan wins
-     * over preamp, so a fully-left pan mutes the right channel
-     * regardless of right preamp.
-     */
-    private fun computeChannelOffsets(): Pair<Float, Float> {
-        val pct = channelBalancePercent.coerceIn(-100, 100)
-        val leftBalanceDb = if (pct > 0) {
-            val ratio = ((100 - pct) / 100f).coerceAtLeast(1e-4f)
-            20f * kotlin.math.log10(ratio)
-        } else 0f
-        val rightBalanceDb = if (pct < 0) {
-            val ratio = ((100 + pct) / 100f).coerceAtLeast(1e-4f)
-            20f * kotlin.math.log10(ratio)
-        } else 0f
-        // Cap floor at -60 dB (≈ silent) to avoid feeding an extreme number to
-        // DynamicsProcessing; cap ceiling at +24 dB.
-        val left = (leftChannelGainDb + leftBalanceDb).coerceIn(-60f, 24f)
-        val right = (rightChannelGainDb + rightBalanceDb).coerceIn(-60f, 24f)
-        return Pair(left, right)
     }
 
     /** Re-apply the current EQ with fresh channel settings (balance, preamp). */

@@ -32,7 +32,7 @@ fun apoTokenToFilterType(token: String): BiquadFilter.FilterType =
 
 object AutoEqParser {
 
-    private val preampRegex = Regex("""Preamp:\s*(-?[\d.]+)\s*dB""", RegexOption.IGNORE_CASE)
+    private val preampRegex = Regex("""Preamp:\s*([-+]?[\d.]+)\s*dB""", RegexOption.IGNORE_CASE)
 
     // `Channel: L` / `Channel: R` / `Channel: L R` / `Channel: L R C` etc.
     // The capture group grabs everything after the colon; we tokenize by
