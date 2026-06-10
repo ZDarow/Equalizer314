@@ -50,6 +50,15 @@ class EqGraphView @JvmOverloads constructor(
     var verticalPadding = 80f
     // Fill the area between the EQ curve and the 0dB line with a translucent color
     var showCurveFill = false
+    // Per-band curve overlay (issue #40): draw each enabled band's
+    // individual response as a thin line + translucent fill in the
+    // band's custom color (falls back to grey), under the summed
+    // white curve — the digital-console / FabFilter look.
+    var showBandCurves = false
+        set(value) {
+            field = value
+            invalidate()
+        }
     // When true, band points are non-interactive (no dragging, no labels inside dots)
     // and drawn smaller — purely visual indicators.
     var readOnlyPoints = false
@@ -726,6 +735,67 @@ class EqGraphView @JvmOverloads constructor(
                 path.lineTo(x, y)
                 saturatedPath.lineTo(x, satY)
             }
+        }
+
+        // Per-band curves (issue #40): each enabled band's individual
+        // response as a thin colored line + translucent matching fill,
+        // drawn BEFORE the sum curve so the white line stays on top.
+        // Skipped in MBC mode (the EQ curve is already de-emphasised
+        // there) and for effectively-flat bands (0 dB bells would just
+        // re-trace the 0 line and add clutter).
+        if (showBandCurves && mbcCrossovers == null) {
+            val zeroY = vPad + graphHeight * (1f - (0f - minGain) / (maxGain - minGain))
+            val density = resources.displayMetrics.density
+            for (b in 0 until eq.getBandCount()) {
+                if (eq.getBand(b)?.enabled != true) continue
+                val bandPath = Path()
+                var started = false
+                var maxAbsDb = 0f
+                for (i in 0 until numSamples) {
+                    val x = graphWidth * i / (numSamples - 1)
+                    val logFreq = logMin + (x / graphWidth) * (logMax - logMin)
+                    val freq = 10f.pow(logFreq)
+                    val db = eq.getBandFrequencyResponse(b, freq)
+                    if (db.isNaN() || db.isInfinite()) continue
+                    if (abs(db) > maxAbsDb) maxAbsDb = abs(db)
+                    // No clamping — same convention as the white sum
+                    // curve: LP/HP cuts dive past the inner plot edge and
+                    // the canvas clips at the view bounds, so the fill
+                    // runs through the whole graph (SQ-5 style) instead
+                    // of stopping at the top/bottom gridline.
+                    val yB = vPad + graphHeight * (1f - (db - minGain) / (maxGain - minGain))
+                    if (!started) { bandPath.moveTo(x, yB); started = true }
+                    else bandPath.lineTo(x, yB)
+                }
+                if (!started || maxAbsDb < 0.1f) continue
+                val baseColor = getBandColor(b) ?: 0xFF888888.toInt()
+                val fillPath = Path(bandPath).apply {
+                    lineTo(graphWidth, zeroY)
+                    lineTo(0f, zeroY)
+                    close()
+                }
+                canvas.drawPath(fillPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = (baseColor and 0x00FFFFFF) or 0x26000000
+                    style = Paint.Style.FILL
+                })
+                canvas.drawPath(bandPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    // Dim outline — the translucent fill carries the color;
+                    // the line is just a subtle edge so it doesn't compete
+                    // with the white sum curve.
+                    color = (baseColor and 0x00FFFFFF) or 0x55000000
+                    style = Paint.Style.STROKE
+                    strokeWidth = 1.2f * density
+                })
+            }
+            // Re-draw the 0 dB reference line on top of the band fills
+            // (they just painted over the grid) — slightly brighter than
+            // the grid so the reference cuts through the colored regions,
+            // SQ-5 style.
+            canvas.drawLine(0f, zeroY, graphWidth, zeroY, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = 0xFF555555.toInt()
+                strokeWidth = 1f * density
+                style = Paint.Style.STROKE
+            })
         }
 
         // Fill between curve and 0dB line

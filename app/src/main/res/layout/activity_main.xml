@@ -195,6 +195,52 @@
                             app:strokeWidth="1dp"
                             android:contentDescription="Toggle band points" />
 
+                        <!-- View-options popout (revealed by the eye button,
+                             same animation as the edit popout). ON/OFF
+                             toggles the band-point dots; the fill icon
+                             toggles the per-band colored curves overlay. -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/bandPointsOnOffBtn"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="top|start"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:padding="0dp"
+                            android:text="ON"
+                            android:textSize="9sp"
+                            android:textAllCaps="true"
+                            android:visibility="gone"
+                            app:iconPadding="0dp"
+                            app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
+                            app:strokeColor="#FF444444"
+                            app:strokeWidth="1dp"
+                            android:contentDescription="Toggle band point visibility" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/bandFillToggle"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="top|start"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:padding="3dp"
+                            android:visibility="gone"
+                            app:icon="@drawable/ic_band_fill"
+                            app:iconGravity="textStart"
+                            app:iconPadding="0dp"
+                            app:iconTint="@null"
+                            app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
+                            app:strokeColor="#FF444444"
+                            app:strokeWidth="1dp"
+                            android:contentDescription="Toggle per-band curves" />
+
 <com.google.android.material.button.MaterialButton
                             android:id="@+id/savePresetButton"
                             style="?attr/materialButtonOutlinedStyle"

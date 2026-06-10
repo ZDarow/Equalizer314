@@ -162,6 +162,18 @@ class ParametricEqualizer(private val sampleRate: Int = 48000) {
         return 20f * kotlin.math.log10(totalMagnitude.coerceAtLeast(0.0001f))
     }
 
+    /** Response of a single band in dB at [frequency]. Used by the
+     *  graph's per-band curve overlay (issue #40) to draw each
+     *  filter's individual contribution under the summed white curve.
+     *  Returns 0 dB for an out-of-range index or a disabled band so
+     *  callers can skip drawing flat lines. */
+    fun getBandFrequencyResponse(index: Int, frequency: Float): Float {
+        val filter = filters.getOrNull(index) ?: return 0f
+        if (bands.getOrNull(index)?.enabled != true) return 0f
+        val magnitude = filter.getFrequencyResponse(frequency)
+        return 20f * kotlin.math.log10(magnitude.coerceAtLeast(0.0001f))
+    }
+
     /**
      * Returns the effective frequency response after tanh saturation,
      * assuming a 0 dBFS reference input. Normalized so flat EQ = 0 dB.

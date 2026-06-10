@@ -814,6 +814,32 @@ class  MainActivity : AppCompatActivity() {
             bandPtsBtn.minimumWidth = 0; bandPtsBtn.minimumHeight = 0
             bandPtsBtn.setPadding(0, 0, 0, 0)
 
+            // View-options popout buttons (revealed by the eye): the
+            // ON/OFF visibility toggle sits below the eye, the per-band
+            // fill toggle sits below the save button — mirroring how
+            // undo/redo sit below reset/edit on the right side.
+            val onOffBtn0 = findViewById<com.google.android.material.button.MaterialButton>(R.id.bandPointsOnOffBtn)
+            val onOffLp = onOffBtn0.layoutParams as android.widget.FrameLayout.LayoutParams
+            onOffLp.width = specWidth
+            onOffLp.height = btnHeight
+            onOffLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            onOffLp.leftMargin = gapPx
+            onOffLp.topMargin = btnTop + btnHeight + gapPx
+            onOffBtn0.layoutParams = onOffLp
+            onOffBtn0.minimumWidth = 0; onOffBtn0.minimumHeight = 0
+            onOffBtn0.setPadding(0, 0, 0, 0)
+
+            val fillBtn0 = findViewById<com.google.android.material.button.MaterialButton>(R.id.bandFillToggle)
+            val fillLp = fillBtn0.layoutParams as android.widget.FrameLayout.LayoutParams
+            fillLp.width = specWidth
+            fillLp.height = btnHeight
+            fillLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            fillLp.leftMargin = gapPx + specWidth + gapPx
+            fillLp.topMargin = btnTop + btnHeight + gapPx
+            fillBtn0.layoutParams = fillLp
+            fillBtn0.minimumWidth = 0; fillBtn0.minimumHeight = 0
+            fillBtn0.setPadding(0, 0, 0, 0)
+
             // Save preset button: right next to eye button
             val saveLeft = gapPx + specWidth + gapPx
             val saveLp = saveBtn.layoutParams as android.widget.FrameLayout.LayoutParams
@@ -1617,29 +1643,78 @@ class  MainActivity : AppCompatActivity() {
                 saveBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
             }
         }
-        // Band points toggle: active by default (points shown)
+        // Eye button: opens the view-options popout (ON/OFF visibility
+        // toggle + per-band fill toggle), animated the same way the
+        // edit button reveals reset/undo/redo. The dots-visibility
+        // toggle itself moved onto the popped-out ON/OFF button.
         var bandPointsVisible = true
-        bandPtsBtn.setBackgroundColor(0xFF555555.toInt())
-        bandPtsBtn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
-        bandPtsBtn.strokeWidth = (2 * vizDensity).toInt()
+        var bandCurvesVisible = false
+        var viewOptionsOpen = false
+        val onOffBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.bandPointsOnOffBtn)
+        val fillBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.bandFillToggle)
+
+        fun paintLit(btn: com.google.android.material.button.MaterialButton, lit: Boolean) {
+            if (lit) {
+                btn.setBackgroundColor(0xFF555555.toInt())
+                btn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
+                btn.strokeWidth = (2 * vizDensity).toInt()
+                btn.setTextColor(0xFFDDDDDD.toInt())
+                btn.iconTint = android.content.res.ColorStateList.valueOf(0xFFDDDDDD.toInt())
+            } else {
+                btn.setBackgroundColor(0x00000000)
+                btn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
+                btn.strokeWidth = (1 * vizDensity).toInt()
+                btn.setTextColor(0xFF888888.toInt())
+                btn.iconTint = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
+            }
+        }
+        // Initial state: eye dim (popout closed), points on.
+        paintLit(bandPtsBtn, false)
         bandPtsBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFFDDDDDD.toInt())
+        onOffBtn.text = "ON"
+        paintLit(onOffBtn, true)
+        paintLit(fillBtn, false)
+
         bandPtsBtn.setOnClickListener {
+            viewOptionsOpen = !viewOptionsOpen
+            val offsetY = -(bandPtsBtn.height.toFloat() + gapPx)
+            if (viewOptionsOpen) {
+                onOffBtn.visibility = android.view.View.VISIBLE
+                fillBtn.visibility = android.view.View.VISIBLE
+                onOffBtn.bringToFront(); fillBtn.bringToFront()
+                onOffBtn.alpha = 0f; onOffBtn.scaleX = 0.3f; onOffBtn.scaleY = 0.3f; onOffBtn.translationY = offsetY
+                fillBtn.alpha = 0f; fillBtn.scaleX = 0.3f; fillBtn.scaleY = 0.3f; fillBtn.translationY = offsetY
+                onOffBtn.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
+                    .setDuration(250).setInterpolator(android.view.animation.OvershootInterpolator(1.0f)).start()
+                fillBtn.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
+                    .setDuration(250).setStartDelay(40).setInterpolator(android.view.animation.OvershootInterpolator(1.0f)).start()
+                paintLit(bandPtsBtn, true)
+            } else {
+                fillBtn.animate().alpha(0f).scaleX(0.3f).scaleY(0.3f).translationY(offsetY)
+                    .setDuration(200).setInterpolator(android.view.animation.AccelerateInterpolator())
+                    .withEndAction { fillBtn.visibility = android.view.View.GONE; fillBtn.translationY = 0f }.start()
+                onOffBtn.animate().alpha(0f).scaleX(0.3f).scaleY(0.3f).translationY(offsetY)
+                    .setDuration(200).setStartDelay(40).setInterpolator(android.view.animation.AccelerateInterpolator())
+                    .withEndAction { onOffBtn.visibility = android.view.View.GONE; onOffBtn.translationY = 0f }.start()
+                paintLit(bandPtsBtn, false)
+                bandPtsBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFFDDDDDD.toInt())
+            }
+        }
+
+        // ON/OFF — toggles the band-point dots (the eye's old job).
+        onOffBtn.setOnClickListener {
             bandPointsVisible = !bandPointsVisible
             eqGraphView.showBandPoints = bandPointsVisible
             eqGraphView.invalidate()
-            if (bandPointsVisible) {
-                bandPtsBtn.setIconResource(R.drawable.ic_visibility)
-                bandPtsBtn.setBackgroundColor(0xFF555555.toInt())
-                bandPtsBtn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
-                bandPtsBtn.strokeWidth = (2 * vizDensity).toInt()
-                bandPtsBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFFDDDDDD.toInt())
-            } else {
-                bandPtsBtn.setIconResource(R.drawable.ic_visibility_off)
-                bandPtsBtn.setBackgroundColor(0x00000000)
-                bandPtsBtn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                bandPtsBtn.strokeWidth = (1 * vizDensity).toInt()
-                bandPtsBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
-            }
+            onOffBtn.text = if (bandPointsVisible) "ON" else "OFF"
+            paintLit(onOffBtn, bandPointsVisible)
+        }
+
+        // Fill — toggles the per-band colored curves overlay (issue #40).
+        fillBtn.setOnClickListener {
+            bandCurvesVisible = !bandCurvesVisible
+            eqGraphView.showBandCurves = bandCurvesVisible
+            paintLit(fillBtn, bandCurvesVisible)
         }
         // Reset button: reset EQ to flat
         resetBtn.setOnClickListener {
@@ -2301,6 +2376,10 @@ class  MainActivity : AppCompatActivity() {
                 reposition(bandPtsBtn, gapPx)
                 val saveLeftPx = gapPx + specWidth + gapPx
                 reposition(saveBtn, saveLeftPx)
+                // View-options popout: ON/OFF below the eye, fill toggle
+                // below the save button (row 2, left side).
+                reposition(findViewById(R.id.bandPointsOnOffBtn), gapPx, row2Top)
+                reposition(findViewById(R.id.bandFillToggle), saveLeftPx, row2Top)
 
                 // Alt-route button: after save on row 1
                 val altRouteLeftPx = saveLeftPx + specWidth + gapPx
