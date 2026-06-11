@@ -18,7 +18,7 @@ android {
 
     defaultConfig {
         applicationId = "com.bearinmind.equalizer314"
-        minSdk = 24
+        minSdk = 28
         targetSdk = 35
         versionCode = 8
         versionName = "0.0.8-beta"

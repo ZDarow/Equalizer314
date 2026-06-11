@@ -24,7 +24,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.bearinmind.equalizer314.audio.EqService
 import com.bearinmind.equalizer314.dsp.BiquadFilter
 import com.bearinmind.equalizer314.dsp.ParametricToDpConverter
-import com.bearinmind.equalizer314.state.EqPreferencesManager
 import com.bearinmind.equalizer314.state.EqStateManager
 import com.bearinmind.equalizer314.state.EqViewModel
 import com.bearinmind.equalizer314.ui.BandToggleManager
@@ -37,6 +36,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import java.util.Locale
 import kotlin.math.pow
 import kotlinx.coroutines.launch
 
@@ -50,11 +50,6 @@ class  MainActivity : AppCompatActivity() {
     private val eqViewModel: EqViewModel by lazy {
         androidx.lifecycle.ViewModelProvider(this)[EqViewModel::class.java]
     }
-
-    // Backward-compatible aliases so the rest of MainActivity compiles
-    // without changes. New code should prefer eqViewModel.
-    private val stateManager: EqStateManager get() = eqViewModel.stateManager
-    private val eqPrefs: EqPreferencesManager get() = eqViewModel.eqPrefs
 
     private var pendingExportText: String? = null
     // Once-per-process gate so we don't fire the POST_NOTIFICATIONS
@@ -97,18 +92,18 @@ class  MainActivity : AppCompatActivity() {
     private val visualizerHelper = com.bearinmind.equalizer314.audio.VisualizerHelper()
 
     private fun reloadEqFromPrefs() {
-        stateManager.initEq(eqGraphView)
-        stateManager.preampGainDb = eqPrefs.getPreampGain()
-        preampSlider.value = stateManager.preampGainDb.coerceIn(-12f, 12f)
-        preampText.setText(String.format("%.1f", stateManager.preampGainDb))
+        eqViewModel.syncAll()
+        eqViewModel.setPreampGain(eqViewModel.eqPrefs.getPreampGain())
+        preampSlider.value = eqViewModel.preampGainDb.value.coerceIn(-12f, 12f)
+        preampText.setText(String.format(Locale.US, "%.1f", eqViewModel.preampGainDb.value))
         eqGraphView.updateBandLevels()
         bandToggleManager.setupToggles()
-        stateManager.pushEqUpdate()
-        val preset = eqPrefs.getPresetName()
+        eqViewModel.pushEqUpdate()
+        val preset = eqViewModel.eqPrefs.getPresetName()
         presetDropdown.setText(preset, false)
         updateAutoEqStatus()
         // Re-apply current mode visibility (toggles may have been rebuilt)
-        if (stateManager.currentEqUiMode == EqUiMode.TABLE) {
+        if (eqViewModel.currentEqUiMode.value == EqUiMode.TABLE) {
             bandToggleGroup.visibility = View.GONE
             bandToggleGroup2.visibility = View.GONE
             tableController.buildTable()
@@ -130,19 +125,20 @@ class  MainActivity : AppCompatActivity() {
     private fun handlePresetReturn() {
         // Reset stale band selection — if CSE was on, selectedBandIndex may
         // point past the end of the new bothEq.
-        stateManager.selectedBandIndex = 0
+        eqViewModel.selectBand(0)
         reloadEqFromPrefs()
         rebindActiveEq()
-        if (stateManager.isProcessing) {
-            val (lEq, rEq) = stateManager.getChannelEqs()
-            stateManager.eqService?.let { svc ->
+        if (eqViewModel.isProcessing.value) {
+            val (lEq, rEq) = eqViewModel.getChannelEqs()
+            eqViewModel.eqService.value?.let { svc ->
                 svc.dynamicsManager.stop()
-                svc.dynamicsManager.start(stateManager.parametricEq)
+                svc.dynamicsManager.start(eqViewModel.parametricEq.value)
                 svc.updateEqPerChannel(lEq, rEq)
             }
         }
     }
 
+    @Suppress("UnusedPrivateProperty") // Reserved for future APO import button
     private val apoImportLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri == null) return@registerForActivityResult
         try {
@@ -163,10 +159,10 @@ class  MainActivity : AppCompatActivity() {
                     )
                 }
 
-            eqPrefs.savePreampGain(profile.preampDb)
-            eqPrefs.savePresetName(getString(R.string.msg_apo_import))
-            eqPrefs.saveAutoEqName("")
-            eqPrefs.saveAutoEqSource("")
+            eqViewModel.eqPrefs.savePreampGain(profile.preampDb)
+            eqViewModel.eqPrefs.savePresetName(getString(R.string.msg_apo_import))
+            eqViewModel.eqPrefs.saveAutoEqName("")
+            eqViewModel.eqPrefs.saveAutoEqSource("")
 
             if (profile.perChannel) {
                 // Fork into L/R editors and flip Channel Side EQ on.
@@ -175,7 +171,7 @@ class  MainActivity : AppCompatActivity() {
                 // bothBands falls back to the combined flat list in case the
                 // user later turns CSE off.
                 val bothSpecs = toBandSpecs(profile.filters)
-                stateManager.applyPresetEqs(
+                eqViewModel.applyPresetEqs(
                     cseEnabled = true,
                     bothBands = bothSpecs,
                     leftBands = leftSpecs,
@@ -184,13 +180,13 @@ class  MainActivity : AppCompatActivity() {
                 // Persist L's bands as the main "bands" state + both L and R
                 // under their own prefs keys so the divergence survives a
                 // process restart.
-                eqPrefs.saveState(stateManager.parametricEq, (0 until stateManager.parametricEq.getBandCount()).toList())
-                stateManager.persistLeftRightIfCse()
-                if (stateManager.isProcessing) {
-                    val (lEq, rEq) = stateManager.getChannelEqs()
-                    stateManager.eqService?.let { svc ->
+                eqViewModel.eqPrefs.saveState(eqViewModel.parametricEq.value, (0 until eqViewModel.parametricEq.value.getBandCount()).toList())
+                eqViewModel.persistLeftRightIfCse()
+                if (eqViewModel.isProcessing.value) {
+                    val (lEq, rEq) = eqViewModel.getChannelEqs()
+                    eqViewModel.eqService.value?.let { svc ->
                         svc.dynamicsManager.stop()
-                        svc.dynamicsManager.start(stateManager.parametricEq)
+                        svc.dynamicsManager.start(eqViewModel.parametricEq.value)
                         svc.updateEqPerChannel(lEq, rEq)
                     }
                 }
@@ -205,15 +201,15 @@ class  MainActivity : AppCompatActivity() {
                 // Flat single-channel preset — CSE off, single EQ.
                 // Reset stale band selection — CSE-on may have left
                 // selectedBandIndex pointing past the end of the new bothEq.
-                stateManager.selectedBandIndex = 0
+                eqViewModel.selectBand(0)
                 val specs = toBandSpecs(profile.filters)
-                stateManager.applyPresetEqs(
+                eqViewModel.applyPresetEqs(
                     cseEnabled = false,
                     bothBands = specs,
                     leftBands = specs,
                     rightBands = specs,
                 )
-                eqPrefs.saveState(stateManager.parametricEq, (0 until stateManager.parametricEq.getBandCount()).toList())
+                eqViewModel.eqPrefs.saveState(eqViewModel.parametricEq.value, (0 until eqViewModel.parametricEq.value.getBandCount()).toList())
                 reloadEqFromPrefs()
                 // Force a full active-EQ rebind so the graph / band toggles /
                 // input widgets retarget bothEq when CSE was previously on.
@@ -223,11 +219,11 @@ class  MainActivity : AppCompatActivity() {
                 // If DP is running, it was bound to leftEq/rightEq — push the
                 // new bothEq to both channels so audio matches the displayed
                 // EQ immediately instead of after the next interaction.
-                if (stateManager.isProcessing) {
-                    val (lEq, rEq) = stateManager.getChannelEqs()
-                    stateManager.eqService?.let { svc ->
+                if (eqViewModel.isProcessing.value) {
+                    val (lEq, rEq) = eqViewModel.getChannelEqs()
+                    eqViewModel.eqService.value?.let { svc ->
                         svc.dynamicsManager.stop()
-                        svc.dynamicsManager.start(stateManager.parametricEq)
+                        svc.dynamicsManager.start(eqViewModel.parametricEq.value)
                         svc.updateEqPerChannel(lEq, rEq)
                     }
                 }
@@ -299,11 +295,11 @@ class  MainActivity : AppCompatActivity() {
     // Listen for EQ stopped from notification "Turn Off" button
     private val eqStoppedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            stateManager.isProcessing = false
-            stateManager.eqService = null
-            if (stateManager.serviceBound) {
-                try { unbindService(stateManager.serviceConnection) } catch (_: Exception) {}
-                stateManager.serviceBound = false
+            eqViewModel.stateManager.isProcessing = false
+            eqViewModel.stateManager.eqService = null
+            if (eqViewModel.serviceBound.value) {
+                try { unbindService(eqViewModel.stateManager.serviceConnection) } catch (_: Exception) {}
+                eqViewModel.stateManager.serviceBound = false
             }
             animatePowerFab(false)
             showPowerSnackbar(false)
@@ -324,15 +320,15 @@ class  MainActivity : AppCompatActivity() {
 
         // On fresh app launch, reset power state — user must explicitly turn on
         if (savedInstanceState == null) {
-            eqPrefs.savePowerState(false)
-            stateManager.pendingStartEq = false
+            eqViewModel.eqPrefs.savePowerState(false)
+            eqViewModel.stateManager.pendingStartEq = false
             // Also re-lock the Experimental settings on every fresh launch
-            eqPrefs.saveExperimentalUnlocked(false)
+            eqViewModel.eqPrefs.saveExperimentalUnlocked(false)
             // Force Experimental DSP options to safe defaults (currently disabled
             // in the UI; see ExperimentalActivity). Overwrite anything a user may
             // have saved in a previous build.
-            eqPrefs.saveDpBandCount(128)
-            eqPrefs.saveAutoGainEnabled(false)
+            eqViewModel.eqPrefs.saveDpBandCount(128)
+            eqViewModel.eqPrefs.saveAutoGainEnabled(false)
         }
 
         initViews()
@@ -341,21 +337,15 @@ class  MainActivity : AppCompatActivity() {
         syncPreampUI()
         setupListeners()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(
-                eqStoppedReceiver,
-                IntentFilter(EqService.ACTION_EQ_STOPPED),
-                RECEIVER_NOT_EXPORTED
-            )
-        } else {
-            registerReceiver(
-                eqStoppedReceiver,
-                IntentFilter(EqService.ACTION_EQ_STOPPED)
-            )
-        }
+        ContextCompat.registerReceiver(
+            this,
+            eqStoppedReceiver,
+            IntentFilter(EqService.ACTION_EQ_STOPPED),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
-        val savedMode = try { EqUiMode.valueOf(eqPrefs.getEqUiMode()) } catch (_: Exception) { EqUiMode.PARAMETRIC }
-        val effectiveMode = if (eqPrefs.getSimpleEqEnabled()) EqUiMode.SIMPLE else savedMode
+        val savedMode = try { EqUiMode.valueOf(eqViewModel.eqPrefs.getEqUiMode()) } catch (_: Exception) { EqUiMode.PARAMETRIC }
+        val effectiveMode = if (eqViewModel.eqPrefs.getSimpleEqEnabled()) EqUiMode.SIMPLE else savedMode
         switchEqUiMode(effectiveMode)
         // Ensure rows are properly ordered after views are laid out
         pageEq.post { reorderToggleRows(animate = false) }
@@ -416,7 +406,7 @@ class  MainActivity : AppCompatActivity() {
         presetDropdown.setAdapter(adapter)
         presetDropdown.setText("Flat", false)
 
-        val savedBandCount = eqPrefs.getDpBandCount().coerceIn(128, 1024)
+        val savedBandCount = eqViewModel.eqPrefs.getDpBandCount().coerceIn(128, 1024)
         ParametricToDpConverter.setNumBands(savedBandCount)
         dpBandCountSlider.value = savedBandCount.toFloat()
         dpBandCountText.setText(savedBandCount.toString())
@@ -428,24 +418,24 @@ class  MainActivity : AppCompatActivity() {
 
     /** Called after initEQ() to sync preamp UI with restored state */
     private fun syncPreampUI() {
-        preampSlider.value = stateManager.preampGainDb.coerceIn(-12f, 12f)
-        preampText.setText(String.format("%.1f", stateManager.preampGainDb))
-        autoGainSwitch.isChecked = stateManager.autoGainEnabled
+        preampSlider.value = eqViewModel.preampGainDb.value.coerceIn(-12f, 12f)
+        preampText.setText(String.format(Locale.US, "%.1f", eqViewModel.preampGainDb.value))
+        autoGainSwitch.isChecked = eqViewModel.autoGainEnabled.value
         updateAutoGainOffsetText()
     }
 
     private fun initControllers() {
         val onEqChanged = {
-            stateManager.pushEqUpdate()
+            eqViewModel.pushEqUpdate()
         }
 
         val onBandCountChanged = {
             onEqChanged()
             bandToggleManager.updateIcons()
             setupFilterTypeButtons()
-            stateManager.selectedBandIndex?.let { updateFilterTypeButtons(it) }
-            if (stateManager.currentEqUiMode == EqUiMode.TABLE) tableController.buildTable()
-            if (stateManager.currentEqUiMode == EqUiMode.GRAPHIC) graphicController.buildSliders(graphicController.targetCardHeight)
+            eqViewModel.selectedBandIndex.value?.let { updateFilterTypeButtons(it) }
+            if (eqViewModel.currentEqUiMode.value == EqUiMode.TABLE) tableController.buildTable()
+            if (eqViewModel.currentEqUiMode.value == EqUiMode.GRAPHIC) graphicController.buildSliders(graphicController.targetCardHeight)
             reorderToggleRows()
         }
 
@@ -453,38 +443,38 @@ class  MainActivity : AppCompatActivity() {
             updateFilterTypeButtons(bandIndex)
             updateBandInputs(bandIndex)
             // In graphic mode, rebuild sliders if we switched to a different page
-            if (stateManager.currentEqUiMode == EqUiMode.GRAPHIC && graphicController.updatePageForBand(bandIndex)) {
+            if (eqViewModel.currentEqUiMode.value == EqUiMode.GRAPHIC && graphicController.updatePageForBand(bandIndex)) {
                 graphicController.buildSliders(graphicController.targetCardHeight)
             }
             reorderToggleRows()
         }
 
         graphicController = GraphicEqController(
-            this, graphicSlidersContainer, eqGraphView, stateManager,
+            this, graphicSlidersContainer, eqGraphView, eqViewModel.stateManager,
             onEqChanged, onBandCountChanged
         )
         graphicController.onColorChanged = {
-            bandToggleManager.updateSelection(stateManager.selectedBandIndex)
+            bandToggleManager.updateSelection(eqViewModel.selectedBandIndex.value)
         }
 
         tableController = TableEqController(
-            this, tableEqRowContainer, eqGraphView, stateManager, onEqChanged
+            this, tableEqRowContainer, eqGraphView, eqViewModel.stateManager, onEqChanged
         )
 
         simpleEqController = SimpleEqController(
-            this, simpleEqContainer, stateManager, eqPrefs, onEqChanged
+            this, simpleEqContainer, eqViewModel.stateManager, eqViewModel.eqPrefs, onEqChanged
         )
 
         bandToggleManager = BandToggleManager(
-            this, bandToggleGroup, bandToggleGroup2, triangleIndicator, eqGraphView, stateManager,
+            this, bandToggleGroup, bandToggleGroup2, triangleIndicator, eqGraphView, eqViewModel.stateManager,
             onEqChanged, onBandCountChanged, onBandSelected
         )
 
         // Wire state manager callbacks
-        stateManager.onProcessingChanged = { active ->
+        eqViewModel.stateManager.onProcessingChanged = { active ->
             animatePowerFab(active)
         }
-        stateManager.onServiceConnected = {
+        eqViewModel.stateManager.onServiceConnected = {
             doStartEq()
         }
     }
@@ -492,7 +482,7 @@ class  MainActivity : AppCompatActivity() {
     private fun initEQ() {
         eqViewModel.init(eqGraphView)
 
-        val savedPreset = eqPrefs.getPresetName()
+        val savedPreset = eqViewModel.eqPrefs.getPresetName()
         presetDropdown.setText(savedPreset, false)
 
         updateEqToggleUI()
@@ -500,9 +490,9 @@ class  MainActivity : AppCompatActivity() {
         bandToggleManager.setupToggles()
 
         // Always have a band selected in parametric mode
-        if (stateManager.currentEqUiMode == EqUiMode.PARAMETRIC && stateManager.parametricEq.getBandCount() > 0) {
-            val defaultBand = stateManager.selectedBandIndex ?: 0
-            stateManager.selectedBandIndex = defaultBand
+        if (eqViewModel.currentEqUiMode.value == EqUiMode.PARAMETRIC && eqViewModel.parametricEq.value.getBandCount() > 0) {
+            val defaultBand = eqViewModel.selectedBandIndex.value ?: 0
+            eqViewModel.selectBand(defaultBand)
             eqGraphView.setActiveBand(defaultBand)
             updateFilterTypeButtons(defaultBand)
             updateBandInputs(defaultBand)
@@ -532,7 +522,7 @@ class  MainActivity : AppCompatActivity() {
             overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
         }
         powerFab.setOnClickListener {
-            if (stateManager.isProcessing) stopProcessing() else startProcessing()
+            if (eqViewModel.isProcessing.value) stopProcessing() else startProcessing()
         }
 
         // Visualizer toggle + Edit + Reset + Undo/Redo + Band points toggle + Save preset
@@ -582,7 +572,7 @@ class  MainActivity : AppCompatActivity() {
             if (channelPopoutOpen) {
                 val offsetY = -(altRouteBtn.height.toFloat() + gapPx)
                 // L and R are dimmed when Channel Side EQ is off, bright when on.
-                val lrAlpha = if (eqPrefs.getChannelSideEqEnabled()) 1.0f else 0.4f
+                val lrAlpha = if (eqViewModel.eqPrefs.getChannelSideEqEnabled()) 1.0f else 0.4f
                 // Paint pressed/outlined styles first so the buttons fade in
                 // already reflecting the active channel.
                 paintChannelButtonStyles()
@@ -620,15 +610,15 @@ class  MainActivity : AppCompatActivity() {
         // Only effective while Channel Side EQ is enabled; dimmed and no-op
         // otherwise. Tapping the currently-active channel is a no-op too.
         channelLBtn.setOnClickListener {
-            if (!eqPrefs.getChannelSideEqEnabled()) return@setOnClickListener
-            if (stateManager.activeChannel == EqStateManager.ActiveChannel.LEFT) return@setOnClickListener
-            stateManager.setActiveChannel(EqStateManager.ActiveChannel.LEFT)
+            if (!eqViewModel.eqPrefs.getChannelSideEqEnabled()) return@setOnClickListener
+            if (eqViewModel.activeChannel.value == EqStateManager.ActiveChannel.LEFT) return@setOnClickListener
+            eqViewModel.setActiveChannel(EqStateManager.ActiveChannel.LEFT)
             rebindActiveEq()
         }
         channelRBtn.setOnClickListener {
-            if (!eqPrefs.getChannelSideEqEnabled()) return@setOnClickListener
-            if (stateManager.activeChannel == EqStateManager.ActiveChannel.RIGHT) return@setOnClickListener
-            stateManager.setActiveChannel(EqStateManager.ActiveChannel.RIGHT)
+            if (!eqViewModel.eqPrefs.getChannelSideEqEnabled()) return@setOnClickListener
+            if (eqViewModel.activeChannel.value == EqStateManager.ActiveChannel.RIGHT) return@setOnClickListener
+            eqViewModel.setActiveChannel(EqStateManager.ActiveChannel.RIGHT)
             rebindActiveEq()
         }
 
@@ -764,8 +754,8 @@ class  MainActivity : AppCompatActivity() {
                 saveDialogBtn.setOnClickListener {
                     val name = input.text.toString().trim().ifEmpty { defaultName }
                     if (name.isNotEmpty()) {
-                        stateManager.eqPrefs.saveState(stateManager.parametricEq)
-                        stateManager.persistLeftRightIfCse()
+                        eqViewModel.eqPrefs.saveState(eqViewModel.parametricEq.value)
+                        eqViewModel.persistLeftRightIfCse()
                         fun serialize(eq: com.bearinmind.equalizer314.dsp.ParametricEqualizer): org.json.JSONArray {
                             val arr = org.json.JSONArray()
                             for (b in eq.getAllBands()) {
@@ -780,19 +770,19 @@ class  MainActivity : AppCompatActivity() {
                             return arr
                         }
                         val json = org.json.JSONObject()
-                        json.put("preamp", stateManager.preampGainDb)
-                        val cseOn = eqPrefs.getChannelSideEqEnabled()
+                        json.put("preamp", eqViewModel.preampGainDb.value)
+                        val cseOn = eqViewModel.eqPrefs.getChannelSideEqEnabled()
                         json.put("channelSideEqEnabled", cseOn)
                         if (cseOn) {
-                            val (lEq, rEq) = stateManager.getChannelEqs()
+                            val (lEq, rEq) = eqViewModel.getChannelEqs()
                             json.put("leftBands", serialize(lEq))
                             json.put("rightBands", serialize(rEq))
                             // Back-compat: also write the currently-active EQ
                             // under the legacy "bands" key so older builds
                             // still see something.
-                            json.put("bands", serialize(stateManager.parametricEq))
+                            json.put("bands", serialize(eqViewModel.parametricEq.value))
                         } else {
-                            json.put("bands", serialize(stateManager.parametricEq))
+                            json.put("bands", serialize(eqViewModel.parametricEq.value))
                         }
                         prefs.edit()
                             .putString("preset_$name", json.toString())
@@ -1173,22 +1163,22 @@ class  MainActivity : AppCompatActivity() {
                     val bothBands = if (obj.has("bands")) parseBands(obj.getJSONArray("bands")) else emptyList()
                     val leftBands = if (obj.has("leftBands")) parseBands(obj.getJSONArray("leftBands")) else bothBands
                     val rightBands = if (obj.has("rightBands")) parseBands(obj.getJSONArray("rightBands")) else bothBands
-                    stateManager.applyPresetEqs(cseOn, bothBands, leftBands, rightBands)
+                    eqViewModel.applyPresetEqs(cseOn, bothBands, leftBands, rightBands)
 
-                    eqGraphView.setParametricEqualizer(stateManager.parametricEq)
-                    stateManager.eqPrefs.saveState(stateManager.parametricEq)
-                    stateManager.persistLeftRightIfCse()
-                    stateManager.initBandSlots()
+                    eqGraphView.setParametricEqualizer(eqViewModel.parametricEq.value)
+                    eqViewModel.eqPrefs.saveState(eqViewModel.parametricEq.value)
+                    eqViewModel.persistLeftRightIfCse()
+                    eqViewModel.initBandSlots()
                     bandToggleManager.setupToggles()
                     if (obj.has("preamp")) {
-                        stateManager.preampGainDb = obj.getDouble("preamp").toFloat()
-                        stateManager.eqPrefs.savePreampGain(stateManager.preampGainDb)
+                        eqViewModel.setPreampGain(obj.getDouble("preamp").toFloat())
+                        eqViewModel.eqPrefs.savePreampGain(eqViewModel.preampGainDb.value)
                     }
-                    if (stateManager.isProcessing) {
-                        val (lEq, rEq) = stateManager.getChannelEqs()
-                        stateManager.eqService?.let { svc ->
+                    if (eqViewModel.isProcessing.value) {
+                        val (lEq, rEq) = eqViewModel.getChannelEqs()
+                        eqViewModel.eqService.value?.let { svc ->
                             svc.dynamicsManager.stop()
-                            svc.dynamicsManager.start(stateManager.parametricEq)
+                            svc.dynamicsManager.start(eqViewModel.parametricEq.value)
                             svc.updateEqPerChannel(lEq, rEq)
                         }
                     }
@@ -1330,21 +1320,21 @@ class  MainActivity : AppCompatActivity() {
                 .create()
             cancelBtn.setOnClickListener { dialog.dismiss() }
             resetDialogBtn.setOnClickListener {
-                val eq = stateManager.parametricEq ?: return@setOnClickListener
+                val eq = eqViewModel.parametricEq.value
                 eq.clearBands()
                 val defaultFreqs = com.bearinmind.equalizer314.dsp.ParametricEqualizer.logSpacedFrequencies(16)
                 for (i in 0..3) {
                     eq.addBand(defaultFreqs[i], 0f, com.bearinmind.equalizer314.dsp.BiquadFilter.FilterType.BELL)
                 }
                 eqGraphView.setParametricEqualizer(eq)
-                stateManager.eqPrefs.saveState(eq)
+                eqViewModel.eqPrefs.saveState(eq)
                 // Reset wipes the shared EQ — drop any stored L/R divergence
                 // so re-enabling CSE forks from the fresh defaults.
-                stateManager.eqPrefs.clearLeftRightBands()
-                stateManager.initBandSlots()
+                eqViewModel.eqPrefs.clearLeftRightBands()
+                eqViewModel.initBandSlots()
                 bandToggleManager.setupToggles()
-                if (stateManager.isProcessing) {
-                    stateManager.eqService?.let { svc ->
+                if (eqViewModel.isProcessing.value) {
+                    eqViewModel.eqService.value?.let { svc ->
                         svc.dynamicsManager.stop()
                         svc.dynamicsManager.start(eq)
                     }
@@ -1403,7 +1393,7 @@ class  MainActivity : AppCompatActivity() {
         val eqHistory = mutableListOf<String>()
         var historyIndex = -1
         fun saveEqState() {
-            val eq = stateManager.parametricEq
+            val eq = eqViewModel.parametricEq.value
             val json = org.json.JSONObject()
             val bands = org.json.JSONArray()
             for (b in eq.getAllBands()) {
@@ -1420,7 +1410,7 @@ class  MainActivity : AppCompatActivity() {
             historyIndex = eqHistory.size - 1
         }
         fun restoreEqState(jsonStr: String) {
-            val eq = stateManager.parametricEq
+            val eq = eqViewModel.parametricEq.value
             val obj = org.json.JSONObject(jsonStr)
             val bandsArr = obj.getJSONArray("bands")
             eq.clearBands()
@@ -1432,12 +1422,12 @@ class  MainActivity : AppCompatActivity() {
                 if (bj.has("enabled")) eq.setBandEnabled(i, bj.getBoolean("enabled"))
             }
             eqGraphView.setParametricEqualizer(eq)
-            stateManager.eqPrefs.saveState(eq)
-            stateManager.persistLeftRightIfCse()
-            stateManager.initBandSlots()
+            eqViewModel.eqPrefs.saveState(eq)
+            eqViewModel.persistLeftRightIfCse()
+            eqViewModel.initBandSlots()
             bandToggleManager.setupToggles()
-            if (stateManager.isProcessing) {
-                stateManager.eqService?.let { svc -> svc.dynamicsManager.stop(); svc.dynamicsManager.start(eq) }
+            if (eqViewModel.isProcessing.value) {
+                eqViewModel.eqService.value?.let { svc -> svc.dynamicsManager.stop(); svc.dynamicsManager.start(eq) }
             }
         }
         // Save initial state
@@ -1472,7 +1462,7 @@ class  MainActivity : AppCompatActivity() {
             }
         }
         // Restore spectrum state from preferences
-        if (eqPrefs.getSpectrumEnabled() &&
+        if (eqViewModel.eqPrefs.getSpectrumEnabled() &&
             checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
             == android.content.pm.PackageManager.PERMISSION_GRANTED) {
             visualizerHelper.start(eqGraphView)
@@ -1487,7 +1477,7 @@ class  MainActivity : AppCompatActivity() {
                 eqGraphView.spectrumRenderer = null
                 eqGraphView.invalidate()
                 updateVizToggleStyle(false)
-                eqPrefs.saveSpectrumEnabled(false)
+                eqViewModel.eqPrefs.saveSpectrumEnabled(false)
             } else {
                 if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
                     != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -1497,31 +1487,31 @@ class  MainActivity : AppCompatActivity() {
                 visualizerHelper.start(eqGraphView)
                 eqGraphView.spectrumRenderer = visualizerHelper.renderer
                 updateVizToggleStyle(true)
-                eqPrefs.saveSpectrumEnabled(true)
+                eqViewModel.eqPrefs.saveSpectrumEnabled(true)
             }
         }
         powerButton.setOnClickListener {
-            if (stateManager.isProcessing) stopProcessing() else startProcessing()
+            if (eqViewModel.isProcessing.value) stopProcessing() else startProcessing()
         }
 
         // EQ toggle
         eqToggleButton.setOnClickListener {
-            val eq = stateManager.parametricEq
+            val eq = eqViewModel.parametricEq.value
             eq.isEnabled = !eq.isEnabled
             updateEqToggleUI()
-            if (stateManager.isProcessing) {
-                stateManager.eqService?.setEqEnabled(eq.isEnabled)
+            if (eqViewModel.isProcessing.value) {
+                eqViewModel.eqService.value?.setEqEnabled(eq.isEnabled)
             }
         }
 
         // Preset dropdown
         presetDropdown.setOnItemClickListener { parent, _, position, _ ->
             val presetName = parent.getItemAtPosition(position) as? String ?: return@setOnItemClickListener
-            stateManager.loadPreset(presetName, eqGraphView)
+            eqViewModel.loadPreset(presetName, eqGraphView)
             presetDropdown.setText(presetName, false)
             bandToggleManager.updateIcons()
-            if (stateManager.currentEqUiMode == EqUiMode.TABLE) tableController.buildTable()
-            if (stateManager.currentEqUiMode == EqUiMode.GRAPHIC) graphicController.buildSliders(graphicController.targetCardHeight)
+            if (eqViewModel.currentEqUiMode.value == EqUiMode.TABLE) tableController.buildTable()
+            if (eqViewModel.currentEqUiMode.value == EqUiMode.GRAPHIC) graphicController.buildSliders(graphicController.targetCardHeight)
         }
 
         // Graph callbacks
@@ -1529,7 +1519,7 @@ class  MainActivity : AppCompatActivity() {
             bandToggleManager.updateSelection(bandIndex)
             updateFilterTypeButtons(bandIndex)
             updateBandInputs(bandIndex)
-            if (stateManager.currentEqUiMode == EqUiMode.GRAPHIC && graphicController.updatePageForBand(bandIndex)) {
+            if (eqViewModel.currentEqUiMode.value == EqUiMode.GRAPHIC && graphicController.updatePageForBand(bandIndex)) {
                 graphicController.buildSliders(graphicController.targetCardHeight)
             }
             reorderToggleRows()
@@ -1539,13 +1529,13 @@ class  MainActivity : AppCompatActivity() {
             // Throttle DP writes during drag — each ACTION_MOVE would otherwise
             // trigger a full Pre-EQ rewrite on the audio thread. The drag-end
             // listener flushes the final value.
-            stateManager.pushEqUpdateThrottled()
+            eqViewModel.pushEqUpdateThrottled()
             updateBandInputs(bandIndex)
-            if (stateManager.currentEqUiMode == EqUiMode.TABLE) tableController.buildTable()
-            if (stateManager.currentEqUiMode == EqUiMode.GRAPHIC) graphicController.updateSliderValues()
+            if (eqViewModel.currentEqUiMode.value == EqUiMode.TABLE) tableController.buildTable()
+            if (eqViewModel.currentEqUiMode.value == EqUiMode.GRAPHIC) graphicController.updateSliderValues()
         }
 
-        eqGraphView.onBandDragEndListener = { stateManager.flushEqUpdate() }
+        eqGraphView.onBandDragEndListener = { eqViewModel.flushEqUpdate() }
 
         eqGraphView.onLongPressListener = { showPresetsBottomSheet() }
 
@@ -1559,8 +1549,8 @@ class  MainActivity : AppCompatActivity() {
             val count = value.toInt()
             dpBandCountText.setText(count.toString())
             ParametricToDpConverter.setNumBands(count)
-            eqPrefs.saveDpBandCount(count)
-            stateManager.pushEqUpdate()
+            eqViewModel.eqPrefs.saveDpBandCount(count)
+            eqViewModel.pushEqUpdate()
         }
 
         dpBandCountText.setOnEditorActionListener { _, actionId, _ ->
@@ -1569,8 +1559,8 @@ class  MainActivity : AppCompatActivity() {
                 dpBandCountText.setText(count.toString())
                 dpBandCountSlider.value = count.toFloat()
                 ParametricToDpConverter.setNumBands(count)
-                eqPrefs.saveDpBandCount(count)
-                stateManager.pushEqUpdate()
+                eqViewModel.eqPrefs.saveDpBandCount(count)
+                eqViewModel.pushEqUpdate()
                 dpBandCountText.clearFocus()
             }
             true
@@ -1593,10 +1583,10 @@ class  MainActivity : AppCompatActivity() {
     // ---- Settings ----
 
     private fun updateAutoEqStatus() {
-        val name = eqPrefs.getAutoEqName()
+        val name = eqViewModel.eqPrefs.getAutoEqName()
         val statusText = findViewById<TextView>(R.id.autoEqStatusText)
         if (!name.isNullOrBlank()) {
-            val source = eqPrefs.getAutoEqSource() ?: ""
+            val source = eqViewModel.eqPrefs.getAutoEqSource() ?: ""
             statusText.text = "$name by $source"
             statusText.setTextColor(com.google.android.material.color.MaterialColors.getColor(
                 statusText, com.google.android.material.R.attr.colorPrimary, 0xFFBB86FC.toInt()))
@@ -1608,10 +1598,10 @@ class  MainActivity : AppCompatActivity() {
     }
 
     private fun updateTargetStatus() {
-        val name = eqPrefs.getSelectedTargetName()
+        val name = eqViewModel.eqPrefs.getSelectedTargetName()
         val statusText = findViewById<TextView>(R.id.targetStatusText)
         if (!name.isNullOrBlank()) {
-            val type = eqPrefs.getSelectedTargetType() ?: ""
+            val type = eqViewModel.eqPrefs.getSelectedTargetType() ?: ""
             statusText.text = if (type.isNotBlank()) "$name \u00B7 $type" else name
             statusText.setTextColor(com.google.android.material.color.MaterialColors.getColor(
                 statusText, com.google.android.material.R.attr.colorPrimary, 0xFFBB86FC.toInt()))
@@ -1632,26 +1622,25 @@ class  MainActivity : AppCompatActivity() {
     private fun applySpectrumSettings() {
         val ppoValues = intArrayOf(1, 2, 3, 6, 12, 24, 48, 96)
         val renderer = visualizerHelper.renderer
-        val eqPrefs = stateManager.eqPrefs
-        if (eqPrefs.getPpoEnabled()) {
-            renderer.ppoSmoothing = ppoValues[eqPrefs.getPpoIndex().coerceIn(0, 7)]
+        if (eqViewModel.eqPrefs.getPpoEnabled()) {
+            renderer.ppoSmoothing = ppoValues[eqViewModel.eqPrefs.getPpoIndex().coerceIn(0, 7)]
         } else {
             renderer.ppoSmoothing = 0
         }
-        renderer.setSpectrumColor(eqPrefs.getSpectrumColor())
-        renderer.releaseAlpha = eqPrefs.getSpectrumRelease()
+        renderer.setSpectrumColor(eqViewModel.eqPrefs.getSpectrumColor())
+        renderer.releaseAlpha = eqViewModel.eqPrefs.getSpectrumRelease()
     }
 
     private fun setupSettingsListeners() {
         // Simple EQ toggle (settings page)
         val simpleEqSwitch = findViewById<com.google.android.material.materialswitch.MaterialSwitch>(R.id.simpleEqSwitch)
-        simpleEqSwitch.isChecked = eqPrefs.getSimpleEqEnabled()
+        simpleEqSwitch.isChecked = eqViewModel.eqPrefs.getSimpleEqEnabled()
         simpleEqSwitch.setOnCheckedChangeListener { _, isChecked ->
-            eqPrefs.saveSimpleEqEnabled(isChecked)
-            if (isChecked && stateManager.currentEqUiMode != EqUiMode.SIMPLE) {
+            eqViewModel.eqPrefs.saveSimpleEqEnabled(isChecked)
+            if (isChecked && eqViewModel.currentEqUiMode.value == EqUiMode.SIMPLE) {
                 switchEqUiMode(EqUiMode.SIMPLE)
-            } else if (!isChecked && stateManager.currentEqUiMode == EqUiMode.SIMPLE) {
-                val fallback = try { EqUiMode.valueOf(eqPrefs.getEqUiMode()) } catch (_: Exception) { EqUiMode.PARAMETRIC }
+            } else if (!isChecked && eqViewModel.currentEqUiMode.value == EqUiMode.SIMPLE) {
+                val fallback = try { EqUiMode.valueOf(eqViewModel.eqPrefs.getEqUiMode()) } catch (_: Exception) { EqUiMode.PARAMETRIC }
                 switchEqUiMode(fallback)
             }
         }
@@ -1679,7 +1668,7 @@ class  MainActivity : AppCompatActivity() {
         val experimentalLockButton = findViewById<ImageButton>(R.id.experimentalLockButton)
         val experimentalCard = findViewById<View>(R.id.experimentalCard)
         fun applyExperimentalLockState() {
-            val unlocked = eqPrefs.getExperimentalUnlocked()
+            val unlocked = eqViewModel.eqPrefs.getExperimentalUnlocked()
             experimentalLockButton.setImageResource(
                 if (unlocked) R.drawable.ic_lock_open else R.drawable.ic_lock
             )
@@ -1688,12 +1677,12 @@ class  MainActivity : AppCompatActivity() {
         }
         applyExperimentalLockState()
         experimentalLockButton.setOnClickListener {
-            val newState = !eqPrefs.getExperimentalUnlocked()
-            eqPrefs.saveExperimentalUnlocked(newState)
+            val newState = !eqViewModel.eqPrefs.getExperimentalUnlocked()
+            eqViewModel.eqPrefs.saveExperimentalUnlocked(newState)
             applyExperimentalLockState()
         }
         experimentalCard.setOnClickListener {
-            if (!eqPrefs.getExperimentalUnlocked()) return@setOnClickListener
+            if (!eqViewModel.eqPrefs.getExperimentalUnlocked()) return@setOnClickListener
             startActivity(Intent(this, ExperimentalActivity::class.java))
             overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
         }
@@ -1715,9 +1704,9 @@ class  MainActivity : AppCompatActivity() {
         preampSlider.addOnChangeListener { _, value, fromUser ->
             if (!fromUser) return@addOnChangeListener
             preampText.setText(String.format("%.1f", value))
-            stateManager.preampGainDb = value
-            eqPrefs.savePreampGain(value)
-            stateManager.pushEqUpdate()
+            eqViewModel.setPreampGain( value)
+            eqViewModel.eqPrefs.savePreampGain(value)
+            eqViewModel.pushEqUpdate()
             updateAutoGainOffsetText()
         }
 
@@ -1726,9 +1715,9 @@ class  MainActivity : AppCompatActivity() {
                 val gain = preampText.text.toString().toFloatOrNull()?.coerceIn(-12f, 12f) ?: 0f
                 preampText.setText(String.format("%.1f", gain))
                 preampSlider.value = gain
-                stateManager.preampGainDb = gain
-                eqPrefs.savePreampGain(gain)
-                stateManager.pushEqUpdate()
+                eqViewModel.setPreampGain( gain)
+                eqViewModel.eqPrefs.savePreampGain(gain)
+                eqViewModel.pushEqUpdate()
                 updateAutoGainOffsetText()
                 preampText.clearFocus()
             }
@@ -1737,9 +1726,9 @@ class  MainActivity : AppCompatActivity() {
 
         // Auto-gain switch
         autoGainSwitch.setOnCheckedChangeListener { _, isChecked ->
-            stateManager.autoGainEnabled = isChecked
-            eqPrefs.saveAutoGainEnabled(isChecked)
-            stateManager.pushEqUpdate()
+            eqViewModel.setAutoGainEnabled( isChecked)
+            eqViewModel.eqPrefs.saveAutoGainEnabled(isChecked)
+            eqViewModel.pushEqUpdate()
             updateAutoGainOffsetText()
         }
 
@@ -1747,7 +1736,7 @@ class  MainActivity : AppCompatActivity() {
     }
 
     private fun updateAutoGainOffsetText() {
-        val offset = stateManager.getAutoGainOffset()
+        val offset = eqViewModel.getAutoGainOffset()
         autoGainOffsetText.text = getString(R.string.offset_label, offset)
     }
 
@@ -1755,16 +1744,16 @@ class  MainActivity : AppCompatActivity() {
 
     private fun switchEqUiMode(mode: EqUiMode) {
         // Clean up table mode bands when leaving
-        if (stateManager.currentEqUiMode == EqUiMode.TABLE && mode != EqUiMode.TABLE) {
+        if (eqViewModel.currentEqUiMode.value == EqUiMode.TABLE && mode != EqUiMode.TABLE) {
             tableController.cleanup()
         }
         // Save simple EQ gains and restore the advanced EQ when leaving SIMPLE mode
-        if (stateManager.currentEqUiMode == EqUiMode.SIMPLE && mode != EqUiMode.SIMPLE) {
+        if (eqViewModel.currentEqUiMode.value == EqUiMode.SIMPLE && mode != EqUiMode.SIMPLE) {
             simpleEqController.saveGains()
             // Restore the advanced EQ state that was saved when entering SIMPLE mode
-            val backup = eqPrefs.getAdvancedEqBackup()
+            val backup = eqViewModel.eqPrefs.getAdvancedEqBackup()
             if (backup != null) {
-                val eq = stateManager.parametricEq
+                val eq = eqViewModel.parametricEq.value
                 val bandsJson = org.json.JSONArray(backup)
                 eq.clearBands()
                 for (i in 0 until bandsJson.length()) {
@@ -1776,10 +1765,10 @@ class  MainActivity : AppCompatActivity() {
                     if (obj.has("enabled")) eq.setBandEnabled(i, obj.getBoolean("enabled"))
                 }
                 // Restore band slots
-                stateManager.initBandSlots()
+                eqViewModel.initBandSlots()
                 eqGraphView.setParametricEqualizer(eq)
                 eqGraphView.updateBandLevels()
-                stateManager.pushEqUpdate()
+                eqViewModel.pushEqUpdate()
                 // Refresh the DP-band overlay — drawDpBands() reads cached
                 // dpCenterFrequencies/dpGains arrays that were populated with
                 // the Simple EQ response. Without this call the overlay keeps
@@ -1791,8 +1780,8 @@ class  MainActivity : AppCompatActivity() {
         // Skip if the current EQ is already a simple-EQ configuration (e.g. on app
         // startup when Simple EQ was enabled in the previous session) — otherwise
         // we'd overwrite the real advanced backup with simple-EQ band data.
-        if (mode == EqUiMode.SIMPLE && stateManager.currentEqUiMode != EqUiMode.SIMPLE) {
-            val eq = stateManager.parametricEq
+        if (mode == EqUiMode.SIMPLE && eqViewModel.currentEqUiMode.value == EqUiMode.SIMPLE) {
+            val eq = eqViewModel.parametricEq.value
             val isAlreadySimpleConfig = eq.getBandCount() == com.bearinmind.equalizer314.ui.SimpleEqController.FREQUENCIES.size &&
                 (0 until eq.getBandCount()).all { i ->
                     val band = eq.getBand(i)
@@ -1812,12 +1801,12 @@ class  MainActivity : AppCompatActivity() {
                         put("enabled", band.enabled)
                     })
                 }
-                eqPrefs.saveAdvancedEqBackup(bandsJson.toString())
+                eqViewModel.eqPrefs.saveAdvancedEqBackup(bandsJson.toString())
             }
         }
-        stateManager.currentEqUiMode = mode
+        eqViewModel.setEqUiMode(mode)
         eqGraphView.eqUiMode = mode
-        if (mode != EqUiMode.SIMPLE) eqPrefs.saveEqUiMode(mode.name)
+        if (mode != EqUiMode.SIMPLE) eqViewModel.eqPrefs.saveEqUiMode(mode.name)
         updateModeSelectorButtons()
 
         // In non-SIMPLE modes, ensure standard views are visible and simple container hidden.
@@ -1899,9 +1888,9 @@ class  MainActivity : AppCompatActivity() {
                 tableEqCard.visibility = View.GONE
                 bandToggleManager.setupToggles()
                 // Always have a band selected
-                if (stateManager.parametricEq.getBandCount() > 0) {
-                    val band = stateManager.selectedBandIndex ?: 0
-                    stateManager.selectedBandIndex = band
+                if (eqViewModel.parametricEq.value.getBandCount() > 0) {
+                    val band = eqViewModel.selectedBandIndex.value ?: 0
+                    eqViewModel.selectBand(band)
                     eqGraphView.setActiveBand(band)
                     updateFilterTypeButtons(band)
                     updateBandInputs(band)
@@ -1988,7 +1977,7 @@ class  MainActivity : AppCompatActivity() {
                 // synchronous measurements use stale (zero) widths and the buttons in
                 // bandToggleGroup haven't been measured yet.
                 pageEq.post {
-                    if (stateManager.currentEqUiMode == EqUiMode.TABLE) applyTableSizing()
+                    if (eqViewModel.currentEqUiMode.value == EqUiMode.TABLE) applyTableSizing()
                 }
 
                 // Let table card's inner ScrollView handle touches, block outer scroll
@@ -2063,20 +2052,20 @@ class  MainActivity : AppCompatActivity() {
         // direct-graphic-vs-feature-aware path flag against the new mode.
         // Without this the live DP keeps using whatever path was active
         // before the switch until the next slider tick / band edit.
-        stateManager.pushEqUpdate()
+        eqViewModel.pushEqUpdate()
         // Refresh the red experimental-DP overlay so it shows the new
         // path (feature-aware ↔ direct) the moment the mode changes.
         eqGraphView.invalidate()
     }
 
     private fun reorderToggleRows(animate: Boolean = true) {
-        if (stateManager.currentEqUiMode == EqUiMode.TABLE || stateManager.currentEqUiMode == EqUiMode.SIMPLE) return
+        if (eqViewModel.currentEqUiMode.value == EqUiMode.TABLE || eqViewModel.currentEqUiMode.value == EqUiMode.SIMPLE) return
         val parent = findViewById<LinearLayout>(R.id.eqControlsContainer)
         val triContainer = findViewById<View>(R.id.triangleIndicatorContainer)
 
         // Determine which page the selected band is on
-        val selectedBand = stateManager.selectedBandIndex ?: 0
-        val displayPos = stateManager.displayToBandIndex.indexOf(selectedBand).let { if (it < 0) 0 else it }
+        val selectedBand = eqViewModel.selectedBandIndex.value ?: 0
+        val displayPos = eqViewModel.displayToBandIndex.value.indexOf(selectedBand).let { if (it < 0) 0 else it }
         val activePage = displayPos / 8
         val activeRow = if (activePage == 0) bandToggleGroup else bandToggleGroup2
         val inactiveRow = if (activePage == 0) bandToggleGroup2 else bandToggleGroup
@@ -2084,7 +2073,7 @@ class  MainActivity : AppCompatActivity() {
         // Check if both rows are already in correct positions — use index 0 as base since controls container starts with toggle groups
         val graphIdx = -1  // graph is outside eqControlsContainer
         val currentActiveIdx = parent.indexOfChild(activeRow)
-        val controlsView = when (stateManager.currentEqUiMode) {
+        val controlsView = when (eqViewModel.currentEqUiMode.value) {
             EqUiMode.PARAMETRIC -> parametricControlsCard
             EqUiMode.GRAPHIC -> graphicScrollView
             else -> null
@@ -2131,7 +2120,7 @@ class  MainActivity : AppCompatActivity() {
             modeTableBtn to EqUiMode.TABLE
         )
         for ((btn, mode) in buttons) {
-            if (mode == stateManager.currentEqUiMode) {
+            if (mode == eqViewModel.currentEqUiMode.value) {
                 btn.setBackgroundColor(getColor(R.color.filter_active))
                 btn.setTextColor(getColor(R.color.filter_active_text))
                 btn.strokeColor = android.content.res.ColorStateList.valueOf(getColor(R.color.filter_active))
@@ -2181,14 +2170,14 @@ class  MainActivity : AppCompatActivity() {
             isUpdatingInputs = false
             val bandIndex = eqGraphView.getActiveBandIndex() ?: return@addOnChangeListener
             eqGraphView.setQ(bandIndex, value.toDouble())
-            stateManager.pushEqUpdate()
+            eqViewModel.pushEqUpdate()
         }
 
         // Double-tap to reset sliders to default values
         addDoubleTapReset(bandHzSlider) {
             val bandIndex = eqGraphView.getActiveBandIndex() ?: return@addDoubleTapReset
-            val defaults = stateManager.allDefaultFrequencies
-            val slot = stateManager.bandSlots.getOrNull(bandIndex) ?: bandIndex
+            val defaults = eqViewModel.stateManager.allDefaultFrequencies
+            val slot = eqViewModel.bandSlots.value.getOrElse(bandIndex) { bandIndex }
             val defaultHz = if (slot < defaults.size) defaults[slot] else 1000f
             bandHzSlider.value = hzToSlider(defaultHz)
             bandHzInput.setText(formatHzValue(defaultHz))
@@ -2207,7 +2196,7 @@ class  MainActivity : AppCompatActivity() {
             bandQInput.setText(String.format("%.2f", defaultQ))
             val bandIndex = eqGraphView.getActiveBandIndex() ?: return@addDoubleTapReset
             eqGraphView.setQ(bandIndex, defaultQ.toDouble())
-            stateManager.pushEqUpdate()
+            eqViewModel.pushEqUpdate()
         }
     }
 
@@ -2293,20 +2282,20 @@ class  MainActivity : AppCompatActivity() {
         isUpdatingInputs = false
         val bandIndex = eqGraphView.getActiveBandIndex() ?: return
         eqGraphView.setQ(bandIndex, clamped)
-        stateManager.pushEqUpdate()
+        eqViewModel.pushEqUpdate()
     }
 
     private fun applyBandHz(hz: Float) {
         val bandIndex = eqGraphView.getActiveBandIndex() ?: return
-        val band = stateManager.parametricEq.getBand(bandIndex) ?: return
-        stateManager.parametricEq.updateBand(bandIndex, hz, band.gain, band.filterType, band.q)
+        val band = eqViewModel.parametricEq.value.getBand(bandIndex) ?: return
+        eqViewModel.parametricEq.value.updateBand(bandIndex, hz, band.gain, band.filterType, band.q)
         eqGraphView.updateBandLevels()
-        stateManager.pushEqUpdate()
+        eqViewModel.pushEqUpdate()
     }
 
     private fun applyBandDb(db: Float) {
         val bandIndex = eqGraphView.getActiveBandIndex() ?: return
-        val band = stateManager.parametricEq.getBand(bandIndex) ?: return
+        val band = eqViewModel.parametricEq.value.getBand(bandIndex) ?: return
         val ftNow = band.filterType
         val gainless = ftNow == BiquadFilter.FilterType.LOW_PASS ||
                        ftNow == BiquadFilter.FilterType.HIGH_PASS ||
@@ -2316,9 +2305,9 @@ class  MainActivity : AppCompatActivity() {
                        ftNow == BiquadFilter.FilterType.NOTCH ||
                        ftNow == BiquadFilter.FilterType.ALL_PASS
         val effectiveDb = if (gainless) 0f else db
-        stateManager.parametricEq.updateBand(bandIndex, band.frequency, effectiveDb, band.filterType, band.q)
+        eqViewModel.parametricEq.value.updateBand(bandIndex, band.frequency, effectiveDb, band.filterType, band.q)
         eqGraphView.updateBandLevels()
-        stateManager.pushEqUpdate()
+        eqViewModel.pushEqUpdate()
     }
 
     private fun showPresetsBottomSheet() {
@@ -2336,11 +2325,11 @@ class  MainActivity : AppCompatActivity() {
                 setTextColor(0xFFE2E2E2.toInt())
                 setPadding((16 * density).toInt(), (14 * density).toInt(), (16 * density).toInt(), (14 * density).toInt())
                 setOnClickListener {
-                    stateManager.loadPreset(presetName, eqGraphView)
+                    eqViewModel.loadPreset(presetName, eqGraphView)
                     presetDropdown.setText(presetName, false)
                     bandToggleManager.updateIcons()
-                    if (stateManager.currentEqUiMode == EqUiMode.TABLE) tableController.buildTable()
-                    if (stateManager.currentEqUiMode == EqUiMode.GRAPHIC) graphicController.buildSliders(graphicController.targetCardHeight)
+                    if (eqViewModel.currentEqUiMode.value == EqUiMode.TABLE) tableController.buildTable()
+                    if (eqViewModel.currentEqUiMode.value == EqUiMode.GRAPHIC) graphicController.buildSliders(graphicController.targetCardHeight)
                     bottomSheet.dismiss()
                 }
             }
@@ -2356,8 +2345,8 @@ class  MainActivity : AppCompatActivity() {
 
     private fun updateBandInputs(bandIndex: Int?) {
         isUpdatingInputs = true
-        val idx = bandIndex ?: stateManager.selectedBandIndex ?: 0
-        val band = stateManager.parametricEq.getBand(idx)
+        val idx = bandIndex ?: eqViewModel.selectedBandIndex.value ?: 0
+        val band = eqViewModel.parametricEq.value.getBand(idx)
         if (band != null) {
             bandHzInput.setText(formatHzValue(band.frequency))
             bandDbInput.setText(String.format("%.1f", band.gain))
@@ -2449,17 +2438,17 @@ class  MainActivity : AppCompatActivity() {
                 }
             }
             swatch.setOnClickListener {
-                val bandIndex = stateManager.selectedBandIndex ?: return@setOnClickListener
-                val slotIdx = if (bandIndex < stateManager.bandSlots.size) stateManager.bandSlots[bandIndex] else return@setOnClickListener
+                val bandIndex = eqViewModel.selectedBandIndex.value ?: return@setOnClickListener
+                val slotIdx = if (bandIndex < eqViewModel.bandSlots.value.size) eqViewModel.bandSlots.value[bandIndex] else return@setOnClickListener
                 if (isNone) {
-                    stateManager.bandColors.remove(slotIdx)
+                    eqViewModel.bandColorsMap.remove(slotIdx)
                 } else {
-                    stateManager.bandColors[slotIdx] = color
+                    eqViewModel.bandColorsMap[slotIdx] = color
                 }
-                stateManager.saveState()
-                eqGraphView.setBandColors(stateManager.bandColors)
+                eqViewModel.saveState()
+                eqGraphView.setBandColors(eqViewModel.bandColors.value)
                 eqGraphView.invalidate()
-                bandToggleManager.updateSelection(stateManager.selectedBandIndex)
+                bandToggleManager.updateSelection(eqViewModel.selectedBandIndex.value)
                 updateColorSwatches(bandIndex)
             }
             wrapper.addView(swatch)
@@ -2468,9 +2457,9 @@ class  MainActivity : AppCompatActivity() {
     }
 
     private fun updateColorSwatches(bandIndex: Int?) {
-        val idx = bandIndex ?: stateManager.selectedBandIndex ?: return
-        val slotIdx = if (idx < stateManager.bandSlots.size) stateManager.bandSlots[idx] else -1
-        val currentColor = if (slotIdx >= 0) stateManager.bandColors[slotIdx] else null
+        val idx = bandIndex ?: eqViewModel.selectedBandIndex.value ?: return
+        val slotIdx = if (idx < eqViewModel.bandSlots.value.size) eqViewModel.bandSlots.value[idx] else -1
+        val currentColor = if (slotIdx >= 0) eqViewModel.bandColors.value[slotIdx] else null
         val density = resources.displayMetrics.density
 
         for (i in 0 until colorSwatchRow.childCount) {
@@ -2521,30 +2510,30 @@ class  MainActivity : AppCompatActivity() {
 
         powerFab.postDelayed({
             EqService.start(this)
-            if (stateManager.serviceBound) {
+            if (eqViewModel.serviceBound.value) {
                 doStartEq()
             } else {
-                stateManager.pendingStartEq = true
+                eqViewModel.stateManager.pendingStartEq = true
                 val intent = Intent(this, EqService::class.java)
-                bindService(intent, stateManager.serviceConnection, BIND_AUTO_CREATE)
+                bindService(intent, eqViewModel.stateManager.serviceConnection, BIND_AUTO_CREATE)
             }
         }, 280)
     }
 
     private fun doStartEq() {
-        stateManager.doStartEq { on -> animatePowerFab(on) }
+        eqViewModel.doStartEq { on -> animatePowerFab(on) }
     }
 
     private fun stopProcessing() {
         showPowerSnackbar(false)
         animatePowerFab(false)
         powerFab.postDelayed({
-            stateManager.stopProcessing { on -> animatePowerFab(on) }
+            eqViewModel.stopProcessing { on -> animatePowerFab(on) }
         }, 280)
     }
 
     private fun showPowerSnackbar(on: Boolean) {
-        eqPrefs.savePowerState(on)
+        eqViewModel.eqPrefs.savePowerState(on)
         com.bearinmind.equalizer314.ui.BottomNavHelper.updatePowerFab(this, on)
         val message = if (on) getString(R.string.msg_dsp_start) else getString(R.string.msg_dsp_stop)
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
@@ -2570,17 +2559,17 @@ class  MainActivity : AppCompatActivity() {
     }
 
     private fun updatePowerUI() {
-        powerButton.text = if (stateManager.isProcessing) "ON" else "OFF"
+        powerButton.text = if (eqViewModel.isProcessing.value) "ON" else "OFF"
     }
 
     private fun updateBottomBarHighlight(isEqPage: Boolean) {
         val screen = if (isEqPage) com.bearinmind.equalizer314.ui.NavScreen.EQ else com.bearinmind.equalizer314.ui.NavScreen.SETTINGS
         com.bearinmind.equalizer314.ui.BottomNavHelper.updateHighlight(this, screen)
-        com.bearinmind.equalizer314.ui.BottomNavHelper.updateStatus(this, eqPrefs)
+        com.bearinmind.equalizer314.ui.BottomNavHelper.updateStatus(this, eqViewModel.eqPrefs)
     }
 
     private fun updateEqToggleUI() {
-        val enabled = stateManager.parametricEq.isEnabled
+        val enabled = eqViewModel.parametricEq.value.isEnabled
         eqToggleButton.text = if (enabled) "EQ: ON" else "EQ: OFF"
     }
 
@@ -2599,7 +2588,7 @@ class  MainActivity : AppCompatActivity() {
         )
         peakBtn.setOnClickListener { anchor ->
             val bandIndex = eqGraphView.getActiveBandIndex() ?: return@setOnClickListener
-            val band = stateManager.parametricEq.getBand(bandIndex)
+            val band = eqViewModel.parametricEq.value.getBand(bandIndex)
             val inFamily = band != null && band.enabled && isPeakFamily(band.filterType)
             if (inFamily) {
                 showPeakPopup(anchor, bandIndex)
@@ -2624,7 +2613,7 @@ class  MainActivity : AppCompatActivity() {
             )
             btn.setOnClickListener { anchor ->
                 val bandIndex = eqGraphView.getActiveBandIndex() ?: return@setOnClickListener
-                val band = stateManager.parametricEq.getBand(bandIndex)
+                val band = eqViewModel.parametricEq.value.getBand(bandIndex)
                 val alreadyActive = band != null &&
                     band.enabled &&
                     filterTypeFamily(band.filterType) == type
@@ -2654,7 +2643,7 @@ class  MainActivity : AppCompatActivity() {
 
     private fun updateFilterTypeButtons(bandIndex: Int?) {
         if (bandIndex == null) return
-        val band = stateManager.parametricEq.getBand(bandIndex) ?: return
+        val band = eqViewModel.parametricEq.value.getBand(bandIndex) ?: return
         val currentType = band.filterType
         val currentFamily = filterTypeFamily(currentType)
         val currentIs1st = currentType == BiquadFilter.FilterType.LOW_SHELF_1 ||
@@ -2800,15 +2789,15 @@ class  MainActivity : AppCompatActivity() {
      *  surface (graph, toggles, inputs, DP pipeline, saved state). Used by
      *  both the direct PEAK tap and the slope-popup selection path. */
     private fun applyFilterTypeToBand(bandIndex: Int, newType: BiquadFilter.FilterType) {
-        stateManager.parametricEq.setBandEnabled(bandIndex, true)
+        eqViewModel.parametricEq.value.setBandEnabled(bandIndex, true)
         eqGraphView.setFilterType(bandIndex, newType)
         updateFilterTypeButtons(bandIndex)
         updateBandInputs(bandIndex)
         bandToggleManager.updateIcons()
         bandToggleManager.updateSelection(bandIndex)
-        stateManager.pushEqUpdate()
-        stateManager.eqPrefs.saveState(stateManager.parametricEq, stateManager.bandSlots)
-        stateManager.persistLeftRightIfCse()
+        eqViewModel.pushEqUpdate()
+        eqViewModel.eqPrefs.saveState(eqViewModel.parametricEq.value, eqViewModel.bandSlots.value)
+        eqViewModel.persistLeftRightIfCse()
     }
 
     /** Shared factory for the filter-type buttons in both rows. `weightedWidth`
@@ -2857,7 +2846,7 @@ class  MainActivity : AppCompatActivity() {
      *  button, styled to match `showSlopePopup`. Tapping any item applies
      *  that filter type to the active band. */
     private fun showPeakPopup(anchor: View, bandIndex: Int) {
-        val band = stateManager.parametricEq.getBand(bandIndex) ?: return
+        val band = eqViewModel.parametricEq.value.getBand(bandIndex) ?: return
         val current = band.filterType
         val density = resources.displayMetrics.density
         val cornerRadius = resources.getDimensionPixelSize(R.dimen.filter_btn_radius).toFloat()
@@ -2949,7 +2938,7 @@ class  MainActivity : AppCompatActivity() {
         family2nd: BiquadFilter.FilterType,
     ) {
         val family1st = oneOrderVariant(family2nd) ?: return
-        val band = stateManager.parametricEq.getBand(bandIndex) ?: return
+        val band = eqViewModel.parametricEq.value.getBand(bandIndex) ?: return
         val currentIs1st = band.filterType == family1st
         val density = resources.displayMetrics.density
         val cornerRadius = resources.getDimensionPixelSize(R.dimen.filter_btn_radius).toFloat()
@@ -3030,9 +3019,9 @@ class  MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        if (!stateManager.serviceBound) {
+        if (!eqViewModel.serviceBound.value) {
             val intent = Intent(this, EqService::class.java)
-            bindService(intent, stateManager.serviceConnection, 0)
+            bindService(intent, eqViewModel.stateManager.serviceConnection, 0)
         }
     }
 
@@ -3052,7 +3041,7 @@ class  MainActivity : AppCompatActivity() {
      *  it moves RIGHT. */
 
     private fun paintChannelButtonStyles() {
-        val enabled = eqPrefs.getChannelSideEqEnabled()
+        val enabled = eqViewModel.eqPrefs.getChannelSideEqEnabled()
         val lBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.channelLButton) ?: return
         val rBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.channelRButton) ?: return
         val density = resources.displayMetrics.density
@@ -3077,7 +3066,7 @@ class  MainActivity : AppCompatActivity() {
             altRouteBtn?.setIconResource(R.drawable.ic_alt_route_right)
             return
         }
-        val active = stateManager.activeChannel
+        val active = eqViewModel.activeChannel.value
         paint(lBtn, active == EqStateManager.ActiveChannel.LEFT)
         paint(rBtn, active == EqStateManager.ActiveChannel.RIGHT)
         badge?.let {
@@ -3107,7 +3096,7 @@ class  MainActivity : AppCompatActivity() {
      *    uses the outlined style. */
     private fun refreshChannelPopoutDim() {
         paintChannelButtonStyles()
-        val enabled = eqPrefs.getChannelSideEqEnabled()
+        val enabled = eqViewModel.eqPrefs.getChannelSideEqEnabled()
         val lBtn = findViewById<View>(R.id.channelLButton) ?: return
         val rBtn = findViewById<View>(R.id.channelRButton) ?: return
         val a = if (enabled) 1.0f else 0.4f
@@ -3117,15 +3106,15 @@ class  MainActivity : AppCompatActivity() {
     /** Rebind the graph + band toggles + input widgets after the active EQ
      *  reference changes (Channel Side EQ on/off, or L/R mode switch). */
     private fun rebindActiveEq() {
-        val eq = stateManager.parametricEq
+        val eq = eqViewModel.parametricEq.value
         eqGraphView.setParametricEqualizer(eq)
         eqGraphView.updateBandLevels()
-        stateManager.pushEqUpdate()
+        eqViewModel.pushEqUpdate()
 
         val count = eq.getBandCount()
         if (count > 0) {
-            val idx = (stateManager.selectedBandIndex ?: 0).coerceIn(0, count - 1)
-            stateManager.selectedBandIndex = idx
+            val idx = (eqViewModel.selectedBandIndex.value ?: 0).coerceIn(0, count - 1)
+            eqViewModel.selectBand(idx)
             eqGraphView.setActiveBand(idx)
             updateFilterTypeButtons(idx)
             updateBandInputs(idx)
@@ -3141,54 +3130,54 @@ class  MainActivity : AppCompatActivity() {
         // EqStateManager's mirror fields, so without this sync the next
         // saveState() (onPause) would overwrite the user's prefs with stale
         // in-memory values.
-        stateManager.limiterEnabled     = eqPrefs.getLimiterEnabled()
-        stateManager.limiterAttackMs    = eqPrefs.getLimiterAttack()
-        stateManager.limiterReleaseMs   = eqPrefs.getLimiterRelease()
-        stateManager.limiterRatio       = eqPrefs.getLimiterRatio()
-        stateManager.limiterThresholdDb = eqPrefs.getLimiterThreshold()
-        stateManager.limiterPostGainDb  = eqPrefs.getLimiterPostGain()
+        eqViewModel.setLimiterEnabled(eqViewModel.eqPrefs.getLimiterEnabled())
+        eqViewModel.setLimiterAttackMs(eqViewModel.eqPrefs.getLimiterAttack())
+        eqViewModel.setLimiterReleaseMs(eqViewModel.eqPrefs.getLimiterRelease())
+        eqViewModel.setLimiterRatio(eqViewModel.eqPrefs.getLimiterRatio())
+        eqViewModel.setLimiterThresholdDb(eqViewModel.eqPrefs.getLimiterThreshold())
+        eqViewModel.setLimiterPostGainDb(eqViewModel.eqPrefs.getLimiterPostGain())
         // Apply spectrum settings (may have changed in SpectrumControlActivity)
         applySpectrumSettings()
         // Sync Channel Side EQ state — the switch lives in ChannelSideEqActivity,
         // so when we return here the pref may have flipped and we need to swap
         // the active ParametricEqualizer accordingly.
-        val cseOnNow = eqPrefs.getChannelSideEqEnabled()
-        val cseOnInState = stateManager.activeChannel != EqStateManager.ActiveChannel.BOTH
+        val cseOnNow = eqViewModel.eqPrefs.getChannelSideEqEnabled()
+        val cseOnInState = eqViewModel.activeChannel.value == EqStateManager.ActiveChannel.BOTH
         if (cseOnNow != cseOnInState) {
-            stateManager.setChannelSideEqEnabled(cseOnNow)
+            eqViewModel.setChannelSideEqEnabled(cseOnNow)
             rebindActiveEq()
         } else {
             refreshChannelPopoutDim()
         }
         // Set FAB from saved power state — instant, no animation
-        val savedPower = eqPrefs.getPowerState()
+        val savedPower = eqViewModel.eqPrefs.getPowerState()
         com.bearinmind.equalizer314.ui.BottomNavHelper.setPowerFabInstant(this, savedPower)
-        if (stateManager.serviceBound && stateManager.eqService != null) {
-            stateManager.isProcessing = stateManager.eqService!!.dynamicsManager.isActive
+        if (eqViewModel.serviceBound.value && eqViewModel.eqService.value != null) {
+            eqViewModel.stateManager.isProcessing = eqViewModel.eqService.value!!.dynamicsManager.isActive
         } else {
-            stateManager.isProcessing = savedPower
+            eqViewModel.stateManager.isProcessing = savedPower
         }
         // Restore EQ/Settings page highlight
         val isEqPage = findViewById<View>(R.id.pageEq).visibility == View.VISIBLE
         updateBottomBarHighlight(isEqPage)
         // Restart visualizer if it was enabled (may have been stopped in onPause)
-        if (eqPrefs.getSpectrumEnabled() && !visualizerHelper.isRunning &&
+        if (eqViewModel.eqPrefs.getSpectrumEnabled() && !visualizerHelper.isRunning &&
             checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
             == android.content.pm.PackageManager.PERMISSION_GRANTED) {
             visualizerHelper.start(eqGraphView)
             eqGraphView.spectrumRenderer = visualizerHelper.renderer
         }
         // Refresh ON/OFF status under nav icons
-        com.bearinmind.equalizer314.ui.BottomNavHelper.updateStatus(this, eqPrefs)
+        com.bearinmind.equalizer314.ui.BottomNavHelper.updateStatus(this, eqViewModel.eqPrefs)
         updateAutoEqStatus()
         updateTargetStatus()
 
         // Check if Simple EQ was toggled in experimental settings
-        val simpleEqEnabled = eqPrefs.getSimpleEqEnabled()
-        if (simpleEqEnabled && stateManager.currentEqUiMode != EqUiMode.SIMPLE) {
+        val simpleEqEnabled = eqViewModel.eqPrefs.getSimpleEqEnabled()
+        if (simpleEqEnabled && eqViewModel.currentEqUiMode.value == EqUiMode.SIMPLE) {
             switchEqUiMode(EqUiMode.SIMPLE)
-        } else if (!simpleEqEnabled && stateManager.currentEqUiMode == EqUiMode.SIMPLE) {
-            val fallback = try { EqUiMode.valueOf(eqPrefs.getEqUiMode()) } catch (_: Exception) { EqUiMode.PARAMETRIC }
+        } else if (!simpleEqEnabled && eqViewModel.currentEqUiMode.value == EqUiMode.SIMPLE) {
+            val fallback = try { EqUiMode.valueOf(eqViewModel.eqPrefs.getEqUiMode()) } catch (_: Exception) { EqUiMode.PARAMETRIC }
             switchEqUiMode(fallback)
         }
     }
@@ -3199,11 +3188,11 @@ class  MainActivity : AppCompatActivity() {
         visualizerHelper.stop()
         eqGraphView.spectrumRenderer = null
         // Save simple EQ gains if in simple mode
-        if (stateManager.currentEqUiMode == EqUiMode.SIMPLE) {
+        if (eqViewModel.currentEqUiMode.value == EqUiMode.SIMPLE) {
             simpleEqController.saveGains()
         }
-        stateManager.saveState()
-        eqPrefs.savePresetName(presetDropdown.text.toString())
+        eqViewModel.saveState()
+        eqViewModel.eqPrefs.savePresetName(presetDropdown.text.toString())
     }
 
     override fun onStop() {
@@ -3213,13 +3202,13 @@ class  MainActivity : AppCompatActivity() {
         // about to abruptly tear down the process (low-memory kill,
         // Bluetooth A2DP disconnect cascade). Re-flushing here makes
         // sure any edits made between onPause and onStop also persist.
-        if (stateManager.currentEqUiMode == EqUiMode.SIMPLE) {
+        if (eqViewModel.currentEqUiMode.value == EqUiMode.SIMPLE) {
             simpleEqController.saveGains()
         }
-        stateManager.saveState()
-        if (stateManager.serviceBound) {
-            try { unbindService(stateManager.serviceConnection) } catch (_: Exception) {}
-            stateManager.serviceBound = false
+        eqViewModel.saveState()
+        if (eqViewModel.serviceBound.value) {
+            try { unbindService(eqViewModel.stateManager.serviceConnection) } catch (_: Exception) {}
+            eqViewModel.stateManager.serviceBound = false
         }
     }
 
@@ -3262,10 +3251,10 @@ class  MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (stateManager.serviceBound && stateManager.eqService != null) {
-            stateManager.isProcessing = stateManager.eqService!!.dynamicsManager.isActive
+        if (eqViewModel.serviceBound.value && eqViewModel.eqService.value != null) {
+            eqViewModel.stateManager.isProcessing = eqViewModel.eqService.value!!.dynamicsManager.isActive
         } else {
-            stateManager.isProcessing = false
+            eqViewModel.stateManager.isProcessing = false
         }
         // Check if we should show settings page
         if (intent.getBooleanExtra("showSettings", false)) {

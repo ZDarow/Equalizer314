@@ -94,7 +94,7 @@ class EqViewModelTest {
 
     @Test
     fun `parametricEq delegates to stateManager`() {
-        assertSame(viewModel.stateManager.parametricEq, viewModel.parametricEq)
+        assertSame(viewModel.stateManager.parametricEq, viewModel.parametricEq.value)
     }
 
     @Test

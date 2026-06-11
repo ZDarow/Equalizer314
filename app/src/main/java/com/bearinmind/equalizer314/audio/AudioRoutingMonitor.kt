@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.core.content.ContextCompat
 
 /**
  * Watches the active audio output and emits a debounced
@@ -90,11 +91,7 @@ class AudioRoutingMonitor(
         if (registered) return
         audioManager.registerAudioDeviceCallback(deviceCallback, handler)
         val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(noisyReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            context.registerReceiver(noisyReceiver, filter)
-        }
+        ContextCompat.registerReceiver(context, noisyReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         registered = true
         // Kick once immediately so a cold-start with a device already
         // routed emits a RouteChange.

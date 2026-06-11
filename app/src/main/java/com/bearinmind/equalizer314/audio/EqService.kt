@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.bearinmind.equalizer314.MainActivity
 import com.bearinmind.equalizer314.R
 import com.bearinmind.equalizer314.dsp.ParametricEqualizer
@@ -64,18 +65,12 @@ class EqService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(
-                volumeReceiver,
-                IntentFilter("android.media.VOLUME_CHANGED_ACTION"),
-                RECEIVER_NOT_EXPORTED
-            )
-        } else {
-            registerReceiver(
-                volumeReceiver,
-                IntentFilter("android.media.VOLUME_CHANGED_ACTION")
-            )
-        }
+        ContextCompat.registerReceiver(
+            this,
+            volumeReceiver,
+            IntentFilter("android.media.VOLUME_CHANGED_ACTION"),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
         // Per-output-device EQ auto-switching. Detection lives in this
         // service so it keeps working when MainActivity is closed.
