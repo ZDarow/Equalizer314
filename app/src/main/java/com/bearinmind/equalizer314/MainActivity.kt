@@ -132,7 +132,7 @@ class  MainActivity : AppCompatActivity() {
             val (lEq, rEq) = eqViewModel.getChannelEqs()
             eqViewModel.eqService.value?.let { svc ->
                 svc.dynamicsManager.stop()
-                svc.dynamicsManager.start(eqViewModel.parametricEq.value)
+                svc.dynamicsManager.run { requestedBandCount = eqViewModel.eqPrefs.getDpBandCount(); start(eqViewModel.parametricEq.value) }
                 svc.updateEqPerChannel(lEq, rEq)
             }
         }
@@ -186,7 +186,7 @@ class  MainActivity : AppCompatActivity() {
                     val (lEq, rEq) = eqViewModel.getChannelEqs()
                     eqViewModel.eqService.value?.let { svc ->
                         svc.dynamicsManager.stop()
-                        svc.dynamicsManager.start(eqViewModel.parametricEq.value)
+                        svc.dynamicsManager.run { requestedBandCount = eqViewModel.eqPrefs.getDpBandCount(); start(eqViewModel.parametricEq.value) }
                         svc.updateEqPerChannel(lEq, rEq)
                     }
                 }
@@ -223,7 +223,7 @@ class  MainActivity : AppCompatActivity() {
                     val (lEq, rEq) = eqViewModel.getChannelEqs()
                     eqViewModel.eqService.value?.let { svc ->
                         svc.dynamicsManager.stop()
-                        svc.dynamicsManager.start(eqViewModel.parametricEq.value)
+                        svc.dynamicsManager.run { requestedBandCount = eqViewModel.eqPrefs.getDpBandCount(); start(eqViewModel.parametricEq.value) }
                         svc.updateEqPerChannel(lEq, rEq)
                     }
                 }
@@ -1178,7 +1178,7 @@ class  MainActivity : AppCompatActivity() {
                         val (lEq, rEq) = eqViewModel.getChannelEqs()
                         eqViewModel.eqService.value?.let { svc ->
                             svc.dynamicsManager.stop()
-                            svc.dynamicsManager.start(eqViewModel.parametricEq.value)
+                            svc.dynamicsManager.run { requestedBandCount = eqViewModel.eqPrefs.getDpBandCount(); start(eqViewModel.parametricEq.value) }
                             svc.updateEqPerChannel(lEq, rEq)
                         }
                     }
@@ -1336,6 +1336,7 @@ class  MainActivity : AppCompatActivity() {
                 if (eqViewModel.isProcessing.value) {
                     eqViewModel.eqService.value?.let { svc ->
                         svc.dynamicsManager.stop()
+                        svc.dynamicsManager.requestedBandCount = eqViewModel.eqPrefs.getDpBandCount()
                         svc.dynamicsManager.start(eq)
                     }
                 }
@@ -1427,7 +1428,7 @@ class  MainActivity : AppCompatActivity() {
             eqViewModel.initBandSlots()
             bandToggleManager.setupToggles()
             if (eqViewModel.isProcessing.value) {
-                eqViewModel.eqService.value?.let { svc -> svc.dynamicsManager.stop(); svc.dynamicsManager.start(eq) }
+                eqViewModel.eqService.value?.let { svc -> svc.dynamicsManager.stop(); svc.dynamicsManager.run { requestedBandCount = eqViewModel.eqPrefs.getDpBandCount(); start(eq) } }
             }
         }
         // Save initial state

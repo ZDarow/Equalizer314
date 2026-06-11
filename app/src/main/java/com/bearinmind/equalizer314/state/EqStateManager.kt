@@ -406,6 +406,7 @@ class EqStateManager(
         dm.limiterRatio = limiterRatio
         dm.limiterThresholdDb = limiterThresholdDb
         dm.limiterPostGainDb = limiterPostGainDb
+        dm.requestedBandCount = eqPrefs.getDpBandCount()
         val started = service.startEq(parametricEq)
         isProcessing = started
         if (!started) {

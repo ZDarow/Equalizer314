@@ -1,3 +1,5 @@
+@file:Suppress("ForbiddenComment")
+
 package com.bearinmind.equalizer314.data
 
 import android.content.Context
@@ -31,6 +33,11 @@ abstract class EqDatabase : RoomDatabase() {
 
         @Volatile
         private var instance: EqDatabase? = null
+
+        // NOTE: replace .fallbackToDestructiveMigration() with proper
+        // Migration(1, 2) before shipping to production. Schema exports
+        // to app/schemas/ via room.schemaLocation — use the v1.json as
+        // the reference for writing MIGRATION_1_2.
 
         fun getInstance(context: Context): EqDatabase {
             return instance ?: synchronized(this) {

@@ -41,6 +41,9 @@ class DynamicsProcessingManager {
     private var lastRightEq: com.bearinmind.equalizer314.dsp.ParametricEqualizer? = null
     private var lastReclaimTime = 0L
     private val reclaimCooldownMs = 2000L  // Don't reclaim more than once every 2 seconds
+    /** User-configured band count (128..1024); used instead of hardcoded 127. */
+    var requestedBandCount: Int = 127
+        set(value) { field = value.coerceIn(128, 1024) }
     var isActive = false
         private set
 
@@ -77,9 +80,9 @@ class DynamicsProcessingManager {
     // Background thread for the binder calls. Each EQ update issues one
     // setPreEqByChannelIndex transaction per channel; running them on the
     // UI thread blocks both rendering and (under contention) the audio
-    // path during a drag.
-    private val workerThread = android.os.HandlerThread("EqDpWorker").apply { start() }
-    private val workerHandler = android.os.Handler(workerThread.looper)
+    // path during a drag. Recreated on each start(); quit on stop().
+    private var workerThread: android.os.HandlerThread? = null
+    private var workerHandler: android.os.Handler? = null
     @Volatile private var pendingApply: Runnable? = null
     @Volatile private var pendingLimiter: Runnable? = null
 
@@ -91,10 +94,16 @@ class DynamicsProcessingManager {
 
         stop() // Clean up any existing instance
 
-        // 127 bands at Wavelet's exact frequency table (a6.z.f608g[]).
-        // Matches AutoEQ GraphicEQ.txt's 127 fixed positions, so a
-        // graphic profile loads with zero interpolation error.
-        ParametricToDpConverter.setNumBands(127)
+        // (Re-)create the worker thread
+        android.os.HandlerThread("EqDpWorker").apply {
+            start()
+            workerThread = this
+            workerHandler = android.os.Handler(this.looper)
+        }
+
+        // Use user-configured band count (128..1024) from requestedBandCount.
+        // Defaults to 127 for backward compat with Wavelet's frequency table.
+        ParametricToDpConverter.setNumBands(requestedBandCount)
         val bandCount = ParametricToDpConverter.numBands
         val variant = DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION
         Log.d(TAG, "DP variant=FREQUENCY bands=$bandCount")
@@ -192,10 +201,11 @@ class DynamicsProcessingManager {
      */
     private fun drainPendingApply() {
         val job = pendingApply ?: return
+        val handler = workerHandler ?: return
         // Remove from queue, run synchronously on the caller's thread.
         // Safe because the binder calls inside are thread-agnostic;
         // only ordering matters, not which thread issues them.
-        workerHandler.removeCallbacks(job)
+        handler.removeCallbacks(job)
         try { job.run() } catch (_: Exception) {}
     }
 
@@ -352,9 +362,10 @@ class DynamicsProcessingManager {
                 pendingApply = null
             }
         }
-        pendingApply?.let { workerHandler.removeCallbacks(it) }
+        val handler = workerHandler ?: return
+        pendingApply?.let { handler.removeCallbacks(it) }
         pendingApply = job
-        workerHandler.post(job)
+        handler.post(job)
     }
 
     /** Re-apply the current EQ with fresh channel settings (balance, preamp). */
@@ -467,17 +478,20 @@ class DynamicsProcessingManager {
                 pendingLimiter = null
             }
         }
-        pendingLimiter?.let { workerHandler.removeCallbacks(it) }
+        val handler = workerHandler ?: return
+        pendingLimiter?.let { handler.removeCallbacks(it) }
         pendingLimiter = job
-        workerHandler.post(job)
+        handler.post(job)
     }
 
     fun stop() {
         // Drain any queued band-write before tearing down the DP instance —
         // the runnable would otherwise run against a released native handle.
-        pendingApply?.let { workerHandler.removeCallbacks(it) }
+        workerHandler?.let { handler ->
+            pendingApply?.let { handler.removeCallbacks(it) }
+            pendingLimiter?.let { handler.removeCallbacks(it) }
+        }
         pendingApply = null
-        pendingLimiter?.let { workerHandler.removeCallbacks(it) }
         pendingLimiter = null
         try {
             dynamicsProcessing?.enabled = false
@@ -488,6 +502,9 @@ class DynamicsProcessingManager {
         dynamicsProcessing = null
         currentBandCount = 0
         isActive = false
+        workerThread?.quitSafely()
+        workerThread = null
+        workerHandler = null
         Log.d(TAG, "DynamicsProcessing stopped")
     }
 }
