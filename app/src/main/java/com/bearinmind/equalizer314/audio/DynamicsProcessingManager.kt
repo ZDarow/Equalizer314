@@ -41,6 +41,9 @@ class DynamicsProcessingManager {
     private var lastRightEq: com.bearinmind.equalizer314.dsp.ParametricEqualizer? = null
     private var lastReclaimTime = 0L
     private val reclaimCooldownMs = 2000L  // Don't reclaim more than once every 2 seconds
+    // @Volatile: read off the main thread by EqService's watchdog and by
+    // EqService.isDpRunning mirrors, written from start()/stop().
+    @Volatile
     var isActive = false
         private set
 
@@ -227,6 +230,35 @@ class DynamicsProcessingManager {
         stop()
         start(eq)
         return isActive
+    }
+
+    /** True when the EQ is supposed to be live but our session-0 effect has
+     *  silently lost control or been disabled by another app / the OEM
+     *  audio policy (the "EQ goes flat after switching apps" case that the
+     *  OnControl/OnEnable listeners often miss on aggressive ROMs). Safe to
+     *  call from any thread: returns false when DP isn't active, and any
+     *  native read on a torn-down handle is caught and treated as "lost"
+     *  (so the caller does a clean reattach). */
+    fun hasLostControl(): Boolean {
+        if (!isActive) return false
+        val dp = dynamicsProcessing ?: return false
+        return try {
+            !dp.hasControl() || !dp.enabled
+        } catch (e: Throwable) {
+            Log.w(TAG, "hasLostControl read threw — treating as lost", e)
+            true
+        }
+    }
+
+    /** Cooldown gate shared with [reclaimSession] (same lastReclaimTime /
+     *  reclaimCooldownMs) so the watchdog and the listener path can't both
+     *  fire a recreate inside the 2s window. Consumes the window when it
+     *  returns true. */
+    fun reclaimCooldownElapsed(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastReclaimTime < reclaimCooldownMs) return false
+        lastReclaimTime = now
+        return true
     }
 
     fun updateFromEqualizer(eq: ParametricEqualizer) {

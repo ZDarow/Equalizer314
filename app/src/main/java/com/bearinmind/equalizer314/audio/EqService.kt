@@ -264,6 +264,60 @@ class EqService : Service() {
      *  setEnabled() on actual transitions, not on every callback. */
     private var systemSoundBypassActive = false
 
+    // ---- Session-0 control watchdog ----------------------------------
+    // The global EQ lives on audio session 0, a shared/non-exclusive
+    // effect chain. When another app grabs focus / opens its own session
+    // (Spotify → TikTok → Spotify), aggressive OEM policies (Vivo, Pixel
+    // Adaptive Sound) silently drop our effect, and the AudioEffect
+    // OnControl/OnEnable listeners often don't fire on those ROMs — so the
+    // EQ goes flat until a manual power toggle. This watchdog re-verifies
+    // control and cleanly re-attaches: promptly on playback changes (the
+    // event hook in systemSoundCallback) and on a 5s backstop timer.
+    private val watchdogHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val watchdogIntervalMs = 5_000L
+    private val watchdogTick = object : Runnable {
+        override fun run() {
+            try { verifyAndReclaimGlobalDp() } finally {
+                watchdogHandler.postDelayed(this, watchdogIntervalMs)
+            }
+        }
+    }
+    private fun startWatchdog() {
+        watchdogHandler.removeCallbacks(watchdogTick)
+        watchdogHandler.postDelayed(watchdogTick, watchdogIntervalMs)
+    }
+    private fun stopWatchdog() {
+        watchdogHandler.removeCallbacks(watchdogTick)
+    }
+
+    /** Re-verify the session-0 effect still holds control and re-attach it
+     *  if it was displaced. No-op unless the EQ is supposed to be live in
+     *  System-wide mode (the early-returns make it cheap to call on every
+     *  timer tick / playback change). Reuses the reclaim cooldown so it
+     *  can't tug-of-war with a competing app, and re-applies MBC + the
+     *  system-sound bypass after the recreate (same sequence as a route
+     *  change). */
+    private fun verifyAndReclaimGlobalDp() {
+        val prefs = EqPreferencesManager(this)
+        if (prefs.getAudioRoutingMode() == 1) return   // Session-based: no global DP
+        if (!prefs.getPowerState()) return              // EQ powered off
+        if (!dynamicsManager.isActive) return
+        if (!dynamicsManager.hasLostControl()) return
+        if (!dynamicsManager.reclaimCooldownElapsed()) return
+        Log.w(TAG, "Watchdog: global DP lost control — reattaching")
+        if (dynamicsManager.reattachActive()) {
+            applyPersistedMbcConfig()
+            syncSystemSoundBypassFromCurrent()
+            updateNotification()
+        }
+    }
+
+    /** Main-thread re-check requested from outside (e.g. MainActivity
+     *  returning to the foreground after an app-switch dropout). */
+    fun requestWatchdogCheck() {
+        watchdogHandler.post { verifyAndReclaimGlobalDp() }
+    }
+
     /** Tracks active playback usages and bypasses the global DP while
      *  any "dangerous" usage is playing — notifications, ringtones,
      *  alarms, voice calls, navigation prompts, etc. These streams are
@@ -274,6 +328,11 @@ class EqService : Service() {
     private val systemSoundCallback = object : AudioManager.AudioPlaybackCallback() {
         override fun onPlaybackConfigChanged(configs: MutableList<AudioPlaybackConfiguration>?) {
             applySystemSoundBypass(configs ?: emptyList())
+            // A playback config change means an app started / stopped /
+            // switched audio — exactly when OEM ROMs silently drop our
+            // session-0 effect. Re-verify shortly after so the foreign
+            // session settles first (mirrors reclaimSession's small delay).
+            watchdogHandler.postDelayed({ verifyAndReclaimGlobalDp() }, 300)
         }
     }
 
@@ -410,6 +469,12 @@ class EqService : Service() {
         routingMonitor = monitor
         routeCoordinator = coordinator
         monitor.start()
+
+        // Start the session-0 control watchdog. It self-gates (early-
+        // returns unless the EQ is live in System-wide mode), so it's a
+        // cheap boolean check while off and the real recovery is driven by
+        // the playback-change / session-open event hooks above.
+        startWatchdog()
     }
 
     /** startForeground that won't crash the service when the OS refuses
@@ -557,11 +622,16 @@ class EqService : Service() {
                 val sessionId = intent.getIntExtra(EXTRA_SESSION_ID, 0)
                 val pkg = intent.getStringExtra(EXTRA_PACKAGE_NAME).orEmpty()
                 sessionEffects?.attach(sessionId, pkg)
+                // Another app opening an effect-control session is a direct
+                // "session-0 chain is being contested" signal — re-verify
+                // the global DP (no-op in Session-based mode / when off).
+                watchdogHandler.postDelayed({ verifyAndReclaimGlobalDp() }, 300)
                 return START_STICKY
             }
             ACTION_DETACH_SESSION -> {
                 val sessionId = intent.getIntExtra(EXTRA_SESSION_ID, 0)
                 sessionEffects?.detach(sessionId)
+                watchdogHandler.postDelayed({ verifyAndReclaimGlobalDp() }, 300)
                 // Don't stopSelf — other sessions / the global DP may
                 // still be active. Service lifecycle is otherwise
                 // managed by the EQ on/off flow.
@@ -846,6 +916,7 @@ class EqService : Service() {
     }
 
     override fun onDestroy() {
+        stopWatchdog()
         try { unregisterReceiver(volumeReceiver) } catch (_: Exception) {}
         try { unregisterReceiver(routePresetReceiver) } catch (_: Exception) {}
         try {

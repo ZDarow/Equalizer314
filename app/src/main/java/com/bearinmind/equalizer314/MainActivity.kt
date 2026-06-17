@@ -4092,6 +4092,14 @@ class  MainActivity : AppCompatActivity() {
         com.bearinmind.equalizer314.ui.BottomNavHelper.setPowerFabInstant(this, savedPower)
         if (stateManager.serviceBound && stateManager.eqService != null) {
             stateManager.isProcessing = stateManager.eqService!!.dynamicsManager.isActive
+            // Safety net: returning to the app after an app-switch dropout
+            // should restore the EQ even if the service watchdog hasn't
+            // ticked yet (e.g. the OEM never fired a playback callback).
+            stateManager.eqService?.let { svc ->
+                if (svc.dynamicsManager.isActive && svc.dynamicsManager.hasLostControl()) {
+                    svc.requestWatchdogCheck()
+                }
+            }
         } else {
             stateManager.isProcessing = savedPower
         }
