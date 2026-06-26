@@ -3,6 +3,7 @@ package com.bearinmind.equalizer314.audio
 import android.media.audiofx.DynamicsProcessing
 import android.os.Build
 import android.util.Log
+import com.bearinmind.equalizer314.BuildConfig
 import com.bearinmind.equalizer314.dsp.ParametricEqualizer
 import com.bearinmind.equalizer314.dsp.ParametricToDpConverter
 
@@ -297,11 +298,11 @@ class DynamicsProcessingManager {
             channelBalancePercent, leftChannelGainDb, rightChannelGainDb,
         )
 
-        Log.d(TAG, "[DUMP] preamp=${"%.2f".format(preampGainDb)} dB, " +
-            "autoGain=$autoGainEnabled (offset=${"%.2f".format(lastAutoGainOffset)} dB), " +
-            "channelOffsets L=${"%.2f".format(leftOffsetDb)} R=${"%.2f".format(rightOffsetDb)} dB, " +
-            "bands=${cutoffs.size}")
-        run {
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[DUMP] preamp=${"%.2f".format(preampGainDb)} dB, " +
+                "autoGain=$autoGainEnabled (offset=${"%.2f".format(lastAutoGainOffset)} dB), " +
+                "channelOffsets L=${"%.2f".format(leftOffsetDb)} R=${"%.2f".format(rightOffsetDb)} dB, " +
+                "bands=${cutoffs.size}")
             val sb = StringBuilder("[DUMP] (cutoff Hz, L gain dB, R gain dB) per band:\n")
             for (i in cutoffs.indices) {
                 sb.append("  [%3d] cutoff=%-9.1f L=%+6.2f R=%+6.2f\n"
@@ -350,7 +351,13 @@ class DynamicsProcessingManager {
                 // never observes partial state during the update.
                 val leftEqObj = DynamicsProcessing.Eq(true, true, n)
                 val rightEqObj = DynamicsProcessing.Eq(true, true, n)
-                for (i in 0 until n) {
+                // Defensive guard: ensure all three arrays have the same length.
+                // cutoffsSnap and leftGains come from convertFeatureAware() which
+                // guarantees equal sizes, but rightGains is a copyOf or separate
+                // conversion — verify to avoid ArrayIndexOutOfBounds.
+                val minLen = minOf(cutoffsSnap.size, leftGains.size, rightGains.size)
+                val actualN = minOf(n, minLen)
+                for (i in 0 until actualN) {
                     leftEqObj.setBand(i, DynamicsProcessing.EqBand(true, cutoffsSnap[i], leftGains[i]))
                     rightEqObj.setBand(i, DynamicsProcessing.EqBand(true, cutoffsSnap[i], rightGains[i]))
                 }

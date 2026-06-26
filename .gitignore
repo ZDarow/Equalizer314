@@ -13,6 +13,7 @@ local.properties
 *.apk
 *.ap_
 *.aab
+keystore.properties
 equalizer314-option-c-implementation.md
 Equalizer314/
 CLAUDE.md

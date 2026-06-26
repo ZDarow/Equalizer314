@@ -295,8 +295,15 @@ class BiquadFilter(
     /**
      * Process stereo sample pair in-place.
      * buffer[offset] = left, buffer[offset+1] = right
+     *
+     * @throws IllegalArgumentException if [offset] or [offset+1] is out of bounds
      */
     fun processStereoInPlace(buffer: FloatArray, offset: Int) {
+        if (offset < 0 || offset + 1 >= buffer.size) {
+            throw IllegalArgumentException(
+                "processStereoInPlace: buffer.size=${buffer.size} too small for offset=$offset"
+            )
+        }
         val inputL = buffer[offset].toDouble()
         val inputR = buffer[offset + 1].toDouble()
 
@@ -317,38 +324,22 @@ class BiquadFilter(
 
     fun getFrequencyResponse(freq: Float): Float {
         val omega = 2.0 * PI * freq / sampleRate
-        val z = Complex(cos(omega), sin(omega))
-        val zInv = z.inverse()
-        val zInv2 = zInv.times(zInv)
+        val c = cos(omega)
+        val s = sin(omega)
+        val c2 = cos(2.0 * omega)
+        val s2 = sin(2.0 * omega)
 
-        val numerator = Complex(b0, 0.0)
-            .plus(Complex(b1, 0.0).times(zInv))
-            .plus(Complex(b2, 0.0).times(zInv2))
+        // Numerator: b0 + b1*z^-1 + b2*z^-2,  z = e^(jω)
+        val bReal = b0 + b1 * c + b2 * c2
+        val bImag = b1 * s + b2 * s2
 
-        val denominator = Complex(1.0, 0.0)
-            .plus(Complex(a1, 0.0).times(zInv))
-            .plus(Complex(a2, 0.0).times(zInv2))
+        // Denominator: 1 + a1*z^-1 + a2*z^-2
+        val aReal = 1.0 + a1 * c + a2 * c2
+        val aImag = a1 * s + a2 * s2
 
-        val response = numerator.div(denominator)
-        val mag = response.magnitude().toFloat()
-
+        // |H(e^jω)| = sqrt((bReal² + bImag²) / (aReal² + aImag²))
+        val magSq = (bReal * bReal + bImag * bImag) / (aReal * aReal + aImag * aImag)
+        val mag = kotlin.math.sqrt(magSq).toFloat()
         return if (mag.isNaN() || mag.isInfinite()) 1f else mag
-    }
-
-    private data class Complex(val real: Double, val imag: Double) {
-        fun plus(other: Complex) = Complex(real + other.real, imag + other.imag)
-        fun times(other: Complex) = Complex(
-            real * other.real - imag * other.imag,
-            real * other.imag + imag * other.real
-        )
-        fun div(other: Complex): Complex {
-            val denominator = other.real * other.real + other.imag * other.imag
-            return Complex(
-                (real * other.real + imag * other.imag) / denominator,
-                (imag * other.real - real * other.imag) / denominator
-            )
-        }
-        fun inverse() = Complex(real / (real * real + imag * imag), -imag / (real * real + imag * imag))
-        fun magnitude() = sqrt(real * real + imag * imag)
     }
 }

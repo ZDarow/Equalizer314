@@ -60,9 +60,11 @@ object ParametricToDpConverter {
         get() = WAVELET_FREQUENCIES.copyOf()
 
     fun setNumBands(count: Int) {
-        // Currently fixed at Wavelet's 127. The setter is kept so
-        // DynamicsProcessingManager can ask for "127" explicitly during
-        // start() and any future variants can be added without renaming.
+        // Currently fixed at Wavelet's 127-band table. The parameter is
+        // accepted for API compatibility with DynamicsProcessingManager's
+        // requestedBandCount (128..1024), but the underlying frequency
+        // table is always 127 entries. DP's VARIANT_FAVOR_FREQUENCY_RESOLUTION
+        // handles any requested count by interpolating the 127 entries.
         numBands = WAVELET_FREQUENCIES.size
     }
 

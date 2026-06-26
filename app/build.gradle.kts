@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -28,12 +30,25 @@ android {
 
     signingConfigs {
         create("release") {
-            val storeFilePath = project.findProperty("RELEASE_STORE_FILE") as String?
+            // Load signing credentials from keystore.properties (in .gitignore)
+            val keystorePropsFile = rootProject.file("keystore.properties")
+            val props = if (keystorePropsFile.exists()) {
+                Properties().apply { load(keystorePropsFile.inputStream()) }
+            } else {
+                // Fallback to project properties (CI/CD secrets, env vars)
+                null
+            }
+
+            val storeFilePath = props?.getProperty("RELEASE_STORE_FILE")
+                ?: project.findProperty("RELEASE_STORE_FILE") as? String
             if (storeFilePath != null) {
                 storeFile = file(storeFilePath)
-                storePassword = project.findProperty("RELEASE_STORE_PASSWORD") as String?
-                keyAlias = project.findProperty("RELEASE_KEY_ALIAS") as String?
-                keyPassword = project.findProperty("RELEASE_KEY_PASSWORD") as String?
+                storePassword = props?.getProperty("RELEASE_STORE_PASSWORD")
+                    ?: project.findProperty("RELEASE_STORE_PASSWORD") as? String
+                keyAlias = props?.getProperty("RELEASE_KEY_ALIAS")
+                    ?: project.findProperty("RELEASE_KEY_ALIAS") as? String
+                keyPassword = props?.getProperty("RELEASE_KEY_PASSWORD")
+                    ?: project.findProperty("RELEASE_KEY_PASSWORD") as? String
             }
         }
     }

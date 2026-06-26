@@ -3,7 +3,7 @@ package com.bearinmind.equalizer314.audio
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.bearinmind.equalizer314.dsp.BiquadFilter
+import com.bearinmind.equalizer314.dsp.EqSerializer
 import com.bearinmind.equalizer314.dsp.ParametricEqualizer
 import com.bearinmind.equalizer314.state.EqPreferencesManager
 import org.json.JSONArray
@@ -77,27 +77,16 @@ class RouteSwitchCoordinator(
     private fun loadCustomPreset(name: String): JSONObject? {
         val prefs = context.getSharedPreferences("custom_presets", Context.MODE_PRIVATE)
         val str = prefs.getString("preset_$name", null) ?: return null
-        return runCatching { JSONObject(str) }.getOrNull()
+        return try {
+            JSONObject(str)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse custom preset '$name': ${e.message}", e)
+            null
+        }
     }
 
-    private fun buildEqualizerFromBands(arr: JSONArray): ParametricEqualizer {
-        val eq = ParametricEqualizer()
-        for (i in 0 until arr.length()) {
-            val o = arr.getJSONObject(i)
-            val type = runCatching {
-                BiquadFilter.FilterType.valueOf(o.getString("filterType"))
-            }.getOrDefault(BiquadFilter.FilterType.BELL)
-            eq.addBand(
-                o.getDouble("frequency").toFloat(),
-                o.getDouble("gain").toFloat(),
-                type,
-                o.getDouble("q"),
-            )
-            if (o.has("enabled")) eq.setBandEnabled(i, o.getBoolean("enabled"))
-        }
-        eq.isEnabled = true
-        return eq
-    }
+    private fun buildEqualizerFromBands(arr: JSONArray): ParametricEqualizer =
+        EqSerializer.parseBands(arr)
 
     companion object {
         private const val TAG = "RouteSwitchCoord"

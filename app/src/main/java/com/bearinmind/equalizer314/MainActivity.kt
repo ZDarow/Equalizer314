@@ -88,6 +88,8 @@ class  MainActivity : AppCompatActivity() {
     private lateinit var tableController: TableEqController
     private lateinit var simpleEqController: SimpleEqController
     private lateinit var bandToggleManager: BandToggleManager
+    private lateinit var undoRedoManager: com.bearinmind.equalizer314.state.UndoRedoManager
+    private lateinit var presetManager: com.bearinmind.equalizer314.state.PresetManager
     private val graphOverlayLayoutManager = GraphOverlayLayoutManager()
     private val visualizerHelper = com.bearinmind.equalizer314.audio.VisualizerHelper()
 
@@ -429,6 +431,11 @@ class  MainActivity : AppCompatActivity() {
             eqViewModel.pushEqUpdate()
         }
 
+        val onEqChangedWithHistory = {
+            eqViewModel.pushEqUpdate()
+            if (::undoRedoManager.isInitialized) undoRedoManager.saveState()
+        }
+
         val onBandCountChanged = {
             onEqChanged()
             bandToggleManager.updateIcons()
@@ -636,8 +643,7 @@ class  MainActivity : AppCompatActivity() {
 
         fun populatePresetPicker() {
             presetPickerContainer.removeAllViews()
-            val prefs = getSharedPreferences("custom_presets", MODE_PRIVATE)
-            val presetNames = prefs.getStringSet("preset_names", emptySet())?.sorted() ?: emptyList()
+            val presetNames = presetManager.names.sorted()
 
             val density = resources.displayMetrics.density
 
@@ -662,145 +668,49 @@ class  MainActivity : AppCompatActivity() {
                 strokeWidth = (1 * density).toInt()
             }
             saveCurrentBtn.setOnClickListener {
-                // Find next Custom # number
-                var nextNum = 1
-                for (n in presetNames) {
-                    val match = Regex("Custom #(\\d+)").find(n)
-                    if (match != null) nextNum = maxOf(nextNum, match.groupValues[1].toInt() + 1)
-                }
-                // Build custom dialog layout (Launcher314 style: side-by-side Cancel/Save)
-                val dialogView = android.widget.LinearLayout(this).apply {
-                    orientation = android.widget.LinearLayout.VERTICAL
-                    setPadding((24 * density).toInt(), (20 * density).toInt(), (24 * density).toInt(), (16 * density).toInt())
-                }
-                val title = android.widget.TextView(this).apply {
-                    text = getString(R.string.dialog_save_custom_preset)
-                    setTextColor(0xFFE2E2E2.toInt())
-                    textSize = 20f
-                    setPadding(0, 0, 0, (12 * density).toInt())
-                }
-                val inputBox = android.widget.FrameLayout(this).apply {
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                        bottomMargin = (16 * density).toInt()
-                    }
-                    background = android.graphics.drawable.GradientDrawable().apply {
-                        setColor(0x00000000)
-                        setStroke((1 * density).toInt(), 0xFF555555.toInt())
-                        cornerRadius = 12 * density
-                    }
-                }
-                val defaultName = getString(R.string.msg_custom_preset_prefix, nextNum)
-                val input = android.widget.EditText(this).apply {
-                    hint = defaultName
-                    setTextColor(0xFFFFFFFF.toInt())
-                    setHintTextColor(0xFF888888.toInt())
-                    inputType = android.text.InputType.TYPE_CLASS_TEXT
-                    background = null
-                    val pad = (14 * density).toInt()
-                    setPadding(pad, pad, pad, pad)
-                    isSingleLine = true
-                }
-                inputBox.addView(input)
-                val btnRow = android.widget.LinearLayout(this).apply {
-                    orientation = android.widget.LinearLayout.HORIZONTAL
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
-                }
-                val cancelBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                    text = getString(R.string.action_cancel)
-                    layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                        marginEnd = (3 * density).toInt()
-                    }
-                    cornerRadius = (12 * density).toInt()
-                    setTextColor(0xFFEF9A9A.toInt())
-                    strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                    strokeWidth = (1 * density).toInt()
-                    setBackgroundColor(0x00000000)
-                    insetTop = 0; insetBottom = 0
-                }
-                val saveDialogBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                    text = getString(R.string.action_ok)
-                    layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                        marginStart = (3 * density).toInt()
-                    }
-                    cornerRadius = (12 * density).toInt()
-                    setTextColor(0xFFDDDDDD.toInt())
-                    setBackgroundColor(0x00000000)
-                    strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                    strokeWidth = (1 * density).toInt()
-                    insetTop = 0; insetBottom = 0
-                }
-                btnRow.addView(cancelBtn)
-                btnRow.addView(saveDialogBtn)
-                val divider = android.view.View(this).apply {
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (1 * density).toInt()).apply {
-                        bottomMargin = (12 * density).toInt()
-                    }
-                    setBackgroundColor(0xFF444444.toInt())
-                }
-                dialogView.addView(title)
-                dialogView.addView(inputBox)
-                dialogView.addView(divider)
-                dialogView.addView(btnRow)
-
-                val dialog = android.app.AlertDialog.Builder(this, R.style.Theme_Equalizer314_Dialog)
-                    .setView(dialogView)
-                    .create()
-                cancelBtn.setOnClickListener { dialog.dismiss() }
-                saveDialogBtn.setOnClickListener {
-                    val name = input.text.toString().trim().ifEmpty { defaultName }
-                    if (name.isNotEmpty()) {
+                val prefix = getString(R.string.msg_custom_preset_prefix, 1)
+                    .trimEnd('1', '2', '3', '4', '5', '6', '7', '8', '9', '0')
+                val defaultName = presetManager.nextCustomName(prefix)
+                com.bearinmind.equalizer314.ui.DialogFactory.input(
+                    this,
+                    title = getString(R.string.dialog_save_custom_preset),
+                    hint = defaultName,
+                    initialText = defaultName,
+                    onConfirm = { name ->
+                        if (name.isEmpty()) return@input
                         eqViewModel.eqPrefs.saveState(eqViewModel.parametricEq.value)
                         eqViewModel.persistLeftRightIfCse()
-                        fun serialize(eq: com.bearinmind.equalizer314.dsp.ParametricEqualizer): org.json.JSONArray {
-                            val arr = org.json.JSONArray()
-                            for (b in eq.getAllBands()) {
-                                arr.put(org.json.JSONObject().apply {
-                                    put("frequency", b.frequency)
-                                    put("gain", b.gain)
-                                    put("q", b.q)
-                                    put("filterType", b.filterType.name)
-                                    put("enabled", b.enabled)
-                                })
-                            }
-                            return arr
-                        }
-                        val json = org.json.JSONObject()
-                        json.put("preamp", eqViewModel.preampGainDb.value)
                         val cseOn = eqViewModel.eqPrefs.getChannelSideEqEnabled()
-                        json.put("channelSideEqEnabled", cseOn)
-                        if (cseOn) {
+                        val bandsJson = com.bearinmind.equalizer314.dsp.EqSerializer.bandsToJson(
+                            eqViewModel.parametricEq.value
+                        )
+                        val json = if (cseOn) {
                             val (lEq, rEq) = eqViewModel.getChannelEqs()
-                            json.put("leftBands", serialize(lEq))
-                            json.put("rightBands", serialize(rEq))
-                            // Back-compat: also write the currently-active EQ
-                            // under the legacy "bands" key so older builds
-                            // still see something.
-                            json.put("bands", serialize(eqViewModel.parametricEq.value))
+                            com.bearinmind.equalizer314.dsp.EqSerializer.presetToJson(
+                                preampDb = eqViewModel.preampGainDb.value,
+                                bands = bandsJson,
+                                channelSideEqEnabled = true,
+                                leftBands = com.bearinmind.equalizer314.dsp.EqSerializer.bandsToJson(lEq),
+                                rightBands = com.bearinmind.equalizer314.dsp.EqSerializer.bandsToJson(rEq),
+                            )
                         } else {
-                            json.put("bands", serialize(eqViewModel.parametricEq.value))
+                            com.bearinmind.equalizer314.dsp.EqSerializer.eqToPresetJson(
+                                eqViewModel.parametricEq.value,
+                                eqViewModel.preampGainDb.value,
+                            )
                         }
-                        prefs.edit()
-                            .putString("preset_$name", json.toString())
-                            .putStringSet("preset_names", (presetNames.toMutableSet() + name))
-                            .apply()
+                        presetManager.save(name, json)
                         populatePresetPicker()
                         android.widget.Toast.makeText(this, getString(R.string.msg_saved, name), android.widget.Toast.LENGTH_SHORT).show()
                     }
-                    dialog.dismiss()
-                }
-                dialog.show()
+                ).show()
             }
             presetPickerContainer.addView(saveCurrentBtn)
 
             // List saved presets — styled like (+) band buttons
             for (name in presetNames) {
                 // Parse preset data for thumbnail
-                val presetJson = prefs.getString("preset_$name", null)
+                val presetJson = presetManager.getJson(name)
                 val bandCount = try {
                     org.json.JSONObject(presetJson ?: "{}").getJSONArray("bands").length()
                 } catch (_: Exception) { 0 }
@@ -830,17 +740,8 @@ class  MainActivity : AppCompatActivity() {
                 val thumbW = (48 * density).toInt()
                 val thumbH = (24 * density).toInt()
                 val thumbnail = object : android.view.View(this) {
-                    private fun buildEq(arr: org.json.JSONArray): com.bearinmind.equalizer314.dsp.ParametricEqualizer {
-                        val eq = com.bearinmind.equalizer314.dsp.ParametricEqualizer()
-                        eq.clearBands()
-                        for (i in 0 until arr.length()) {
-                            val b = arr.getJSONObject(i)
-                            val ft = try { com.bearinmind.equalizer314.dsp.BiquadFilter.FilterType.valueOf(b.getString("filterType")) }
-                                     catch (_: Exception) { com.bearinmind.equalizer314.dsp.BiquadFilter.FilterType.BELL }
-                            eq.addBand(b.getDouble("frequency").toFloat(), b.getDouble("gain").toFloat(), ft, b.getDouble("q"))
-                        }
-                        return eq
-                    }
+                    private fun buildEq(arr: org.json.JSONArray): com.bearinmind.equalizer314.dsp.ParametricEqualizer =
+                        com.bearinmind.equalizer314.dsp.EqSerializer.parseBands(arr)
 
                     private fun drawCurve(
                         canvas: android.graphics.Canvas,
@@ -974,78 +875,16 @@ class  MainActivity : AppCompatActivity() {
                     strokeWidth = (1 * density).toInt()
                 }
                 deleteBtn.setOnClickListener {
-                    val d = resources.displayMetrics.density
-                    val dlgView = android.widget.LinearLayout(this).apply {
-                        orientation = android.widget.LinearLayout.VERTICAL
-                        setPadding((24 * d).toInt(), (20 * d).toInt(), (24 * d).toInt(), (16 * d).toInt())
-                    }
-                    val dlgTitle = android.widget.TextView(this).apply {
-                        text = getString(R.string.action_delete)
-                        setTextColor(0xFFE2E2E2.toInt())
-                        textSize = 20f
-                        setPadding(0, 0, 0, (12 * d).toInt())
-                    }
-                    val dlgMsg = android.widget.TextView(this).apply {
-                        text = getString(R.string.dialog_delete_preset, name)
-                        setTextColor(0xFFAAAAAA.toInt())
-                        textSize = 14f
-                        setPadding(0, 0, 0, (16 * d).toInt())
-                    }
-                    val dlgDiv = android.view.View(this).apply {
-                        layoutParams = android.widget.LinearLayout.LayoutParams(
-                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (1 * d).toInt()).apply {
-                            bottomMargin = (12 * d).toInt()
+                    com.bearinmind.equalizer314.ui.DialogFactory.confirmation(
+                        this,
+                        title = getString(R.string.action_delete),
+                        message = getString(R.string.dialog_delete_preset, name),
+                        confirmLabel = getString(R.string.action_delete),
+                        onConfirm = {
+                            presetManager.delete(name)
+                            populatePresetPicker()
                         }
-                        setBackgroundColor(0xFF444444.toInt())
-                    }
-                    val dlgBtnRow = android.widget.LinearLayout(this).apply {
-                        orientation = android.widget.LinearLayout.HORIZONTAL
-                        layoutParams = android.widget.LinearLayout.LayoutParams(
-                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
-                    }
-                    val dlgDeleteBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                        text = getString(R.string.action_delete)
-                        layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                            marginEnd = (3 * d).toInt()
-                        }
-                        cornerRadius = (12 * d).toInt()
-                        setTextColor(0xFFEF9A9A.toInt())
-                        strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                        strokeWidth = (1 * d).toInt()
-                        setBackgroundColor(0x00000000)
-                        insetTop = 0; insetBottom = 0
-                    }
-                    val dlgCancelBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                        text = getString(R.string.action_cancel)
-                        layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                            marginStart = (3 * d).toInt()
-                        }
-                        cornerRadius = (12 * d).toInt()
-                        setTextColor(0xFFDDDDDD.toInt())
-                        setBackgroundColor(0x00000000)
-                        strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                        strokeWidth = (1 * d).toInt()
-                        insetTop = 0; insetBottom = 0
-                    }
-                    dlgBtnRow.addView(dlgDeleteBtn)
-                    dlgBtnRow.addView(dlgCancelBtn)
-                    dlgView.addView(dlgTitle)
-                    dlgView.addView(dlgMsg)
-                    dlgView.addView(dlgDiv)
-                    dlgView.addView(dlgBtnRow)
-                    val dlg = android.app.AlertDialog.Builder(this, R.style.Theme_Equalizer314_Dialog)
-                        .setView(dlgView).create()
-                    dlgCancelBtn.setOnClickListener { dlg.dismiss() }
-                    dlgDeleteBtn.setOnClickListener {
-                        prefs.edit()
-                            .remove("preset_$name")
-                            .putStringSet("preset_names", (presetNames.toMutableSet() - name))
-                            .apply()
-                        populatePresetPicker()
-                        dlg.dismiss()
-                    }
-                    dlg.show()
+                    ).show()
                 }
                 // Export button
                 val exportBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
@@ -1067,62 +906,8 @@ class  MainActivity : AppCompatActivity() {
                     strokeWidth = (1 * density).toInt()
                 }
                 exportBtn.setOnClickListener {
-                    val presetJson = prefs.getString("preset_$name", null) ?: return@setOnClickListener
-                    val obj = org.json.JSONObject(presetJson)
-                    val sb = StringBuilder()
-                    val preamp = obj.optDouble("preamp", 0.0)
-                    sb.append("Preamp: ${String.format("%.1f", preamp)} dB\n")
-
-                    // Emit one APO filter line per band.
-                    fun appendFilters(bands: org.json.JSONArray, indexOffset: Int = 0) {
-                        for (i in 0 until bands.length()) {
-                            val b = bands.getJSONObject(i)
-                            val ft = b.getString("filterType")
-                            // Map our FilterType to APO's token + which optional
-                            // fields the line needs. BP / NO / AP / LP / HP have
-                            // no Gain; 1st-order LS / HS / LP / HP have no Q.
-                            val apoType: String
-                            val hasGain: Boolean
-                            val hasQ: Boolean
-                            when (ft) {
-                                "BELL"         -> { apoType = "PK";  hasGain = true;  hasQ = true  }
-                                "LOW_SHELF"    -> { apoType = "LSC"; hasGain = true;  hasQ = true  }
-                                "HIGH_SHELF"   -> { apoType = "HSC"; hasGain = true;  hasQ = true  }
-                                "LOW_PASS"     -> { apoType = "LPQ"; hasGain = false; hasQ = true  }
-                                "HIGH_PASS"    -> { apoType = "HPQ"; hasGain = false; hasQ = true  }
-                                "LOW_SHELF_1"  -> { apoType = "LS";  hasGain = true;  hasQ = false }
-                                "HIGH_SHELF_1" -> { apoType = "HS";  hasGain = true;  hasQ = false }
-                                "LOW_PASS_1"   -> { apoType = "LP";  hasGain = false; hasQ = false }
-                                "HIGH_PASS_1"  -> { apoType = "HP";  hasGain = false; hasQ = false }
-                                "BAND_PASS"    -> { apoType = "BP";  hasGain = false; hasQ = true  }
-                                "NOTCH"        -> { apoType = "NO";  hasGain = false; hasQ = true  }
-                                "ALL_PASS"     -> { apoType = "AP";  hasGain = false; hasQ = true  }
-                                else           -> { apoType = "PK";  hasGain = true;  hasQ = true  }
-                            }
-                            val fc = b.getDouble("frequency").toInt()
-                            val line = StringBuilder("Filter ${i + 1 + indexOffset}: ON $apoType Fc $fc Hz")
-                            if (hasGain) line.append(" Gain ${String.format("%.1f", b.getDouble("gain"))} dB")
-                            if (hasQ) line.append(" Q ${String.format("%.2f", b.getDouble("q"))}")
-                            sb.append(line).append('\n')
-                        }
-                    }
-
-                    val cseOn = obj.optBoolean("channelSideEqEnabled", false)
-                    if (cseOn && obj.has("leftBands") && obj.has("rightBands")) {
-                        val leftArr = obj.getJSONArray("leftBands")
-                        val rightArr = obj.getJSONArray("rightBands")
-                        sb.append("Channel: L\n")
-                        appendFilters(leftArr)
-                        sb.append("Channel: R\n")
-                        // Continue filter numbering from where L ended so the
-                        // file has globally unique Filter N indices.
-                        appendFilters(rightArr, indexOffset = leftArr.length())
-                    } else {
-                        // Single / shared EQ preset — no Channel: directive
-                        // means APO applies all filters to every channel.
-                        appendFilters(obj.getJSONArray("bands"))
-                    }
-                    pendingExportText = sb.toString()
+                    val apoText = presetManager.toApoText(name) ?: return@setOnClickListener
+                    pendingExportText = apoText
                     val intent = android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT).apply {
                         addCategory(android.content.Intent.CATEGORY_OPENABLE)
                         type = "text/plain"
@@ -1139,41 +924,19 @@ class  MainActivity : AppCompatActivity() {
                 presetRow.addView(deleteBtn)
                 // Tap to load preset
                 presetRow.setOnClickListener {
-                    val json = prefs.getString("preset_$name", null) ?: return@setOnClickListener
-                    val obj = org.json.JSONObject(json)
-
-                    fun parseBands(arr: org.json.JSONArray): List<com.bearinmind.equalizer314.state.EqStateManager.BandSpec> {
-                        val out = mutableListOf<com.bearinmind.equalizer314.state.EqStateManager.BandSpec>()
-                        for (i in 0 until arr.length()) {
-                            val bj = arr.getJSONObject(i)
-                            val ft = try { com.bearinmind.equalizer314.dsp.BiquadFilter.FilterType.valueOf(bj.getString("filterType")) }
-                                     catch (_: Exception) { com.bearinmind.equalizer314.dsp.BiquadFilter.FilterType.BELL }
-                            out += com.bearinmind.equalizer314.state.EqStateManager.BandSpec(
-                                frequency = bj.getDouble("frequency").toFloat(),
-                                gain = bj.getDouble("gain").toFloat(),
-                                q = bj.getDouble("q"),
-                                filterType = ft,
-                                enabled = if (bj.has("enabled")) bj.getBoolean("enabled") else true,
-                            )
-                        }
-                        return out
-                    }
-
-                    val cseOn = obj.optBoolean("channelSideEqEnabled", false)
-                    val bothBands = if (obj.has("bands")) parseBands(obj.getJSONArray("bands")) else emptyList()
-                    val leftBands = if (obj.has("leftBands")) parseBands(obj.getJSONArray("leftBands")) else bothBands
-                    val rightBands = if (obj.has("rightBands")) parseBands(obj.getJSONArray("rightBands")) else bothBands
-                    eqViewModel.applyPresetEqs(cseOn, bothBands, leftBands, rightBands)
+                    val parsed = presetManager.parse(name) ?: return@setOnClickListener
+                    eqViewModel.applyPresetEqs(
+                        parsed.cseOn,
+                        parsed.bothBands,
+                        parsed.leftBands,
+                        parsed.rightBands,
+                    )
 
                     eqGraphView.setParametricEqualizer(eqViewModel.parametricEq.value)
                     eqViewModel.eqPrefs.saveState(eqViewModel.parametricEq.value)
                     eqViewModel.persistLeftRightIfCse()
                     eqViewModel.initBandSlots()
                     bandToggleManager.setupToggles()
-                    if (obj.has("preamp")) {
-                        eqViewModel.setPreampGain(obj.getDouble("preamp").toFloat())
-                        eqViewModel.eqPrefs.savePreampGain(eqViewModel.preampGainDb.value)
-                    }
                     if (eqViewModel.isProcessing.value) {
                         val (lEq, rEq) = eqViewModel.getChannelEqs()
                         eqViewModel.eqService.value?.let { svc ->
@@ -1254,96 +1017,36 @@ class  MainActivity : AppCompatActivity() {
         }
         // Reset button: reset EQ to flat
         resetBtn.setOnClickListener {
-            val density = resources.displayMetrics.density
-            val dialogView = android.widget.LinearLayout(this).apply {
-                orientation = android.widget.LinearLayout.VERTICAL
-                setPadding((24 * density).toInt(), (20 * density).toInt(), (24 * density).toInt(), (16 * density).toInt())
-            }
-            val title = android.widget.TextView(this).apply {
-                text = getString(R.string.action_reset)
-                setTextColor(0xFFE2E2E2.toInt())
-                textSize = 20f
-                setPadding(0, 0, 0, (12 * density).toInt())
-            }
-            val message = android.widget.TextView(this).apply {
-                text = getString(R.string.dialog_reset_all_values)
-                setTextColor(0xFFAAAAAA.toInt())
-                textSize = 14f
-                setPadding(0, 0, 0, (16 * density).toInt())
-            }
-            val divider = android.view.View(this).apply {
-                layoutParams = android.widget.LinearLayout.LayoutParams(
-                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (1 * density).toInt()).apply {
-                    bottomMargin = (12 * density).toInt()
-                }
-                setBackgroundColor(0xFF444444.toInt())
-            }
-            val btnRow = android.widget.LinearLayout(this).apply {
-                orientation = android.widget.LinearLayout.HORIZONTAL
-                layoutParams = android.widget.LinearLayout.LayoutParams(
-                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
-            }
-            val resetDialogBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                text = getString(R.string.action_reset)
-                layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginEnd = (3 * density).toInt()
-                }
-                cornerRadius = (12 * density).toInt()
-                setTextColor(0xFFEF9A9A.toInt())
-                strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                strokeWidth = (1 * density).toInt()
-                setBackgroundColor(0x00000000)
-                insetTop = 0; insetBottom = 0
-            }
-            val cancelBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                text = getString(R.string.action_cancel)
-                layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginStart = (3 * density).toInt()
-                }
-                cornerRadius = (12 * density).toInt()
-                setTextColor(0xFFDDDDDD.toInt())
-                setBackgroundColor(0x00000000)
-                strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                strokeWidth = (1 * density).toInt()
-                insetTop = 0; insetBottom = 0
-            }
-            btnRow.addView(resetDialogBtn)
-            btnRow.addView(cancelBtn)
-            dialogView.addView(title)
-            dialogView.addView(message)
-            dialogView.addView(divider)
-            dialogView.addView(btnRow)
-
-            val dialog = android.app.AlertDialog.Builder(this, R.style.Theme_Equalizer314_Dialog)
-                .setView(dialogView)
-                .create()
-            cancelBtn.setOnClickListener { dialog.dismiss() }
-            resetDialogBtn.setOnClickListener {
-                val eq = eqViewModel.parametricEq.value
-                eq.clearBands()
-                val defaultFreqs = com.bearinmind.equalizer314.dsp.ParametricEqualizer.logSpacedFrequencies(16)
-                for (i in 0..3) {
-                    eq.addBand(defaultFreqs[i], 0f, com.bearinmind.equalizer314.dsp.BiquadFilter.FilterType.BELL)
-                }
-                eqGraphView.setParametricEqualizer(eq)
-                eqViewModel.eqPrefs.saveState(eq)
-                // Reset wipes the shared EQ — drop any stored L/R divergence
-                // so re-enabling CSE forks from the fresh defaults.
-                eqViewModel.eqPrefs.clearLeftRightBands()
-                eqViewModel.initBandSlots()
-                bandToggleManager.setupToggles()
-                if (eqViewModel.isProcessing.value) {
-                    eqViewModel.eqService.value?.let { svc ->
-                        svc.dynamicsManager.stop()
-                        svc.dynamicsManager.requestedBandCount = eqViewModel.eqPrefs.getDpBandCount()
-                        svc.dynamicsManager.start(eq)
+            com.bearinmind.equalizer314.ui.DialogFactory.confirmation(
+                this,
+                title = getString(R.string.action_reset),
+                message = getString(R.string.dialog_reset_all_values),
+                confirmLabel = getString(R.string.action_reset),
+                onConfirm = {
+                    undoRedoManager.saveState()
+                    val eq = eqViewModel.parametricEq.value
+                    eq.clearBands()
+                    val defaultFreqs = com.bearinmind.equalizer314.dsp.ParametricEqualizer.logSpacedFrequencies(16)
+                    for (i in 0..3) {
+                        eq.addBand(defaultFreqs[i], 0f, com.bearinmind.equalizer314.dsp.BiquadFilter.FilterType.BELL)
                     }
+                    eqGraphView.setParametricEqualizer(eq)
+                    eqViewModel.eqPrefs.saveState(eq)
+                    // Reset wipes the shared EQ — drop any stored L/R divergence
+                    // so re-enabling CSE forks from the fresh defaults.
+                    eqViewModel.eqPrefs.clearLeftRightBands()
+                    eqViewModel.initBandSlots()
+                    bandToggleManager.setupToggles()
+                    if (eqViewModel.isProcessing.value) {
+                        eqViewModel.eqService.value?.let { svc ->
+                            svc.dynamicsManager.stop()
+                            svc.dynamicsManager.requestedBandCount = eqViewModel.eqPrefs.getDpBandCount()
+                            svc.dynamicsManager.start(eq)
+                        }
+                    }
+                    android.widget.Toast.makeText(this, getString(R.string.msg_eq_reset), android.widget.Toast.LENGTH_SHORT).show()
                 }
-                android.widget.Toast.makeText(this, getString(R.string.msg_eq_reset), android.widget.Toast.LENGTH_SHORT).show()
-                dialog.dismiss()
-            }
-            dialog.show()
+            ).show()
         }
         // Edit mode toggle — undo/redo pop out from edit button position
         var editMode = false
@@ -1390,62 +1093,19 @@ class  MainActivity : AppCompatActivity() {
             }
         }
 
-        // Undo/Redo — EQ state history
-        val eqHistory = mutableListOf<String>()
-        var historyIndex = -1
-        fun saveEqState() {
-            val eq = eqViewModel.parametricEq.value
-            val json = org.json.JSONObject()
-            val bands = org.json.JSONArray()
-            for (b in eq.getAllBands()) {
-                val bj = org.json.JSONObject()
-                bj.put("frequency", b.frequency); bj.put("gain", b.gain)
-                bj.put("q", b.q); bj.put("filterType", b.filterType.name)
-                bj.put("enabled", b.enabled)
-                bands.put(bj)
-            }
-            json.put("bands", bands)
-            // Trim future states if we're not at the end
-            while (eqHistory.size > historyIndex + 1) eqHistory.removeAt(eqHistory.size - 1)
-            eqHistory.add(json.toString())
-            historyIndex = eqHistory.size - 1
-        }
-        fun restoreEqState(jsonStr: String) {
-            val eq = eqViewModel.parametricEq.value
-            val obj = org.json.JSONObject(jsonStr)
-            val bandsArr = obj.getJSONArray("bands")
-            eq.clearBands()
-            for (i in 0 until bandsArr.length()) {
-                val bj = bandsArr.getJSONObject(i)
-                val ft = try { com.bearinmind.equalizer314.dsp.BiquadFilter.FilterType.valueOf(bj.getString("filterType")) }
-                         catch (_: Exception) { com.bearinmind.equalizer314.dsp.BiquadFilter.FilterType.BELL }
-                eq.addBand(bj.getDouble("frequency").toFloat(), bj.getDouble("gain").toFloat(), ft, bj.getDouble("q"))
-                if (bj.has("enabled")) eq.setBandEnabled(i, bj.getBoolean("enabled"))
-            }
-            eqGraphView.setParametricEqualizer(eq)
-            eqViewModel.eqPrefs.saveState(eq)
-            eqViewModel.persistLeftRightIfCse()
-            eqViewModel.initBandSlots()
-            bandToggleManager.setupToggles()
-            if (eqViewModel.isProcessing.value) {
-                eqViewModel.eqService.value?.let { svc -> svc.dynamicsManager.stop(); svc.dynamicsManager.run { requestedBandCount = eqViewModel.eqPrefs.getDpBandCount(); start(eq) } }
-            }
-        }
-        // Save initial state
-        saveEqState()
+        // Undo/Redo — EQ state history (delegated to UndoRedoManager)
+        undoRedoManager = com.bearinmind.equalizer314.state.UndoRedoManager(
+            eqViewModel, eqGraphView, bandToggleManager
+        )
+        undoRedoManager.reset()
 
-        undoBtn.setOnClickListener {
-            if (historyIndex > 0) {
-                historyIndex--
-                restoreEqState(eqHistory[historyIndex])
-            }
-        }
-        redoBtn.setOnClickListener {
-            if (historyIndex < eqHistory.size - 1) {
-                historyIndex++
-                restoreEqState(eqHistory[historyIndex])
-            }
-        }
+        // Preset manager — custom preset persistence
+        presetManager = com.bearinmind.equalizer314.state.PresetManager(
+            getSharedPreferences("custom_presets", MODE_PRIVATE)
+        )
+
+        undoBtn.setOnClickListener { undoRedoManager.undo() }
+        redoBtn.setOnClickListener { undoRedoManager.redo() }
 
         fun updateVizToggleStyle(active: Boolean) {
             if (active) {
@@ -1508,6 +1168,7 @@ class  MainActivity : AppCompatActivity() {
         // Preset dropdown
         presetDropdown.setOnItemClickListener { parent, _, position, _ ->
             val presetName = parent.getItemAtPosition(position) as? String ?: return@setOnItemClickListener
+            undoRedoManager.saveState()
             eqViewModel.loadPreset(presetName, eqGraphView)
             presetDropdown.setText(presetName, false)
             bandToggleManager.updateIcons()
@@ -1755,16 +1416,7 @@ class  MainActivity : AppCompatActivity() {
             val backup = eqViewModel.eqPrefs.getAdvancedEqBackup()
             if (backup != null) {
                 val eq = eqViewModel.parametricEq.value
-                val bandsJson = org.json.JSONArray(backup)
-                eq.clearBands()
-                for (i in 0 until bandsJson.length()) {
-                    val obj = bandsJson.getJSONObject(i)
-                    val ft = try {
-                        com.bearinmind.equalizer314.dsp.BiquadFilter.FilterType.valueOf(obj.getString("filterType"))
-                    } catch (_: Exception) { com.bearinmind.equalizer314.dsp.BiquadFilter.FilterType.BELL }
-                    eq.addBand(obj.getDouble("frequency").toFloat(), obj.getDouble("gain").toFloat(), ft, obj.getDouble("q"))
-                    if (obj.has("enabled")) eq.setBandEnabled(i, obj.getBoolean("enabled"))
-                }
+                com.bearinmind.equalizer314.dsp.EqSerializer.loadBandsTo(eq, backup)
                 // Restore band slots
                 eqViewModel.initBandSlots()
                 eqGraphView.setParametricEqualizer(eq)
@@ -1791,17 +1443,7 @@ class  MainActivity : AppCompatActivity() {
                     kotlin.math.abs(band.frequency - com.bearinmind.equalizer314.ui.SimpleEqController.FREQUENCIES[i]) < 0.5f
                 }
             if (!isAlreadySimpleConfig) {
-                val bandsJson = org.json.JSONArray()
-                for (i in 0 until eq.getBandCount()) {
-                    val band = eq.getBand(i) ?: continue
-                    bandsJson.put(org.json.JSONObject().apply {
-                        put("frequency", band.frequency.toDouble())
-                        put("gain", band.gain.toDouble())
-                        put("filterType", band.filterType.name)
-                        put("q", band.q)
-                        put("enabled", band.enabled)
-                    })
-                }
+                val bandsJson = com.bearinmind.equalizer314.dsp.EqSerializer.bandsToJson(eq)
                 eqViewModel.eqPrefs.saveAdvancedEqBackup(bandsJson.toString())
             }
         }

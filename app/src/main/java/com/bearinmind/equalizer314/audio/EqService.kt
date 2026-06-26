@@ -98,7 +98,10 @@ class EqService : Service() {
         }
 
         startForeground(NOTIFICATION_ID, buildNotification())
-        return START_STICKY
+        // START_NOT_STICKY: foreground service should not be auto-restarted
+        // by the system after being killed, as the service lifecycle is
+        // explicitly managed by the user's power button.
+        return START_NOT_STICKY
     }
 
     fun startEq(eq: ParametricEqualizer): Boolean {

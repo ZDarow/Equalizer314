@@ -424,11 +424,14 @@ class EqStateManager(
 
     fun stopProcessing(animatePower: (Boolean) -> Unit) {
         animatePower(false)
-        EqService.stop(context)
+        // Unbind first, then stop: unbindService triggers onServiceDisconnected
+        // which nulls eqService. Stopping the service after unbind avoids the
+        // race where the service is destroyed before the unbind completes.
         if (serviceBound) {
             try { context.unbindService(serviceConnection) } catch (_: Exception) {}
             serviceBound = false
         }
+        EqService.stop(context)
         eqService = null
         isProcessing = false
     }

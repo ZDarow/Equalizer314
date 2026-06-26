@@ -2,7 +2,7 @@ package com.bearinmind.equalizer314.state
 
 import android.content.Context
 import android.net.Uri
-import com.bearinmind.equalizer314.dsp.BiquadFilter
+import com.bearinmind.equalizer314.dsp.EqSerializer
 import com.bearinmind.equalizer314.dsp.ParametricEqualizer
 import org.json.JSONArray
 import org.json.JSONObject
@@ -18,19 +18,16 @@ class EqPreferencesManager(context: Context) {
     data class Binding(val key: String, val label: String, val presetName: String)
 
     fun saveState(eq: ParametricEqualizer, slots: List<Int>? = null) {
-        val bandsJson = JSONArray()
-        for (i in 0 until eq.getBandCount()) {
-            val band = eq.getBand(i) ?: continue
-            bandsJson.put(JSONObject().apply {
-                put("frequency", band.frequency.toDouble())
-                put("gain", band.gain.toDouble())
-                put("filterType", band.filterType.name)
-                put("q", band.q)
-                put("enabled", band.enabled)
-                if (slots != null && i < slots.size) {
-                    put("slot", slots[i])
+        // Use EqSerializer for core band → JSON conversion
+        val bandsJson = EqSerializer.bandsToJson(eq)
+
+        // Add slot indices on top of the serialized bands (preferences-only)
+        if (slots != null) {
+            for (i in 0 until bandsJson.length()) {
+                if (i < slots.size) {
+                    bandsJson.getJSONObject(i).put("slot", slots[i])
                 }
-            })
+            }
         }
 
         prefs.edit()
@@ -41,78 +38,22 @@ class EqPreferencesManager(context: Context) {
 
     fun restoreState(eq: ParametricEqualizer) {
         val bandsStr = prefs.getString("bands", null) ?: return
-        val bandsJson = JSONArray(bandsStr)
-
-        // Rebuild EQ to match saved band count
-        eq.clearBands()
-        for (i in 0 until bandsJson.length()) {
-            val obj = bandsJson.getJSONObject(i)
-            val filterType = try {
-                BiquadFilter.FilterType.valueOf(obj.getString("filterType"))
-            } catch (_: Exception) {
-                BiquadFilter.FilterType.BELL
-            }
-            eq.addBand(
-                obj.getDouble("frequency").toFloat(),
-                obj.getDouble("gain").toFloat(),
-                filterType,
-                obj.getDouble("q")
-            )
-            if (obj.has("enabled")) {
-                eq.setBandEnabled(i, obj.getBoolean("enabled"))
-            }
-        }
-
+        if (!EqSerializer.loadBandsTo(eq, bandsStr)) return
         eq.isEnabled = prefs.getBoolean("eqEnabled", true)
     }
 
     // ---- Per-channel EQ persistence (Channel Side EQ) ------------------
 
-    /** Serialize a ParametricEqualizer's bands to the compact JSON-array
-     *  form the saveState / restoreState path uses. Private helper; the
-     *  public entry points are saveLeftBands / saveRightBands. */
-    private fun serializeBands(eq: ParametricEqualizer): String {
-        val bands = JSONArray()
-        for (i in 0 until eq.getBandCount()) {
-            val band = eq.getBand(i) ?: continue
-            bands.put(JSONObject().apply {
-                put("frequency", band.frequency.toDouble())
-                put("gain", band.gain.toDouble())
-                put("filterType", band.filterType.name)
-                put("q", band.q)
-                put("enabled", band.enabled)
-            })
-        }
-        return bands.toString()
-    }
+    /** Serialize a ParametricEqualizer's bands via [EqSerializer]. */
+    private fun serializeBands(eq: ParametricEqualizer): String =
+        EqSerializer.bandsToJson(eq).toString()
 
-    /** Load a JSON-string band array into the given EQ. Returns true when
-     *  parsing succeeded (even if the array was empty), false on malformed
-     *  JSON. */
+    /** Load a JSON-string band array into the given EQ via [EqSerializer].
+     *  Returns true when parsing succeeded, false on malformed JSON. */
     private fun loadBands(eq: ParametricEqualizer, jsonStr: String): Boolean {
-        return try {
-            val arr = JSONArray(jsonStr)
-            eq.clearBands()
-            for (i in 0 until arr.length()) {
-                val obj = arr.getJSONObject(i)
-                val ft = try {
-                    BiquadFilter.FilterType.valueOf(obj.getString("filterType"))
-                } catch (_: Exception) {
-                    BiquadFilter.FilterType.BELL
-                }
-                eq.addBand(
-                    obj.getDouble("frequency").toFloat(),
-                    obj.getDouble("gain").toFloat(),
-                    ft,
-                    obj.getDouble("q")
-                )
-                if (obj.has("enabled")) eq.setBandEnabled(i, obj.getBoolean("enabled"))
-            }
-            eq.isEnabled = true
-            true
-        } catch (_: Exception) {
-            false
-        }
+        val ok = EqSerializer.loadBandsTo(eq, jsonStr)
+        if (ok) eq.isEnabled = true
+        return ok
     }
 
     fun saveLeftBands(eq: ParametricEqualizer) {
