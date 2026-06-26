@@ -79,7 +79,7 @@ class RouteSwitchCoordinator(
         val str = prefs.getString("preset_$name", null) ?: return null
         return try {
             JSONObject(str)
-        } catch (e: Exception) {
+        } catch (e: org.json.JSONException) {
             Log.e(TAG, "Failed to parse custom preset '$name': ${e.message}", e)
             null
         }

@@ -2,6 +2,7 @@ package com.bearinmind.equalizer314.state
 
 import android.content.SharedPreferences
 import com.bearinmind.equalizer314.dsp.BiquadFilter
+import java.util.Locale
 import com.bearinmind.equalizer314.dsp.EqSerializer
 import com.bearinmind.equalizer314.dsp.ParametricEqualizer
 import org.json.JSONArray
@@ -111,50 +112,56 @@ class PresetManager(private val prefs: SharedPreferences) {
             val obj = JSONObject(json)
             val sb = StringBuilder()
             val preamp = obj.optDouble("preamp", 0.0)
-            sb.append("Preamp: ${String.format("%.1f", preamp)} dB\n")
-
-            fun appendFilters(bands: JSONArray, indexOffset: Int = 0) {
-                for (i in 0 until bands.length()) {
-                    val b = bands.getJSONObject(i)
-                    val ft = b.getString("filterType")
-                    val (apoType, hasGain, hasQ) = when (ft) {
-                        "BELL"         -> Triple("PK",  true, true)
-                        "LOW_SHELF"    -> Triple("LSC", true, true)
-                        "HIGH_SHELF"   -> Triple("HSC", true, true)
-                        "LOW_PASS"     -> Triple("LPQ", false, true)
-                        "HIGH_PASS"    -> Triple("HPQ", false, true)
-                        "LOW_SHELF_1"  -> Triple("LS",  true, false)
-                        "HIGH_SHELF_1" -> Triple("HS",  true, false)
-                        "LOW_PASS_1"   -> Triple("LP",  false, false)
-                        "HIGH_PASS_1"  -> Triple("HP",  false, false)
-                        "BAND_PASS"    -> Triple("BP",  false, true)
-                        "NOTCH"        -> Triple("NO",  false, true)
-                        "ALL_PASS"     -> Triple("AP",  false, true)
-                        else           -> Triple("PK",  true, true)
-                    }
-                    val fc = b.getDouble("frequency").toInt()
-                    val line = StringBuilder("Filter ${i + 1 + indexOffset}: ON $apoType Fc $fc Hz")
-                    if (hasGain) line.append(" Gain ${String.format("%.1f", b.getDouble("gain"))} dB")
-                    if (hasQ) line.append(" Q ${String.format("%.2f", b.getDouble("q"))}")
-                    sb.append(line).append('\n')
-                }
-            }
+            sb.append("Preamp: ${"%.1f".format(Locale.US, preamp)} dB\n")
 
             val cseOn = obj.optBoolean("channelSideEqEnabled", false)
             if (cseOn && obj.has("leftBands") && obj.has("rightBands")) {
                 val leftArr = obj.getJSONArray("leftBands")
                 val rightArr = obj.getJSONArray("rightBands")
                 sb.append("Channel: L\n")
-                appendFilters(leftArr)
+                sb.append(apoFilterLines(leftArr))
                 sb.append("Channel: R\n")
-                appendFilters(rightArr, indexOffset = leftArr.length())
+                sb.append(apoFilterLines(rightArr, indexOffset = leftArr.length()))
             } else {
-                appendFilters(obj.getJSONArray("bands"))
+                sb.append(apoFilterLines(obj.getJSONArray("bands")))
             }
             sb.toString()
         } catch (_: Exception) {
             null
         }
+    }
+
+    /** Format a JSONArray of band objects into APO "Filter N: ON ..." lines. */
+    private fun apoFilterLines(bands: JSONArray, indexOffset: Int = 0): String {
+        val sb = StringBuilder()
+        for (i in 0 until bands.length()) {
+            val b = bands.getJSONObject(i)
+            val ft = b.getString("filterType")
+            val (apoType, hasGain, hasQ) = apoFilterType(ft)
+            val fc = b.getDouble("frequency").toInt()
+            val line = StringBuilder("Filter ${i + 1 + indexOffset}: ON $apoType Fc $fc Hz")
+            if (hasGain) line.append(" Gain ${"%.1f".format(Locale.US, b.getDouble("gain"))} dB")
+            if (hasQ) line.append(" Q ${"%.2f".format(Locale.US, b.getDouble("q"))}")
+            sb.append(line).append('\n')
+        }
+        return sb.toString()
+    }
+
+    /** Map internal filter type to APO token + flags. */
+    private fun apoFilterType(ft: String): Triple<String, Boolean, Boolean> = when (ft) {
+        "BELL"         -> Triple("PK",  true, true)
+        "LOW_SHELF"    -> Triple("LSC", true, true)
+        "HIGH_SHELF"   -> Triple("HSC", true, true)
+        "LOW_PASS"     -> Triple("LPQ", false, true)
+        "HIGH_PASS"    -> Triple("HPQ", false, true)
+        "LOW_SHELF_1"  -> Triple("LS",  true, false)
+        "HIGH_SHELF_1" -> Triple("HS",  true, false)
+        "LOW_PASS_1"   -> Triple("LP",  false, false)
+        "HIGH_PASS_1"  -> Triple("HP",  false, false)
+        "BAND_PASS"    -> Triple("BP",  false, true)
+        "NOTCH"        -> Triple("NO",  false, true)
+        "ALL_PASS"     -> Triple("AP",  false, true)
+        else           -> Triple("PK",  true, true)
     }
 
     // ── internal ────────────────────────────────────────────────────────
