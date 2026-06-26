@@ -80,9 +80,7 @@ class PresetManager(private val prefs: SharedPreferences) {
     fun buildThumbnailEq(name: String): ParametricEqualizer? {
         val json = getJson(name) ?: return null
         return try {
-            val obj = JSONObject(json)
-            val bands = obj.optJSONArray("bands") ?: return null
-            EqSerializer.parseBands(bands)
+            JSONObject(json).optJSONArray("bands")?.let { EqSerializer.parseBands(it) }
         } catch (_: Exception) {
             null
         }
@@ -96,10 +94,11 @@ class PresetManager(private val prefs: SharedPreferences) {
         val json = getJson(name) ?: return null
         return try {
             val obj = JSONObject(json)
-            if (!obj.optBoolean("channelSideEqEnabled", false)) return null
-            val key = if (isLeft) "leftBands" else "rightBands"
-            val bands = obj.optJSONArray(key) ?: return null
-            EqSerializer.parseBands(bands)
+            if (!obj.optBoolean("channelSideEqEnabled", false)) null
+            else {
+                val key = if (isLeft) "leftBands" else "rightBands"
+                obj.optJSONArray(key)?.let { EqSerializer.parseBands(it) }
+            }
         } catch (_: Exception) {
             null
         }

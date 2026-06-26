@@ -299,10 +299,8 @@ class BiquadFilter(
      * @throws IllegalArgumentException if [offset] or [offset+1] is out of bounds
      */
     fun processStereoInPlace(buffer: FloatArray, offset: Int) {
-        if (offset < 0 || offset + 1 >= buffer.size) {
-            throw IllegalArgumentException(
-                "processStereoInPlace: buffer.size=${buffer.size} too small for offset=$offset"
-            )
+        require(offset >= 0 && offset + 1 < buffer.size) {
+            "processStereoInPlace: buffer.size=${buffer.size} too small for offset=$offset"
         }
         val inputL = buffer[offset].toDouble()
         val inputR = buffer[offset + 1].toDouble()

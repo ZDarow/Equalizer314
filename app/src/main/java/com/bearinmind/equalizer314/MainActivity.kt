@@ -431,11 +431,6 @@ class  MainActivity : AppCompatActivity() {
             eqViewModel.pushEqUpdate()
         }
 
-        val onEqChangedWithHistory = {
-            eqViewModel.pushEqUpdate()
-            if (::undoRedoManager.isInitialized) undoRedoManager.saveState()
-        }
-
         val onBandCountChanged = {
             onEqChanged()
             bandToggleManager.updateIcons()
