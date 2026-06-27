@@ -259,7 +259,11 @@ class EqPreferencesManager(context: Context) {
 
     // Auto-gain
     fun saveAutoGainEnabled(enabled: Boolean) { prefs.edit().putBoolean("autoGainEnabled", enabled).apply() }
-    fun getAutoGainEnabled(): Boolean = prefs.getBoolean("autoGainEnabled", false)
+    // Default ON: pulls the EQ's peak response to ≤ 0 dB so positive-gain
+    // bands can't clip (and cause aliasing — issue #57), matching Wavelet /
+    // Poweramp which both ship clip protection enabled. Persists the user's
+    // choice once they toggle it, so turning it off stays off.
+    fun getAutoGainEnabled(): Boolean = prefs.getBoolean("autoGainEnabled", true)
 
     // Limiter
     fun saveLimiterEnabled(enabled: Boolean) { prefs.edit().putBoolean("limiterEnabled", enabled).apply() }
