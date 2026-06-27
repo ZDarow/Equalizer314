@@ -307,7 +307,10 @@ class ReverbVisualizerView @JvmOverloads constructor(
     // valueFrom/valueTo (-90..+20 dB) and the API's setReverbLevel
     // range. Y position of the Decay dot maps to reverbLevelDb.
     private val reverbLevelMinDb = -90f
-    private val reverbLevelMaxDb = 20f
+    // LVREV caps reverb level at 0 mB (it's relative attenuation, can't boost
+    // the wet above the room level) — the doc's +2000 mB is rejected, so the
+    // dot tops out at 0 dB to match what the engine actually accepts.
+    private val reverbLevelMaxDb = 0f
 
     // HF Damping (Decay HF Ratio) range — matches the Decay HF slider's
     // valueFrom/valueTo (0.1..2.0) and the API's setDecayHFRatio range.
@@ -459,7 +462,9 @@ class ReverbVisualizerView @JvmOverloads constructor(
     private val revDelayMinMs = 0f
     private val revDelayMaxMs = 100f
     private val decayMinMs = 100f
-    private val decayMaxMs = 20000f
+    // LVREV_MAX_T60 = 7000 ms is the reverb algorithm's hard decay ceiling;
+    // the doc's 20000 ms is rejected. Cap the dot at 7 s to match the engine.
+    private val decayMaxMs = 7000f
     private val zoneCount = 4
 
     // Direct Sound capsule layout — shared between drawBars (which
