@@ -59,7 +59,7 @@ class MeasurementSelectActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this, getString(R.string.msg_parse_measurement_failed), Toast.LENGTH_LONG).show()
             }
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Toast.makeText(this, getString(R.string.msg_error) + "${e.message}", Toast.LENGTH_SHORT).show()
         }
     }

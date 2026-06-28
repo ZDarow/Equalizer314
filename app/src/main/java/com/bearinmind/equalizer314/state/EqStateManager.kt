@@ -496,7 +496,7 @@ class EqStateManager(
         // which nulls eqService. Stopping the service after unbind avoids the
         // race where the service is destroyed before the unbind completes.
         if (serviceBound) {
-            try { context.unbindService(serviceConnection) } catch (_: Exception) {}
+            runCatching { context.unbindService(serviceConnection) }
             serviceBound = false
         }
         EqService.stop(context)

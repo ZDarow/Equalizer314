@@ -506,7 +506,7 @@ class LimiterActivity : AppCompatActivity() {
 
                 enabled = true
             }
-        } catch (_: Exception) {}
+        } catch (@Suppress("TooGenericExceptionCaught") _: Exception) {}
 
         // Single 33ms timer — pushes same data to BOTH graph AND ceiling (like MBC)
         meterRunnable?.let { meterHandler.removeCallbacks(it) }
@@ -549,7 +549,7 @@ class LimiterActivity : AppCompatActivity() {
         try {
             visualizer?.enabled = false
             visualizer?.release()
-        } catch (_: Exception) {}
+        } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
         visualizer = null
     }
 

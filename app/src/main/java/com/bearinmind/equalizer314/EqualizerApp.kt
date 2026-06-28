@@ -44,7 +44,7 @@ class EqualizerApp : Application() {
                 EqMigrationHelper.migrateSeenDevices(bindingsPrefs, database.seenDeviceDao())
 
                 prefs.edit().putBoolean(KEY_ROOM_MIGRATED, true).apply()
-            } catch (e: Exception) {
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                 // Migration is best-effort — SharedPreferences still works
                 android.util.Log.w(TAG, "Room migration failed", e)
             }

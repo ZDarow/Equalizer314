@@ -25,7 +25,7 @@ class AutoEqDatabase(private val context: Context) {
                     )
                 )
             }
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             android.util.Log.e("AutoEqDB", "Failed to load index", e)
         }
         entries = loaded
@@ -55,7 +55,7 @@ class AutoEqDatabase(private val context: Context) {
         return try {
             val text = context.assets.open("autoeq/profiles/${entry.path}").bufferedReader().readText()
             AutoEqParser.parse(text)
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             android.util.Log.e("AutoEqDB", "Failed to load profile: ${entry.path}", e)
             null
         }

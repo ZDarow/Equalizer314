@@ -393,7 +393,7 @@ class SpectrumControlActivity : AppCompatActivity() {
                 }, android.media.audiofx.Visualizer.getMaxCaptureRate(), true, false)
                 enabled = true
             }
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             android.util.Log.e("SpectrumControl", "Visualizer init failed", e)
         }
     }

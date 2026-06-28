@@ -1,6 +1,10 @@
 package com.bearinmind.equalizer314.audio
 
-import android.app.*
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -493,7 +497,7 @@ class EqService : Service() {
         return try {
             startForeground(NOTIFICATION_ID, buildNotification())
             true
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Log.w(TAG, "startForeground blocked (${e.javaClass.simpleName}): ${e.message}")
             try { stopSelf() } catch (_: Throwable) {}
             false
@@ -925,12 +929,12 @@ class EqService : Service() {
 
     override fun onDestroy() {
         stopWatchdog()
-        try { unregisterReceiver(volumeReceiver) } catch (_: Exception) {}
-        try { unregisterReceiver(routePresetReceiver) } catch (_: Exception) {}
+        try { unregisterReceiver(volumeReceiver) } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
+        try { unregisterReceiver(routePresetReceiver) } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
         try {
             getSystemService(AudioManager::class.java)
                 ?.unregisterAudioPlaybackCallback(systemSoundCallback)
-        } catch (_: Exception) {}
+        } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
         routingMonitor?.stop()
         routingMonitor = null
         routeCoordinator = null

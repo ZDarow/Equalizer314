@@ -10,7 +10,16 @@ import android.os.Bundle
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
-import android.widget.*
+import android.widget.ArrayAdapter
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.HorizontalScrollView
+import android.widget.ImageButton
+import android.widget.LinearLayout
+import android.widget.PopupWindow
+import android.widget.ScrollView
+import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -77,7 +86,7 @@ class  MainActivity : AppCompatActivity() {
             try {
                 contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(text) }
                 android.widget.Toast.makeText(this, getString(R.string.msg_exported_success), android.widget.Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                 android.widget.Toast.makeText(this, getString(R.string.msg_export_failed, e.message), android.widget.Toast.LENGTH_SHORT).show()
             }
             pendingExportText = null
@@ -104,7 +113,7 @@ class  MainActivity : AppCompatActivity() {
                 val json = BackupManager.exportAll(this)
                 contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(json) }
                 android.widget.Toast.makeText(this, "Backup saved", android.widget.Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                 android.widget.Toast.makeText(this, "Backup failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
@@ -129,7 +138,7 @@ class  MainActivity : AppCompatActivity() {
             } else {
                 android.widget.Toast.makeText(this, "Not a valid Equalizer314 backup", android.widget.Toast.LENGTH_SHORT).show()
             }
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             android.widget.Toast.makeText(this, "Restore failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
@@ -358,7 +367,7 @@ class  MainActivity : AppCompatActivity() {
                 }
                 android.widget.Toast.makeText(this, getString(R.string.msg_applied_filters, profile.filters.size), android.widget.Toast.LENGTH_SHORT).show()
             }
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             android.widget.Toast.makeText(this, getString(R.string.msg_error, e.message), android.widget.Toast.LENGTH_SHORT).show()
         }
     }
@@ -471,7 +480,7 @@ class  MainActivity : AppCompatActivity() {
             eqViewModel.stateManager.isProcessing = false
             eqViewModel.stateManager.eqService = null
             if (eqViewModel.serviceBound.value) {
-                try { unbindService(eqViewModel.stateManager.serviceConnection) } catch (_: Exception) {}
+                runCatching { unbindService(eqViewModel.stateManager.serviceConnection) }
                 eqViewModel.stateManager.serviceBound = false
             }
             animatePowerFab(false)
@@ -649,7 +658,7 @@ class  MainActivity : AppCompatActivity() {
             )
         }
 
-        val savedMode = try { EqUiMode.valueOf(eqViewModel.eqPrefs.getEqUiMode()) } catch (_: Exception) { EqUiMode.PARAMETRIC }
+        val savedMode = runCatching { EqUiMode.valueOf(eqViewModel.eqPrefs.getEqUiMode()) }.getOrDefault(EqUiMode.PARAMETRIC)
         val effectiveMode = if (eqViewModel.eqPrefs.getSimpleEqEnabled()) EqUiMode.SIMPLE else savedMode
         switchEqUiMode(effectiveMode)
         // Ensure rows are properly ordered after views are laid out
@@ -1208,9 +1217,9 @@ class  MainActivity : AppCompatActivity() {
             for (name in presetNames) {
                 // Parse preset data for thumbnail
                 val presetJson = presetManager.getJson(name)
-                val bandCount = try {
-                    org.json.JSONObject(presetJson ?: "{}").getJSONArray("bands").length()
-                } catch (_: Exception) { 0 }
+        val bandCount = runCatching {
+            org.json.JSONObject(presetJson ?: "{}").getJSONArray("bands").length()
+        }.getOrDefault(0)
 
                 val presetRow = android.widget.LinearLayout(this).apply {
                     orientation = android.widget.LinearLayout.HORIZONTAL
@@ -1320,9 +1329,9 @@ class  MainActivity : AppCompatActivity() {
                                 drawCurve(canvas, buildEq(obj.getJSONArray("bands")),
                                     0f, 0f, w, h, curveColor)
                             }
-                        } catch (_: Exception) {}
-                    }
-                }.apply {
+            } catch (@Suppress("TooGenericExceptionCaught") _: Exception) {}
+            }
+        }.apply {
                     layoutParams = android.widget.LinearLayout.LayoutParams(thumbW, thumbH)
                 }
 
@@ -1344,9 +1353,9 @@ class  MainActivity : AppCompatActivity() {
                         android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
                     )
                 }
-                val presetPreamp: Double? = try {
-                    org.json.JSONObject(presetJson ?: "{}").optDouble("preamp", 0.0)
-                } catch (_: Exception) { null }
+        val presetPreamp: Double? = runCatching {
+            org.json.JSONObject(presetJson ?: "{}").optDouble("preamp", 0.0)
+        }.getOrNull()
                 val preampSubtitle = android.widget.TextView(this).apply {
                     text = presetPreamp?.let {
                         com.bearinmind.equalizer314.ui.PresetDropdownAdapter.formatPreamp(it)
@@ -1589,7 +1598,7 @@ class  MainActivity : AppCompatActivity() {
                     // if the current in-memory preamp differs.
                     val presetJson = presetManager.getJson(name)
                     val preampFromPreset = if (presetJson != null) {
-                        try { org.json.JSONObject(presetJson).optDouble("preamp", 0.0).toFloat() } catch (_: Exception) { 0f }
+                        runCatching { org.json.JSONObject(presetJson).optDouble("preamp", 0.0).toFloat() }.getOrDefault(0f)
                     } else 0f
                     eqViewModel.stateManager.preampGainDb = preampFromPreset
                     eqViewModel.eqPrefs.savePreampGain(preampFromPreset)
@@ -3643,7 +3652,7 @@ class  MainActivity : AppCompatActivity() {
         if (simpleEqEnabled && eqViewModel.currentEqUiMode.value == EqUiMode.SIMPLE) {
             switchEqUiMode(EqUiMode.SIMPLE)
         } else if (!simpleEqEnabled && eqViewModel.currentEqUiMode.value == EqUiMode.SIMPLE) {
-            val fallback = try { EqUiMode.valueOf(eqViewModel.eqPrefs.getEqUiMode()) } catch (_: Exception) { EqUiMode.PARAMETRIC }
+            val fallback = runCatching { EqUiMode.valueOf(eqViewModel.eqPrefs.getEqUiMode()) }.getOrDefault(EqUiMode.PARAMETRIC)
             switchEqUiMode(fallback)
         }
     }
@@ -3673,16 +3682,16 @@ class  MainActivity : AppCompatActivity() {
         }
         eqViewModel.saveState()
         if (eqViewModel.serviceBound.value) {
-            try { unbindService(eqViewModel.stateManager.serviceConnection) } catch (_: Exception) {}
+            try { unbindService(eqViewModel.stateManager.serviceConnection) } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
             eqViewModel.stateManager.serviceBound = false
         }
     }
 
     override fun onDestroy() {
         visualizerHelper.stop()
-        try { unregisterReceiver(eqStoppedReceiver) } catch (_: Exception) {}
-        try { unregisterReceiver(eqStartedReceiver) } catch (_: Exception) {}
-        try { unregisterReceiver(statusRefreshReceiver) } catch (_: Exception) {}
+        try { unregisterReceiver(eqStoppedReceiver) } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
+        try { unregisterReceiver(eqStartedReceiver) } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
+        try { unregisterReceiver(statusRefreshReceiver) } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
         super.onDestroy()
     }
 

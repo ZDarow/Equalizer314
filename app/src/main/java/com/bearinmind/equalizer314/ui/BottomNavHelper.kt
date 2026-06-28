@@ -5,7 +5,10 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.widget.ImageButton
 import android.widget.TextView
-import com.bearinmind.equalizer314.*
+import com.bearinmind.equalizer314.LimiterActivity
+import com.bearinmind.equalizer314.MainActivity
+import com.bearinmind.equalizer314.MbcActivity
+import com.bearinmind.equalizer314.R
 import com.bearinmind.equalizer314.state.EqPreferencesManager
 
 enum class NavScreen { EQ, MBC, LIMITER, SETTINGS }

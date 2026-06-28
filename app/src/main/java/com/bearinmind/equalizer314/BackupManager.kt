@@ -58,7 +58,7 @@ object BackupManager {
      *  applied. The caller should reload UI/state afterwards (the simplest
      *  is to recreate the activity). */
     fun importAll(context: Context, json: String): Boolean {
-        val root = try { JSONObject(json) } catch (_: Exception) { return false }
+        val root = runCatching { JSONObject(json) }.getOrNull() ?: return false
         // Sanity check — a real backup always carries the settings or the
         // preset pool. Guards against importing an arbitrary JSON file.
         if (!root.has("eq_settings") && !root.has("custom_presets")) return false

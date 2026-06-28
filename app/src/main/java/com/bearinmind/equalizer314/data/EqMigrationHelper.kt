@@ -94,9 +94,7 @@ object EqMigrationHelper {
         val names = prefs.getStringSet("simple_preset_names", emptySet()) ?: return
         for (name in names) {
             val gainsStr = prefs.getString("simple_preset_$name", null) ?: continue
-            val gainsArr = try {
-                JSONArray(gainsStr)
-            } catch (_: Exception) { continue }
+            val gainsArr = runCatching { JSONArray(gainsStr) }.getOrNull() ?: continue
 
             // Convert simple EQ (10 fixed-band gain floats) to
             // the parametric JSON format so downstream consumers

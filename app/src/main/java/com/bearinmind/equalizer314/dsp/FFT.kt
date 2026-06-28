@@ -1,6 +1,9 @@
 package com.bearinmind.equalizer314.dsp
 
-import kotlin.math.*
+import kotlin.math.cos
+import kotlin.math.log10
+import kotlin.math.sin
+import kotlin.math.PI
 
 /**
  * Fast Fourier Transform implementation for real-time audio spectrum analysis
@@ -32,34 +35,33 @@ class FFT(private val size: Int) {
     }
 
     fun initHannWindow(fftLen: Int) {
-        wnd = DoubleArray(fftLen)
-
+        val newWnd = DoubleArray(fftLen)
         for (i in 0 until fftLen) {
-            wnd!![i] = 0.5 * (1.0 - cos(2.0 * PI * i / (fftLen - 1.0))) * 2.0
+            newWnd[i] = 0.5 * (1.0 - cos(2.0 * PI * i / (fftLen - 1.0))) * 2.0
         }
-
         var normalizeFactor = 0.0
         for (i in 0 until fftLen) {
-            normalizeFactor += wnd!![i]
+            normalizeFactor += newWnd[i]
         }
         normalizeFactor = fftLen / normalizeFactor
-
         wndEnergyFactor = 0.0
         for (i in 0 until fftLen) {
-            wnd!![i] *= normalizeFactor
-            wndEnergyFactor += wnd!![i] * wnd!![i]
+            newWnd[i] *= normalizeFactor
+            wndEnergyFactor += newWnd[i] * newWnd[i]
         }
         wndEnergyFactor = fftLen / wndEnergyFactor
+        wnd = newWnd
     }
 
     fun applyWindow(input: FloatArray): DoubleArray {
-        if (wnd == null || wnd!!.size != input.size) {
+        val window = wnd
+        if (window == null || window.size != input.size) {
             initHannWindow(input.size)
         }
-
+        val w = wnd ?: error("Window not initialized after initHannWindow")
         val windowed = DoubleArray(input.size)
         for (i in input.indices) {
-            windowed[i] = input[i].toDouble() * wnd!![i]
+            windowed[i] = input[i].toDouble() * w[i]
         }
         return windowed
     }

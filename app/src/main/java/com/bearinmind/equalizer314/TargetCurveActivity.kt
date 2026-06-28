@@ -8,7 +8,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import com.bearinmind.equalizer314.autoeq.*
+import com.bearinmind.equalizer314.autoeq.AutoEqParser
+import com.bearinmind.equalizer314.autoeq.AutoEqProfile
+import com.bearinmind.equalizer314.autoeq.EqFitter
+import com.bearinmind.equalizer314.autoeq.FreqResponseParser
+import com.bearinmind.equalizer314.autoeq.apoTokenToFilterType
 import com.bearinmind.equalizer314.dsp.BiquadFilter
 import com.bearinmind.equalizer314.dsp.ParametricEqualizer
 import com.bearinmind.equalizer314.state.EqPreferencesManager
@@ -49,7 +53,7 @@ class TargetCurveActivity : AppCompatActivity() {
                 val apoText = resultText.text.toString().trim()
                 contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(apoText) }
                 Toast.makeText(this, getString(R.string.msg_exported_success), Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                 Toast.makeText(this, getString(R.string.msg_export_failed) + e.message, Toast.LENGTH_SHORT).show()
             }
         }
@@ -199,7 +203,8 @@ class TargetCurveActivity : AppCompatActivity() {
                 val text = assets.open("targets/${targetFile}.csv").bufferedReader().readText()
                 FreqResponseParser.parse(text)
             }
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception) {
+            // suppress: fallback to null on any I/O or parse error
             null
         }
 
@@ -272,7 +277,7 @@ class TargetCurveActivity : AppCompatActivity() {
                 computeButton.isEnabled = true
                 setResult(Activity.RESULT_OK)
             }
-            } catch (e: Exception) {
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                 runOnUiThread {
                     dotHandler.removeCallbacks(dotRunnable)
                     computeButton.text = "Generate EQ"

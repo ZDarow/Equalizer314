@@ -563,9 +563,9 @@ class SimpleEqController(
     private fun createPresetRow(name: String): View {
         val density = activity.resources.displayMetrics.density
         val presetJson = eqPrefs.getCustomPresetJson(name)
-        val bandCount = try {
+        val bandCount = runCatching {
             org.json.JSONObject(presetJson ?: "{}").getJSONArray("bands").length()
-        } catch (_: Exception) { 0 }
+        }.getOrDefault(0)
 
         val row = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -602,9 +602,9 @@ class SimpleEqController(
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
-        val presetPreamp: Double? = try {
+        val presetPreamp: Double? = runCatching {
             org.json.JSONObject(presetJson ?: "{}").optDouble("preamp", 0.0)
-        } catch (_: Exception) { null }
+        }.getOrNull()
         val preampSubtitle = TextView(activity).apply {
             text = presetPreamp?.let { PresetDropdownAdapter.formatPreamp(it) } ?: ""
             setTextColor(0xFF888888.toInt())
@@ -634,8 +634,8 @@ class SimpleEqController(
                 eq.clearBands()
                 for (i in 0 until arr.length()) {
                     val b = arr.getJSONObject(i)
-                    val ft = try { BiquadFilter.FilterType.valueOf(b.getString("filterType")) }
-                             catch (_: Exception) { BiquadFilter.FilterType.BELL }
+                    val ft = runCatching { BiquadFilter.FilterType.valueOf(b.getString("filterType")) }
+                             .getOrDefault(BiquadFilter.FilterType.BELL)
                     eq.addBand(b.getDouble("frequency").toFloat(), b.getDouble("gain").toFloat(), ft, b.getDouble("q"))
                 }
                 return eq
@@ -694,7 +694,7 @@ class SimpleEqController(
                     } else {
                         drawCurve(canvas, buildEq(obj.getJSONArray("bands")), 0f, 0f, w, h, curveColor)
                     }
-                } catch (_: Exception) {}
+                } catch (@Suppress("TooGenericExceptionCaught") _: Exception) {}
             }
         }.apply {
             layoutParams = LinearLayout.LayoutParams(thumbW, thumbH)

@@ -50,7 +50,7 @@ object ApoConverter {
                 tryPowerampGraphic(json)?.let { return Result.Ok(it, "Poweramp graphic EQ") }
                 tryWaveletPreset(json)?.let { return Result.Ok(it, "Wavelet preset (JSON)") }
                 return Result.Err("JSON didn't match any known Wavelet / Poweramp shape")
-            } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception) {
                 return Result.Err("Malformed JSON: ${e.message}")
             }
         }
@@ -109,7 +109,7 @@ object ApoConverter {
         )
         val profile = try {
             EqFitter.computeCorrection(flatMeasurement, target, numBands = 10)
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception) {
             // If the fitter blows up for any reason, fall back to a
             // dense PK emit (still better than no import at all).
             val bands = indices.map { rawFreqs[it] to rawLevels[it] }

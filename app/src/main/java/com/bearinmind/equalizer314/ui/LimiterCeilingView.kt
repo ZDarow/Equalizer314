@@ -2,7 +2,12 @@ package com.bearinmind.equalizer314.ui
 
 import android.content.Context
 import com.bearinmind.equalizer314.R
-import android.graphics.*
+import android.graphics.Canvas
+import android.graphics.CornerPathEffect
+import android.graphics.DashPathEffect
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View

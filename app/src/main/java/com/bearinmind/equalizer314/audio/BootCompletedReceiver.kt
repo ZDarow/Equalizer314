@@ -32,7 +32,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
             } else {
                 context.startService(svc)
             }
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Log.w(TAG, "Boot DP start blocked by OS: ${e.javaClass.simpleName}: ${e.message}")
         }
     }

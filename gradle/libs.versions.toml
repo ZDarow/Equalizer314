@@ -42,6 +42,9 @@ detekt = "1.23.8"
 kover = "0.9.8"
 ben-manes = "0.54.0"
 
+# ── Documentation ────────────────────────────────────────────
+dokka = "1.9.20"
+
 [libraries]
 # ── AndroidX Core & UI ──────────────────────────────────────────
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
@@ -86,3 +89,4 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 ben-manes = { id = "com.github.ben-manes.versions", version.ref = "ben-manes" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }

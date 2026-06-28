@@ -1,6 +1,8 @@
 package com.bearinmind.equalizer314.audio
 
-import kotlin.math.*
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Pure-Kotlin radix-2 Cooley-Tukey FFT.

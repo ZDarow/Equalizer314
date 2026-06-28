@@ -1,6 +1,16 @@
 package com.bearinmind.equalizer314.autoeq
 
-import kotlin.math.*
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.cos
+import kotlin.math.exp
+import kotlin.math.ln
+import kotlin.math.log10
+import kotlin.math.pow
+import kotlin.math.round
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
  * Computes parametric EQ filters to match a measurement to a target curve.

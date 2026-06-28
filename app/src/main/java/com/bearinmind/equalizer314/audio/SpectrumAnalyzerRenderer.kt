@@ -1,7 +1,13 @@
 package com.bearinmind.equalizer314.audio
 
-import android.graphics.*
-import kotlin.math.*
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Shader
+import kotlin.math.log10
+import kotlin.math.pow
 
 /**
  * Professional spectrum analyzer renderer — waveform-based approach.

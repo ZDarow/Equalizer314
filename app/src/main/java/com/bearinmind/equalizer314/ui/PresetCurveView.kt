@@ -153,7 +153,7 @@ class PresetCurveView @JvmOverloads constructor(
             } else {
                 drawCurve(canvas, buildEq(obj.getJSONArray("bands")), 0f, 0f, w, h)
             }
-        } catch (_: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") _: Exception) {
             // Malformed JSON or missing fields — leave the grid blank.
         }
     }

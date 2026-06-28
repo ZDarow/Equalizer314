@@ -1,6 +1,10 @@
 package com.bearinmind.equalizer314.audio
 
-import kotlin.math.*
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.log10
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 /**
  * Processes raw waveform bytes from Android's Visualizer.getWaveForm()

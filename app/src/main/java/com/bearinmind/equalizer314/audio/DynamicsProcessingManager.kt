@@ -191,7 +191,7 @@ class DynamicsProcessingManager {
             currentBandCount = bandCount
             isActive = true
             Log.d(TAG, "DynamicsProcessing started with $bandCount bands")
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Log.e(TAG, "Failed to start DynamicsProcessing", e)
             dynamicsProcessing = null
             isActive = false
@@ -211,7 +211,7 @@ class DynamicsProcessingManager {
         // Safe because the binder calls inside are thread-agnostic;
         // only ordering matters, not which thread issues them.
         handler.removeCallbacks(job)
-        try { job.run() } catch (_: Exception) {}
+        runCatching { job.run() }
     }
 
     private fun reclaimSession() {
@@ -294,7 +294,7 @@ class DynamicsProcessingManager {
             lastEq = leftEq
             lastRightEq = if (leftEq !== rightEq) rightEq else null
             applyParametricResponse(dp, leftEq, rightEq)
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Log.e(TAG, "Failed to update DynamicsProcessing", e)
         }
     }
@@ -413,7 +413,7 @@ class DynamicsProcessingManager {
                 }
                 dp.setPreEqByChannelIndex(0, leftEqObj)
                 dp.setPreEqByChannelIndex(1, rightEqObj)
-            } catch (e: Exception) {
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                 Log.e(TAG, "DP band write failed", e)
             } finally {
                 pendingApply = null
@@ -431,7 +431,7 @@ class DynamicsProcessingManager {
         val eq = lastEq ?: return
         try {
             applyParametricResponse(dp, eq, lastRightEq ?: eq)
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Log.e(TAG, "Failed to update channel settings", e)
         }
     }
@@ -446,7 +446,7 @@ class DynamicsProcessingManager {
             )
             dp.setLimiterByChannelIndex(0, limiter)
             dp.setLimiterByChannelIndex(1, limiter)
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Log.e(TAG, "Failed to update limiter", e)
         }
     }
@@ -490,7 +490,7 @@ class DynamicsProcessingManager {
             Log.d(TAG, "MBC readback band 0: preGain=${readback.preGain} postGain=${readback.postGain} threshold=${readback.threshold}")
             Log.d(TAG, "DP enabled=${dp.enabled}, MBC stage enabled=${dp.getMbcByChannelIndex(0).isEnabled}, bandCount=${dp.getMbcByChannelIndex(0).bandCount}")
             Log.d(TAG, "Applied ${bands.size} MBC bands")
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Log.e(TAG, "Failed to apply MBC bands", e)
         }
     }
@@ -529,7 +529,7 @@ class DynamicsProcessingManager {
             try {
                 dp.setLimiterByChannelIndex(0, limiter)
                 dp.setLimiterByChannelIndex(1, limiter)
-            } catch (e: Exception) {
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                 Log.e(TAG, "Limiter live-update failed", e)
             } finally {
                 pendingLimiter = null
@@ -553,7 +553,7 @@ class DynamicsProcessingManager {
         try {
             dynamicsProcessing?.enabled = false
             dynamicsProcessing?.release()
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Log.e(TAG, "Error releasing DynamicsProcessing", e)
         }
         dynamicsProcessing = null

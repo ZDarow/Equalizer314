@@ -58,7 +58,7 @@ class TargetSelectActivity : AppCompatActivity() {
             } else {
                 android.widget.Toast.makeText(this, getString(R.string.msg_parse_target_failed), android.widget.Toast.LENGTH_LONG).show()
             }
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             android.widget.Toast.makeText(this, getString(R.string.msg_error) + "${e.message}", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
@@ -93,7 +93,7 @@ class TargetSelectActivity : AppCompatActivity() {
                 performSearch(searchInput.text?.toString() ?: "")
             } },
             frLoader = { entry ->
-                try {
+                runCatching {
                     if (entry.file != "__custom__") {
                         val text = assets.open("targets/${entry.file}.csv").bufferedReader().readText()
                         FreqResponseParser.parse(text)
@@ -101,7 +101,7 @@ class TargetSelectActivity : AppCompatActivity() {
                         val text = eqPrefs.getImportedTargetText(entry.name)
                         if (text != null) FreqResponseParser.parse(text) else null
                     }
-                } catch (_: Exception) { null }
+                }.getOrNull()
             }
         )
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -140,7 +140,7 @@ class TargetSelectActivity : AppCompatActivity() {
                     file = obj.getString("file")
                 ))
             }
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             android.util.Log.e("TargetSelect", "Failed to load targets", e)
         }
     }
@@ -220,16 +220,16 @@ class TargetSelectActivity : AppCompatActivity() {
         val container = findViewById<android.widget.FrameLayout>(R.id.targetActiveGraph)
         container.removeAllViews()
         val targetFile = eqPrefs.getSelectedTarget()
-        val fr = try {
-            if (targetFile != null && targetFile != "__custom__") {
-                val text = assets.open("targets/${targetFile}.csv").bufferedReader().readText()
-                FreqResponseParser.parse(text)
-            } else {
-                val name = eqPrefs.getSelectedTargetName() ?: return
-                val text = eqPrefs.getImportedTargetText(name)
-                if (text != null) FreqResponseParser.parse(text) else null
-            }
-        } catch (_: Exception) { null }
+            val fr = runCatching {
+                if (targetFile != null && targetFile != "__custom__") {
+                    val text = assets.open("targets/${targetFile}.csv").bufferedReader().readText()
+                    FreqResponseParser.parse(text)
+                } else {
+                    val name = eqPrefs.getSelectedTargetName() ?: return@runCatching null
+                    val text = eqPrefs.getImportedTargetText(name)
+                    if (text != null) FreqResponseParser.parse(text) else null
+                }
+            }.getOrNull()
         if (fr != null) {
             val view = MiniFrView(this)
             view.setData(fr)

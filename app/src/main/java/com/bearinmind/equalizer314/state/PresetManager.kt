@@ -62,16 +62,14 @@ class PresetManager(private val prefs: SharedPreferences) {
      */
     fun parse(name: String): ParsedPreset? {
         val json = getJson(name) ?: return null
-        return try {
+        return runCatching {
             val obj = JSONObject(json)
             val cseOn = obj.optBoolean("channelSideEqEnabled", false)
             val bothBands = if (obj.has("bands")) parseBandSpecs(obj.getJSONArray("bands")) else emptyList()
             val leftBands = if (obj.has("leftBands")) parseBandSpecs(obj.getJSONArray("leftBands")) else bothBands
             val rightBands = if (obj.has("rightBands")) parseBandSpecs(obj.getJSONArray("rightBands")) else bothBands
             PrefsPreset(cseOn, bothBands, leftBands, rightBands)
-        } catch (_: Exception) {
-            null
-        }
+        }.getOrNull()
     }
 
     /**
@@ -79,11 +77,9 @@ class PresetManager(private val prefs: SharedPreferences) {
      */
     fun buildThumbnailEq(name: String): ParametricEqualizer? {
         val json = getJson(name) ?: return null
-        return try {
+        return runCatching {
             JSONObject(json).optJSONArray("bands")?.let { EqSerializer.parseBands(it) }
-        } catch (_: Exception) {
-            null
-        }
+        }.getOrNull()
     }
 
     /**
@@ -92,22 +88,20 @@ class PresetManager(private val prefs: SharedPreferences) {
      */
     fun buildChannelThumbnailEq(name: String, isLeft: Boolean): ParametricEqualizer? {
         val json = getJson(name) ?: return null
-        return try {
+        return runCatching {
             val obj = JSONObject(json)
             if (!obj.optBoolean("channelSideEqEnabled", false)) null
             else {
                 val key = if (isLeft) "leftBands" else "rightBands"
                 obj.optJSONArray(key)?.let { EqSerializer.parseBands(it) }
             }
-        } catch (_: Exception) {
-            null
-        }
+        }.getOrNull()
     }
 
     /** Convert a preset's JSON to APO-format text for export. */
     fun toApoText(name: String): String? {
         val json = getJson(name) ?: return null
-        return try {
+        return runCatching {
             val obj = JSONObject(json)
             val sb = StringBuilder()
             val preamp = obj.optDouble("preamp", 0.0)
@@ -125,9 +119,7 @@ class PresetManager(private val prefs: SharedPreferences) {
                 sb.append(apoFilterLines(obj.getJSONArray("bands")))
             }
             sb.toString()
-        } catch (_: Exception) {
-            null
-        }
+        }.getOrNull()
     }
 
     /** Format a JSONArray of band objects into APO "Filter N: ON ..." lines. */
@@ -176,11 +168,9 @@ class PresetManager(private val prefs: SharedPreferences) {
         val out = mutableListOf<EqStateManager.BandSpec>()
         for (i in 0 until arr.length()) {
             val bj = arr.getJSONObject(i)
-            val ft = try {
+            val ft = runCatching {
                 BiquadFilter.FilterType.valueOf(bj.getString("filterType"))
-            } catch (_: Exception) {
-                BiquadFilter.FilterType.BELL
-            }
+            }.getOrDefault(BiquadFilter.FilterType.BELL)
             out += EqStateManager.BandSpec(
                 frequency = bj.getDouble("frequency").toFloat(),
                 gain = bj.getDouble("gain").toFloat(),

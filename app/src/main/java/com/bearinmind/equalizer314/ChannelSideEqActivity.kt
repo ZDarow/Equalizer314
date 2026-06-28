@@ -62,7 +62,7 @@ class ChannelSideEqActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        try { unbindService(serviceConnection) } catch (_: Exception) {}
+        try { unbindService(serviceConnection) } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
         super.onDestroy()
     }
 

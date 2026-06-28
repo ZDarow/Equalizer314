@@ -59,7 +59,7 @@ class ConvertToApoActivity : AppCompatActivity() {
         try {
             contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(resultText.text.toString()) }
             Toast.makeText(this, getString(R.string.msg_exported), Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Toast.makeText(this, getString(R.string.msg_export_failed) + "${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
@@ -141,7 +141,7 @@ class ConvertToApoActivity : AppCompatActivity() {
                 powerampStatus.text = "No file selected"
             }
             convertButton.isEnabled = text.isNotBlank()
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Toast.makeText(this, getString(R.string.msg_error_reading_file) + "${e.message}", Toast.LENGTH_SHORT).show()
         }
     }

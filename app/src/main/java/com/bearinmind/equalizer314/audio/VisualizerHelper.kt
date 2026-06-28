@@ -75,9 +75,7 @@ class VisualizerHelper {
 
                             // Compute calibration offset: absolute dBFS vs normalized spectrum
                             val measurement = Visualizer.MeasurementPeakRms()
-                            try {
-                                v.getMeasurementPeakRms(measurement)
-                            } catch (_: Exception) { return }
+                            runCatching { v.getMeasurementPeakRms(measurement) }.getOrNull() ?: return
                             val absoluteRmsDb = measurement.mRms / 100f  // mB to dB
 
                             // Compute broadband RMS from the normalized spectrum
@@ -115,7 +113,7 @@ class VisualizerHelper {
             }
             isRunning = true
             Log.d(TAG, "Visualizer started (waveform mode), capture size: ${visualizer?.captureSize}")
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Log.e(TAG, "Failed to start Visualizer", e)
             visualizer = null
             isRunning = false
@@ -134,7 +132,7 @@ class VisualizerHelper {
         try {
             visualizer?.enabled = false
             visualizer?.release()
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Log.e(TAG, "Error releasing Visualizer", e)
         }
         visualizer = null

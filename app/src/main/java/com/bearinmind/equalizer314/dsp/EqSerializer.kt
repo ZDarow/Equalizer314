@@ -64,11 +64,9 @@ object EqSerializer {
         eq.clearBands()
         for (i in 0 until bandsJson.length()) {
             val obj = bandsJson.getJSONObject(i)
-            val ft = try {
+            val ft = runCatching {
                 BiquadFilter.FilterType.valueOf(obj.getString("filterType"))
-            } catch (_: Exception) {
-                BiquadFilter.FilterType.BELL
-            }
+            }.getOrDefault(BiquadFilter.FilterType.BELL)
             eq.addBand(
                 obj.getDouble("frequency").toFloat(),
                 obj.getDouble("gain").toFloat(),
@@ -82,22 +80,18 @@ object EqSerializer {
     }
 
     /** Deserialize a JSON string into [eq]. Returns false on parse failure. */
-    fun loadBandsTo(eq: ParametricEqualizer, jsonStr: String): Boolean = try {
+    fun loadBandsTo(eq: ParametricEqualizer, jsonStr: String): Boolean = runCatching {
         loadBandsTo(eq, JSONArray(jsonStr))
         true
-    } catch (_: Exception) {
-        false
-    }
+    }.getOrDefault(false)
 
     /** Convenience: parse JSON string, return new [ParametricEqualizer] or null. */
-    fun parseBands(jsonStr: String): ParametricEqualizer? = try {
+    fun parseBands(jsonStr: String): ParametricEqualizer? = runCatching {
         val arr = JSONArray(jsonStr)
         val eq = ParametricEqualizer()
         loadBandsTo(eq, arr)
         eq
-    } catch (_: Exception) {
-        null
-    }
+    }.getOrNull()
 
     /** Convenience: parse [JSONArray], return new [ParametricEqualizer]. */
     fun parseBands(arr: JSONArray): ParametricEqualizer {
@@ -108,13 +102,11 @@ object EqSerializer {
     }
 
     /** Legacy preset JSON — returns [ParametricEqualizer] or null. */
-    fun parsePresetJson(jsonStr: String): ParametricEqualizer? = try {
+    fun parsePresetJson(jsonStr: String): ParametricEqualizer? = runCatching {
         val obj = JSONObject(jsonStr)
-        val bands = obj.optJSONArray("bands") ?: return null
+        val bands = obj.optJSONArray("bands") ?: return@runCatching null
         parseBands(bands)
-    } catch (_: Exception) {
-        null
-    }
+    }.getOrNull()
 
     // ── Preset JSON (preamp + bands + optional CSE) ─────────────────────
 

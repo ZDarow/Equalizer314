@@ -166,17 +166,15 @@ class EqPreferencesManager(context: Context) {
      *  the string is missing, malformed, or any band lacks slot data. */
     private fun parseSavedSlots(bandsStr: String?): List<Int>? {
         val s = bandsStr ?: return null
-        return try {
+        return runCatching {
             val bandsJson = JSONArray(s)
             val slots = mutableListOf<Int>()
             for (i in 0 until bandsJson.length()) {
                 val obj = bandsJson.getJSONObject(i)
-                if (obj.has("slot")) slots.add(obj.getInt("slot")) else return null
+                if (obj.has("slot")) slots.add(obj.getInt("slot")) else return@runCatching null
             }
             slots
-        } catch (_: Exception) {
-            null
-        }
+        }.getOrNull()
     }
 
     /** Persist the currently selected preset name. */
@@ -605,7 +603,7 @@ class EqPreferencesManager(context: Context) {
      *  frequencies. Returns null if the preset is missing/unparseable. */
     fun getSimpleEqPresetGains(name: String): FloatArray? {
         val str = customPresetsPrefs.getString("preset_$name", null) ?: return null
-        return try {
+        return runCatching {
             val obj = JSONObject(str)
             val arr = obj.getJSONArray("bands")
 
@@ -634,14 +632,14 @@ class EqPreferencesManager(context: Context) {
             eq.clearBands()
             for (i in 0 until arr.length()) {
                 val b = arr.getJSONObject(i)
-                val ft = try { BiquadFilter.FilterType.valueOf(b.getString("filterType")) }
-                         catch (_: Exception) { BiquadFilter.FilterType.BELL }
+                    val ft = runCatching { BiquadFilter.FilterType.valueOf(b.getString("filterType")) }
+                         .getOrDefault(BiquadFilter.FilterType.BELL)
                 eq.addBand(b.getDouble("frequency").toFloat(), b.getDouble("gain").toFloat(), ft, b.getDouble("q"))
             }
             FloatArray(SIMPLE_FREQS.size) { i ->
                 eq.getFrequencyResponse(SIMPLE_FREQS[i]).coerceIn(-12f, 12f)
             }
-        } catch (_: Exception) { null }
+        }.getOrNull()
     }
 
     /** Delete a preset from the shared pool. */
@@ -675,7 +673,7 @@ class EqPreferencesManager(context: Context) {
         for (name in legacyNames) {
             val legacyStr = prefs.getString("simple_preset_$name", null)
             if (legacyStr != null && !existing.contains(name)) {
-                val gainsArr = try { JSONArray(legacyStr) } catch (_: Exception) { null }
+                val gainsArr = runCatching { JSONArray(legacyStr) }.getOrNull()
                 if (gainsArr != null) {
                     val bands = JSONArray()
                     for (i in SIMPLE_FREQS.indices) {

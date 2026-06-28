@@ -54,7 +54,7 @@ class AutoEqActivity : AppCompatActivity() {
             eqPrefs.addImportedPreset(fileName, text)
             // Imported successfully
             performSearch(searchInput.text?.toString() ?: "")
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Toast.makeText(this, getString(R.string.msg_error) + e.message, Toast.LENGTH_SHORT).show()
         }
     }

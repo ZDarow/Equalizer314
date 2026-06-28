@@ -1,6 +1,16 @@
 package com.bearinmind.equalizer314.dsp
 
-import kotlin.math.*
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.cosh
+import kotlin.math.exp
+import kotlin.math.log10
+import kotlin.math.max
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
+import kotlin.math.tan
 
 /**
  * Biquad filter implementation for parametric EQ.
