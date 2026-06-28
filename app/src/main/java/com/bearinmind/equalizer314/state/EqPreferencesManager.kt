@@ -31,6 +31,16 @@ class EqPreferencesManager(context: Context) {
         migrateLegacySimplePresets()
     }
 
+    // Reserved префикс — имена, начинающиеся с __, зарезервированы для
+    // системных sentinel-значений (DEVICE_PRESET_DISABLED и др.).
+    // Валидация используется во всех методах сохранения пресетов.
+    private fun validatePresetName(name: String): String {
+        require(name.isNotBlank()) { "Preset name cannot be blank" }
+        require(name != DEVICE_PRESET_DISABLED) { "Preset name '$DEVICE_PRESET_DISABLED' is reserved" }
+        require(!name.startsWith("__")) { "Preset names starting with '__' are reserved" }
+        return name
+    }
+
     /** A device → preset binding. `key` is the stable device identity
      *  (e.g. `"BT:00:1A:7D:DA:71:13"`), `label` is the human-friendly
      *  name shown in the UI, `presetName` is a key into `custom_presets`
@@ -264,12 +274,13 @@ class EqPreferencesManager(context: Context) {
     /** Import a text-based preset (e.g. APO format) and store it. Replaces any
      *  existing preset with the same [name]. */
     fun addImportedPreset(name: String, rawText: String) {
+        val safeName = validatePresetName(name)
         val list = getImportedPresets().toMutableList()
-        list.removeAll { it == name }
-        list.add(0, name)
+        list.removeAll { it == safeName }
+        list.add(0, safeName)
         prefs.edit()
             .putString("importedPresets", org.json.JSONArray(list).toString())
-            .putString("importedPreset_$name", rawText)
+            .putString("importedPreset_$safeName", rawText)
             .apply()
     }
     /** Remove an imported preset by name. */
@@ -575,6 +586,7 @@ class EqPreferencesManager(context: Context) {
     /** Convert 10-band Simple-mode [gains] into a full JSON preset and save it to
      *  the shared custom-preset pool. */
     fun saveSimpleEqPreset(name: String, gains: FloatArray, preamp: Float = 0f) {
+        val safeName = validatePresetName(name)
         val bands = JSONArray()
         for (i in SIMPLE_FREQS.indices) {
             val g = if (i < gains.size) gains[i] else 0f
@@ -591,9 +603,9 @@ class EqPreferencesManager(context: Context) {
             put("channelSideEqEnabled", false)
             put("bands", bands)
         }
-        val names = (customPresetsPrefs.getStringSet("preset_names", emptySet()) ?: emptySet()).toMutableSet() + name
+        val names = (customPresetsPrefs.getStringSet("preset_names", emptySet()) ?: emptySet()).toMutableSet() + safeName
         customPresetsPrefs.edit()
-            .putString("preset_$name", json.toString())
+            .putString("preset_$safeName", json.toString())
             .putStringSet("preset_names", names)
             .apply()
     }

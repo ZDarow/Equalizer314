@@ -1,5 +1,6 @@
 package com.bearinmind.equalizer314
 
+import java.util.Locale
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -419,9 +420,9 @@ class TargetCurveActivity : AppCompatActivity() {
 
     private fun profileToApoText(profile: AutoEqProfile): String {
         val sb = StringBuilder()
-        sb.append("Preamp: ${String.format("%.1f", profile.preampDb)} dB\n")
+        sb.append("Preamp: ${String.format(Locale.US, "%.1f", profile.preampDb)} dB\n")
         for ((i, f) in profile.filters.withIndex()) {
-            sb.append("Filter ${i + 1}: ON ${f.filterType} Fc ${f.frequency.toInt()} Hz Gain ${String.format("%.1f", f.gain)} dB Q ${String.format("%.2f", f.q)}\n")
+            sb.append("Filter ${i + 1}: ON ${f.filterType} Fc ${f.frequency.toInt()} Hz Gain ${String.format(Locale.US, "%.1f", f.gain)} dB Q ${String.format(Locale.US, "%.2f", f.q)}\n")
         }
         return sb.toString()
     }

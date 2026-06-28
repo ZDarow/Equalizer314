@@ -1,5 +1,6 @@
 package com.bearinmind.equalizer314
 
+import java.util.Locale
 import android.content.ComponentName
 import android.content.ServiceConnection
 import android.os.Bundle
@@ -136,7 +137,7 @@ class LimiterActivity : AppCompatActivity() {
             eqPrefs.saveLimiterThreshold(value)
             isUpdating = true
             thresholdSlider.value = value.coerceIn(-30f, 0f)
-            thresholdText.setText(String.format("%.1f", value))
+            thresholdText.setText(String.format(Locale.US, "%.1f", value))
             ceilingView.ceilingDb = value
             isUpdating = false
             pushToService()
@@ -314,24 +315,24 @@ class LimiterActivity : AppCompatActivity() {
 
         val threshold = eqPrefs.getLimiterThreshold()
         thresholdSlider.value = threshold.coerceIn(-30f, 0f)
-        thresholdText.setText(String.format("%.1f", threshold))
+        thresholdText.setText(String.format(Locale.US, "%.1f", threshold))
 
         val ratio = eqPrefs.getLimiterRatio()
         ratioSlider.value = ratio.coerceIn(1f, 50f)
-        ratioText.setText(String.format("%.1f", ratio))
+        ratioText.setText(String.format(Locale.US, "%.1f", ratio))
 
         val attack = eqPrefs.getLimiterAttack()
         val snappedAttack = (Math.round(attack * 100f) / 100f).coerceIn(0.01f, 100f)
         attackSlider.value = snappedAttack
-        attackText.setText(String.format("%.2f", attack))
+        attackText.setText(String.format(Locale.US, "%.2f", attack))
 
         val release = eqPrefs.getLimiterRelease()
         releaseSlider.value = release.coerceIn(1f, 500f)
-        releaseText.setText(String.format("%.0f", release))
+        releaseText.setText(String.format(Locale.US, "%.0f", release))
 
         val postGain = eqPrefs.getLimiterPostGain()
         postGainSlider.value = postGain.coerceIn(-12f, 12f)
-        postGainText.setText(String.format("%.1f", postGain))
+        postGainText.setText(String.format(Locale.US, "%.1f", postGain))
 
         // Sync visualizations
         syncVisualizations()
@@ -384,7 +385,7 @@ class LimiterActivity : AppCompatActivity() {
             eqPrefs.saveLimiterThreshold(value)
             isUpdating = true
             thresholdSlider.value = value.coerceIn(-30f, 0f)
-            thresholdText.setText(String.format("%.1f", value))
+            thresholdText.setText(String.format(Locale.US, "%.1f", value))
             waveformView.ceilingDb = value
             isUpdating = false
             pushToService()
@@ -564,7 +565,7 @@ class LimiterActivity : AppCompatActivity() {
     private fun setupSlider(slider: Slider, text: EditText, format: String, onChanged: (Float) -> Unit) {
         slider.addOnChangeListener { _, value, fromUser ->
             if (fromUser && !isUpdating) {
-                text.setText(String.format(format, value))
+                text.setText(String.format(Locale.US, format, value))
                 onChanged(value)
             }
         }
@@ -573,7 +574,7 @@ class LimiterActivity : AppCompatActivity() {
             if (v != null) {
                 isUpdating = true
                 slider.value = v
-                text.setText(String.format(format, v))
+                text.setText(String.format(Locale.US, format, v))
                 isUpdating = false
                 onChanged(v)
             }

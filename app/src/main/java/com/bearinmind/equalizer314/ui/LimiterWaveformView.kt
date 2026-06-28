@@ -1,5 +1,6 @@
 package com.bearinmind.equalizer314.ui
 
+import java.util.Locale
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.DashPathEffect
@@ -191,7 +192,7 @@ class LimiterWaveformView @JvmOverloads constructor(
 
         // Ceiling line with centered dB label
         val ceilY = dbToY(ceilingDb, h)
-        val ceilText = String.format("%.1f", ceilingDb)
+        val ceilText = String.format(Locale.US, "%.1f", ceilingDb)
         val ceilTextWidth = ceilingTextPaint.measureText(ceilText)
         val ceilCenterX = w / 2f
         val gapPad = 8f

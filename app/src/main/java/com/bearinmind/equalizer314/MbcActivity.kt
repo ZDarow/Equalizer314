@@ -1,5 +1,6 @@
 package com.bearinmind.equalizer314
 
+import java.util.Locale
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.res.ColorStateList
@@ -195,7 +196,7 @@ class MbcActivity : AppCompatActivity() {
             // Always sync threshold slider + compressor curve
             isUpdating = true
             thresholdSlider.value = thresholdDb.coerceIn(-60f, 0f)
-            thresholdText.setText(String.format("%.1f", thresholdDb))
+            thresholdText.setText(String.format(Locale.US, "%.1f", thresholdDb))
             compressorCurve.threshold = thresholdDb
             gateCurve.compressorThreshold = thresholdDb
             isUpdating = false
@@ -786,7 +787,7 @@ class MbcActivity : AppCompatActivity() {
             if (bandIndex == selectedBand) {
                 isUpdating = true
                 preGainSlider.value = snapped.coerceIn(-30f, 30f)
-                preGainText.setText(String.format("%.1f", snapped))
+                preGainText.setText(String.format(Locale.US, "%.1f", snapped))
                 isUpdating = false
             }
         }
@@ -908,26 +909,26 @@ class MbcActivity : AppCompatActivity() {
         cutoffSlider.value = freqToSlider(cutoffVal)
         cutoffText.setText(cutoffVal.toInt().toString())
         attackSlider.value = b.attack.coerceIn(0.01f, 500f)
-        attackText.setText(String.format("%.2f", b.attack))
+        attackText.setText(String.format(Locale.US, "%.2f", b.attack))
         releaseSlider.value = b.release.coerceIn(1f, 5000f)
-        releaseText.setText(String.format("%.0f", b.release))
+        releaseText.setText(String.format(Locale.US, "%.0f", b.release))
         ratioSlider.value = ratioToSlider(b.ratio)
-        ratioText.setText(String.format("%.2f", b.ratio))
+        ratioText.setText(String.format(Locale.US, "%.2f", b.ratio))
         thresholdSlider.value = b.threshold.coerceIn(-60f, 0f)
-        thresholdText.setText(String.format("%.1f", b.threshold))
+        thresholdText.setText(String.format(Locale.US, "%.1f", b.threshold))
         // RANGE FEATURE COMMENTED OUT — range slider/text in loadBandToUI
         // rangeSlider.value = b.range.coerceIn(-12f, 0f)
         // rangeText.setText(String.format("%.1f", b.range))
         kneeSlider.value = b.kneeWidth.coerceIn(0.01f, 24f)
-        kneeText.setText(String.format("%.2f", b.kneeWidth))
+        kneeText.setText(String.format(Locale.US, "%.2f", b.kneeWidth))
         noiseGateSlider.value = b.noiseGateThreshold.coerceIn(-90f, 0f)
-        noiseGateText.setText(String.format("%.0f", b.noiseGateThreshold))
+        noiseGateText.setText(String.format(Locale.US, "%.0f", b.noiseGateThreshold))
         expanderSlider.value = ratioToSlider(b.expanderRatio)
-        expanderText.setText(String.format("%.2f", b.expanderRatio))
+        expanderText.setText(String.format(Locale.US, "%.2f", b.expanderRatio))
         preGainSlider.value = b.preGain.coerceIn(-30f, 30f)
-        preGainText.setText(String.format("%.1f", b.preGain))
+        preGainText.setText(String.format(Locale.US, "%.1f", b.preGain))
         postGainSlider.value = b.postGain.coerceIn(-30f, 30f)
-        postGainText.setText(String.format("%.1f", b.postGain))
+        postGainText.setText(String.format(Locale.US, "%.1f", b.postGain))
         // Sync compressor curve
         compressorCurve.selectedBand = selectedBand
         compressorCurve.threshold = b.threshold
@@ -1021,7 +1022,7 @@ class MbcActivity : AppCompatActivity() {
         ratioSlider.addOnChangeListener { _, value, fromUser ->
             if (!fromUser || isUpdating) return@addOnChangeListener
             val ratio = sliderToRatio(value)
-            ratioText.setText(String.format("%.2f", ratio))
+            ratioText.setText(String.format(Locale.US, "%.2f", ratio))
             bands[selectedBand].ratio = ratio
             compressorCurve.ratio = ratio
             saveBand(selectedBand)
@@ -1031,7 +1032,7 @@ class MbcActivity : AppCompatActivity() {
         ratioText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
                 val v = ratioText.text.toString().toFloatOrNull()?.coerceIn(1f, 50f) ?: 1f
-                ratioText.setText(String.format("%.2f", v))
+                ratioText.setText(String.format(Locale.US, "%.2f", v))
                 ratioSlider.value = ratioToSlider(v)
                 bands[selectedBand].ratio = v
                 compressorCurve.ratio = v
@@ -1074,7 +1075,7 @@ class MbcActivity : AppCompatActivity() {
         expanderSlider.addOnChangeListener { _, value, fromUser ->
             if (!fromUser || isUpdating) return@addOnChangeListener
             val ratio = sliderToRatio(value)
-            expanderText.setText(String.format("%.2f", ratio))
+            expanderText.setText(String.format(Locale.US, "%.2f", ratio))
             bands[selectedBand].expanderRatio = ratio
             gateCurve.expanderRatio = ratio
             saveBand(selectedBand)
@@ -1082,7 +1083,7 @@ class MbcActivity : AppCompatActivity() {
         expanderText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
                 val v = expanderText.text.toString().toFloatOrNull()?.coerceIn(1f, 50f) ?: 1f
-                expanderText.setText(String.format("%.2f", v))
+                expanderText.setText(String.format(Locale.US, "%.2f", v))
                 expanderSlider.value = ratioToSlider(v)
                 bands[selectedBand].expanderRatio = v
                 gateCurve.expanderRatio = v
@@ -1106,7 +1107,7 @@ class MbcActivity : AppCompatActivity() {
             saveBand(selectedBand)
             isUpdating = true
             thresholdSlider.value = value.coerceIn(-60f, 0f)
-            thresholdText.setText(String.format("%.1f", value))
+            thresholdText.setText(String.format(Locale.US, "%.1f", value))
             gateCurve.compressorThreshold = value  // sync dulled dot
             isUpdating = false
         }
@@ -1115,7 +1116,7 @@ class MbcActivity : AppCompatActivity() {
             saveBand(selectedBand)
             isUpdating = true
             ratioSlider.value = ratioToSlider(value)
-            ratioText.setText(String.format("%.2f", value))
+            ratioText.setText(String.format(Locale.US, "%.2f", value))
             isUpdating = false
         }
 
@@ -1124,7 +1125,7 @@ class MbcActivity : AppCompatActivity() {
             saveBand(selectedBand)
             isUpdating = true
             kneeSlider.value = value.coerceIn(0.01f, 24f)
-            kneeText.setText(String.format("%.2f", value))
+            kneeText.setText(String.format(Locale.US, "%.2f", value))
             isUpdating = false
         }
 
@@ -1134,7 +1135,7 @@ class MbcActivity : AppCompatActivity() {
             saveBand(selectedBand)
             isUpdating = true
             noiseGateSlider.value = value.coerceIn(-90f, 0f)
-            noiseGateText.setText(String.format("%.0f", value))
+            noiseGateText.setText(String.format(Locale.US, "%.0f", value))
             compressorCurve.gateThreshold = value  // sync dulled dot
             isUpdating = false
         }
@@ -1143,7 +1144,7 @@ class MbcActivity : AppCompatActivity() {
             saveBand(selectedBand)
             isUpdating = true
             expanderSlider.value = ratioToSlider(value)
-            expanderText.setText(String.format("%.2f", value))
+            expanderText.setText(String.format(Locale.US, "%.2f", value))
             isUpdating = false
         }
 
@@ -1153,7 +1154,7 @@ class MbcActivity : AppCompatActivity() {
             saveBand(selectedBand)
             isUpdating = true
             attackSlider.value = value.coerceIn(0.01f, 500f)
-            attackText.setText(String.format("%.2f", value))
+            attackText.setText(String.format(Locale.US, "%.2f", value))
             isUpdating = false
         }
         attackReleaseView.onReleaseChanged = { value ->
@@ -1161,7 +1162,7 @@ class MbcActivity : AppCompatActivity() {
             saveBand(selectedBand)
             isUpdating = true
             releaseSlider.value = value.coerceIn(1f, 5000f)
-            releaseText.setText(String.format("%.0f", value))
+            releaseText.setText(String.format(Locale.US, "%.0f", value))
             isUpdating = false
         }
 
@@ -1264,7 +1265,7 @@ class MbcActivity : AppCompatActivity() {
     ) {
         slider.addOnChangeListener { _, value, fromUser ->
             if (!fromUser || isUpdating) return@addOnChangeListener
-            textField.setText(String.format(fmt, value))
+            textField.setText(String.format(Locale.US, fmt, value))
             onValue(value)
             saveBand(selectedBand)
         }
@@ -1272,7 +1273,7 @@ class MbcActivity : AppCompatActivity() {
         textField.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
                 val v = textField.text.toString().toFloatOrNull()?.coerceIn(min, max) ?: min
-                textField.setText(String.format(fmt, v))
+                textField.setText(String.format(Locale.US, fmt, v))
                 slider.value = v
                 onValue(v)
                 saveBand(selectedBand)

@@ -1,5 +1,6 @@
 package com.bearinmind.equalizer314.ui
 
+import java.util.Locale
 import android.content.Context
 import com.bearinmind.equalizer314.R
 import android.graphics.Canvas
@@ -1310,7 +1311,7 @@ class EqGraphView @JvmOverloads constructor(
     private fun drawActivePointLabel(canvas: Canvas, point: BandPoint) {
         val currentFilterType = parametricEq?.getBand(point.bandIndex)?.filterType?.name ?: "BELL"
         val actualGain = parametricEq?.getBand(point.bandIndex)?.gain ?: point.gain
-        val label = "Band ${getBandLabel(point.bandIndex)}: ${formatFrequency(point.frequency.toInt())} | ${String.format("%.1f dB", actualGain)} | $currentFilterType"
+        val label = "Band ${getBandLabel(point.bandIndex)}: ${formatFrequency(point.frequency.toInt())} | ${String.format(Locale.US, "%.1f dB", actualGain)} | $currentFilterType"
 
         val labelWidth = labelPaint.measureText(label)
         val padH = 14f
@@ -1339,7 +1340,7 @@ class EqGraphView @JvmOverloads constructor(
                 val kHz = hz / 1000.0
                 if (kHz >= 10) "${kHz.toInt()}k"
                 else if (kHz % 1.0 == 0.0) "${kHz.toInt()}k"
-                else String.format("%.1fk", kHz)
+                else String.format(Locale.US, "%.1fk", kHz)
             }
             else -> "$hz"
         }

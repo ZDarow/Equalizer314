@@ -1,5 +1,6 @@
 package com.bearinmind.equalizer314.ui
 
+import java.util.Locale
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.DashPathEffect
@@ -304,7 +305,7 @@ class GrTraceView @JvmOverloads constructor(
             threshLinePaint.alpha = if (b == selectedBand || b == draggingThresholdBand) 180 else 80
 
             // Measure text to create gap in the line
-            val text = String.format("%.1f", thresholds[b])
+            val text = String.format(Locale.US, "%.1f", thresholds[b])
             val textWidth = threshTextPaint.measureText(text)
             val gapPad = 8f
             val gapLeft = centerX - textWidth / 2f - gapPad

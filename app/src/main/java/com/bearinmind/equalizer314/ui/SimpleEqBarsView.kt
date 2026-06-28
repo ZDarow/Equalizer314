@@ -1,5 +1,6 @@
 package com.bearinmind.equalizer314.ui
 
+import java.util.Locale
 import android.content.Context
 import com.bearinmind.equalizer314.R
 import android.graphics.Canvas
@@ -196,7 +197,7 @@ class SimpleEqBarsView @JvmOverloads constructor(
             }
 
             // dB label above bar — moves up with the pop animation
-            val dbText = String.format("%.1f", gain)
+            val dbText = String.format(Locale.US, "%.1f", gain)
             canvas.drawText(dbText, cx, barTop - 4f * density, labelPaint)
 
             // Frequency label below bar — moves down with the pop animation

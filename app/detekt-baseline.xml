@@ -427,5 +427,6 @@
     <ID>WildcardImport:SpectrumAnalyzerRenderer.kt$import kotlin.math.*</ID>
     <ID>WildcardImport:TargetCurveActivity.kt$import com.bearinmind.equalizer314.autoeq.*</ID>
     <ID>WildcardImport:WaveformFftProcessor.kt$import kotlin.math.*</ID>
+    <ID>ReturnCount:EqService.kt$EqService$private fun verifyAndReclaimGlobalDp(): Boolean</ID>
   </CurrentIssues>
 </SmellBaseline>

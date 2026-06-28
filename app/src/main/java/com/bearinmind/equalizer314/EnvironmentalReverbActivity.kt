@@ -1,5 +1,6 @@
 package com.bearinmind.equalizer314
 
+import java.util.Locale
 import android.os.Bundle
 import android.view.View
 import android.widget.EditText
@@ -249,7 +250,7 @@ class EnvironmentalReverbActivity : AppCompatActivity() {
         // back into the visualizer from the slider's own callback.
         isUpdating = true
         slider.value = value.coerceIn(slider.valueFrom, slider.valueTo)
-        text.setText(String.format(format, value))
+        text.setText(String.format(Locale.US, format, value))
         isUpdating = false
     }
 
@@ -264,12 +265,12 @@ class EnvironmentalReverbActivity : AppCompatActivity() {
         isUpdating = true
         val clamped = initial.coerceIn(slider.valueFrom, slider.valueTo)
         slider.value = clamped
-        text.setText(String.format(format, clamped))
+        text.setText(String.format(Locale.US, format, clamped))
         isUpdating = false
 
         slider.addOnChangeListener { _, value, fromUser ->
             if (fromUser && !isUpdating) {
-                text.setText(String.format(format, value))
+                text.setText(String.format(Locale.US, format, value))
                 save(value)
                 onValueChanged(value)
                 schedulePushReverbParams()
@@ -281,7 +282,7 @@ class EnvironmentalReverbActivity : AppCompatActivity() {
             if (v != null) {
                 isUpdating = true
                 slider.value = v
-                text.setText(String.format(format, v))
+                text.setText(String.format(Locale.US, format, v))
                 isUpdating = false
                 save(v)
                 onValueChanged(v)

@@ -1,5 +1,6 @@
 package com.bearinmind.equalizer314.ui
 
+import java.util.Locale
 import android.app.Activity
 import com.bearinmind.equalizer314.R
 import android.view.View
@@ -244,7 +245,7 @@ class TableEqController(
         val numType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
         val signedNumType = numType or android.text.InputType.TYPE_NUMBER_FLAG_SIGNED
 
-        val hzInput = makeInput(String.format("%.0f", band.frequency), numType, 1f, marginEnd) { text ->
+        val hzInput = makeInput(String.format(Locale.US, "%.0f", band.frequency), numType, 1f, marginEnd) { text ->
             val hz = text.toFloatOrNull()?.coerceIn(10f, 20000f) ?: band.frequency
             val b = eq.getBand(bandIndex) ?: return@makeInput
             eq.updateBand(bandIndex, hz, b.gain, b.filterType, b.q)
@@ -260,7 +261,7 @@ class TableEqController(
             BiquadFilter.FilterType.ALL_PASS -> true
             else -> false
         }
-        val dbInput = makeInput(String.format("%.1f", band.gain), signedNumType, 1f, marginEnd) { text ->
+        val dbInput = makeInput(String.format(Locale.US, "%.1f", band.gain), signedNumType, 1f, marginEnd) { text ->
             val db = text.toFloatOrNull()?.coerceIn(-12f, 12f) ?: band.gain
             val b = eq.getBand(bandIndex) ?: return@makeInput
             eq.updateBand(bandIndex, b.frequency, db, b.filterType, b.q)
@@ -272,7 +273,7 @@ class TableEqController(
         dbInput.alpha = if (gainless) 0.4f else 1f
         row.addView(dbInput)
 
-        val qInput = makeInput(String.format("%.2f", band.q), numType, 1f, 0) { text ->
+        val qInput = makeInput(String.format(Locale.US, "%.2f", band.q), numType, 1f, 0) { text ->
             val q = text.toDoubleOrNull()?.coerceIn(0.1, 12.0) ?: band.q
             val b = eq.getBand(bandIndex) ?: return@makeInput
             eq.updateBand(bandIndex, b.frequency, b.gain, b.filterType, q)

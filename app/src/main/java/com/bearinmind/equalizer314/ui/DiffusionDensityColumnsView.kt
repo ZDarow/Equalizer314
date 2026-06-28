@@ -1,5 +1,6 @@
 package com.bearinmind.equalizer314.ui
 
+import java.util.Locale
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -139,11 +140,11 @@ class DiffusionDensityColumnsView @JvmOverloads constructor(
         canvas.drawText("Dens", (densLeft + densRight) / 2f, 32f, titlePaint)
 
         canvas.drawText(
-            String.format("%.0f", diffusionPct),
+            String.format(Locale.US, "%.0f", diffusionPct),
             (diffLeft + diffRight) / 2f, h - 10f, valuePaint
         )
         canvas.drawText(
-            String.format("%.0f", densityPct),
+            String.format(Locale.US, "%.0f", densityPct),
             (densLeft + densRight) / 2f, h - 10f, valuePaint
         )
     }

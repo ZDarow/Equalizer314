@@ -1,5 +1,6 @@
 package com.bearinmind.equalizer314.ui
 
+import java.util.Locale
 import android.app.Activity
 import android.view.View
 import android.widget.FrameLayout
@@ -243,14 +244,14 @@ class GraphicEqController(
             maxLines = 1
         }
         val dbText = TextView(activity).apply {
-            text = "${String.format("%.1f", band.gain)} dB"
+            text = "${String.format(Locale.US, "%.1f", band.gain)} dB"
             textSize = hzDbSize
             setTextColor(if (isLpHp) 0xFF555555.toInt() else 0xFFAAAAAA.toInt())
             gravity = android.view.Gravity.CENTER
             maxLines = 1
         }
         val qText = TextView(activity).apply {
-            text = "${String.format("%.2f", band.q)} Q"
+            text = "${String.format(Locale.US, "%.2f", band.q)} Q"
             textSize = qSize
             setTextColor(0xFFAAAAAA.toInt())
             gravity = android.view.Gravity.CENTER
@@ -294,11 +295,11 @@ class GraphicEqController(
                 if (isLpHp) {
                     eq.updateBand(bandIndex, b.frequency, b.gain, b.filterType, value.toDouble())
                     hzText.text = formatHz(b.frequency)
-                    qText.text = "${String.format("%.2f", value)} Q"
+                    qText.text = "${String.format(Locale.US, "%.2f", value)} Q"
                 } else {
                     eq.updateBand(bandIndex, b.frequency, value, b.filterType, b.q)
                     hzText.text = formatHz(b.frequency)
-                    dbText.text = "${String.format("%.1f", value)} dB"
+                    dbText.text = "${String.format(Locale.US, "%.1f", value)} dB"
                 }
                 graphView.setParametricEqualizer(eq)
                 onEqChanged()
@@ -495,9 +496,9 @@ class GraphicEqController(
 
         val hzType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
         val dbType = hzType or android.text.InputType.TYPE_NUMBER_FLAG_SIGNED
-        val (hzInput, hzRow) = makeRow("Hz", String.format("%.0f", band.frequency), hzType, android.view.inputmethod.EditorInfo.IME_ACTION_NEXT)
-        val (dbInput, dbRow) = makeRow("dB", String.format("%.1f", band.gain), dbType, android.view.inputmethod.EditorInfo.IME_ACTION_DONE, enabled = !isLpHp)
-        val (qInput, qRow) = makeRow(activity.getString(R.string.q_label), String.format("%.2f", band.q), hzType, android.view.inputmethod.EditorInfo.IME_ACTION_DONE)
+        val (hzInput, hzRow) = makeRow("Hz", String.format(Locale.US, "%.0f", band.frequency), hzType, android.view.inputmethod.EditorInfo.IME_ACTION_NEXT)
+        val (dbInput, dbRow) = makeRow("dB", String.format(Locale.US, "%.1f", band.gain), dbType, android.view.inputmethod.EditorInfo.IME_ACTION_DONE, enabled = !isLpHp)
+        val (qInput, qRow) = makeRow(activity.getString(R.string.q_label), String.format(Locale.US, "%.2f", band.q), hzType, android.view.inputmethod.EditorInfo.IME_ACTION_DONE)
 
         container.addView(hzRow)
         container.addView(makeDivider())
@@ -515,8 +516,8 @@ class GraphicEqController(
                 val b = eq.getBand(bandIndex) ?: return@setPositiveButton
                 eq.updateBand(bandIndex, hz, db, b.filterType, q)
                 hzLabel.text = formatHz(hz)
-                dbLabel.text = "${String.format("%.1f", db)} dB"
-                qLabel.text = "Q ${String.format("%.2f", q)}"
+                dbLabel.text = "${String.format(Locale.US, "%.1f", db)} dB"
+                qLabel.text = "Q ${String.format(Locale.US, "%.2f", q)}"
                 val sliderPos = sortedIndices.indexOf(bandIndex)
                 if (sliderPos in sliderRefs.indices) {
                     isUpdating = true
@@ -533,7 +534,7 @@ class GraphicEqController(
     fun formatHz(hz: Float): String {
         return when {
             hz >= 10000 -> "${(hz / 1000).toInt()}k"
-            hz >= 1000 -> String.format("%.1fk", hz / 1000)
+            hz >= 1000 -> String.format(Locale.US, "%.1fk", hz / 1000)
             else -> "${hz.toInt()}"
         }
     }

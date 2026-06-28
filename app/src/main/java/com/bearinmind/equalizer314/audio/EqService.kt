@@ -277,44 +277,58 @@ class EqService : Service() {
     // OnControl/OnEnable listeners often don't fire on those ROMs — so the
     // EQ goes flat until a manual power toggle. This watchdog re-verifies
     // control and cleanly re-attaches: promptly on playback changes (the
-    // event hook in systemSoundCallback) and on a 5s backstop timer.
+    // event hook in systemSoundCallback) and on a timer with exponential
+    // backoff (15s..60s) чтобы не будить CPU каждые 5 секунд без пользы.
     private val watchdogHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private val watchdogIntervalMs = 5_000L
+    private var watchdogCurrentIntervalMs = 15_000L
+    private val watchdogIntervalMinMs = 15_000L
+    private val watchdogIntervalMaxMs = 60_000L
     private val watchdogTick = object : Runnable {
         override fun run() {
-            try { verifyAndReclaimGlobalDp() } finally {
-                watchdogHandler.postDelayed(this, watchdogIntervalMs)
+            val reclaimed = try { verifyAndReclaimGlobalDp() } catch (_: Throwable) { false }
+            // Если reclaim не понадобился — увеличиваем интервал (backoff).
+            // Если reclaim был — сбрасываем на минимум для быстрого реагирования.
+            watchdogCurrentIntervalMs = if (reclaimed) {
+                watchdogIntervalMinMs
+            } else {
+                (watchdogCurrentIntervalMs * 1.5).toLong().coerceAtMost(watchdogIntervalMaxMs)
+            }
+            if (dynamicsManager.isActive) {
+                watchdogHandler.postDelayed(this, watchdogCurrentIntervalMs)
             }
         }
     }
     private fun startWatchdog() {
         watchdogHandler.removeCallbacks(watchdogTick)
-        watchdogHandler.postDelayed(watchdogTick, watchdogIntervalMs)
+        watchdogCurrentIntervalMs = watchdogIntervalMinMs
+        watchdogHandler.postDelayed(watchdogTick, watchdogIntervalMinMs)
     }
     private fun stopWatchdog() {
         watchdogHandler.removeCallbacks(watchdogTick)
     }
 
     /** Re-verify the session-0 effect still holds control and re-attach it
-     *  if it was displaced. No-op unless the EQ is supposed to be live in
-     *  System-wide mode (the early-returns make it cheap to call on every
-     *  timer tick / playback change). Reuses the reclaim cooldown so it
-     *  can't tug-of-war with a competing app, and re-applies MBC + the
-     *  system-sound bypass after the recreate (same sequence as a route
-     *  change). */
-    private fun verifyAndReclaimGlobalDp() {
+     *  if it was displaced. Returns true when a reclaim actually happened
+     *  (used by watchdog backoff logic). No-op unless the EQ is supposed
+     *  to be live in System-wide mode (the early-returns make it cheap to
+     *  call on every timer tick / playback change). Reuses the reclaim
+     *  cooldown so it can't tug-of-war with a competing app. */
+    @Suppress("ReturnCount")
+    private fun verifyAndReclaimGlobalDp(): Boolean {
         val prefs = EqPreferencesManager(this)
-        if (prefs.getAudioRoutingMode() == 1) return   // Session-based: no global DP
-        if (!prefs.getPowerState()) return              // EQ powered off
-        if (!dynamicsManager.isActive) return
-        if (!dynamicsManager.hasLostControl()) return
-        if (!dynamicsManager.reclaimCooldownElapsed()) return
+        if (prefs.getAudioRoutingMode() == 1) return false  // Session-based: no global DP
+        if (!prefs.getPowerState()) return false             // EQ powered off
+        if (!dynamicsManager.isActive) return false
+        if (!dynamicsManager.hasLostControl()) return false
+        if (!dynamicsManager.reclaimCooldownElapsed()) return false
         Log.w(TAG, "Watchdog: global DP lost control — reattaching")
-        if (dynamicsManager.reattachActive()) {
+        val reclaimed = dynamicsManager.reattachActive()
+        if (reclaimed) {
             applyPersistedMbcConfig()
             syncSystemSoundBypassFromCurrent()
             updateNotification()
         }
+        return reclaimed
     }
 
     /** Main-thread re-check requested from outside (e.g. MainActivity
@@ -929,12 +943,12 @@ class EqService : Service() {
 
     override fun onDestroy() {
         stopWatchdog()
-        try { unregisterReceiver(volumeReceiver) } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
-        try { unregisterReceiver(routePresetReceiver) } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
-        try {
+        runCatching { unregisterReceiver(volumeReceiver) }.onFailure { Log.w(TAG, "unregister volumeReceiver failed: ${it.message}") }
+        runCatching { unregisterReceiver(routePresetReceiver) }.onFailure { Log.w(TAG, "unregister routePresetReceiver failed: ${it.message}") }
+        runCatching {
             getSystemService(AudioManager::class.java)
                 ?.unregisterAudioPlaybackCallback(systemSoundCallback)
-        } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
+        }.onFailure { Log.w(TAG, "unregister AudioPlaybackCallback failed: ${it.message}") }
         routingMonitor?.stop()
         routingMonitor = null
         routeCoordinator = null

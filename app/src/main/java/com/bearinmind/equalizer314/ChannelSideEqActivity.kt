@@ -1,5 +1,6 @@
 package com.bearinmind.equalizer314
 
+import java.util.Locale
 import android.content.ComponentName
 import android.content.ServiceConnection
 import android.os.Bundle
@@ -96,7 +97,7 @@ class ChannelSideEqActivity : AppCompatActivity() {
         val slider = findViewById<Slider>(sliderId)
         val input = findViewById<TextInputEditText>(inputId)
 
-        fun format(db: Float) = String.format("%.1f", db)
+        fun format(db: Float) = String.format(Locale.US, "%.1f", db)
 
         var suppress = false
         val start = initial.coerceIn(-12f, 12f)

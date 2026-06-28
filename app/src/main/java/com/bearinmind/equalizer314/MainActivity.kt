@@ -1604,7 +1604,7 @@ class  MainActivity : AppCompatActivity() {
                     eqViewModel.eqPrefs.savePreampGain(preampFromPreset)
                     // Sync the preamp slider + text so the user sees the loaded value.
                     preampSlider.value = preampFromPreset.coerceIn(-12f, 12f)
-                    preampText.setText(String.format("%.1f", preampFromPreset))
+                    preampText.setText(String.format(Locale.US, "%.1f", preampFromPreset))
                     // Persist the loaded preset's name so the foreground
                     // notification, anything else that reads
                     // getPresetName(), and the next save-preset prompt
@@ -2174,7 +2174,7 @@ class  MainActivity : AppCompatActivity() {
         // Preamp slider
         preampSlider.addOnChangeListener { _, value, fromUser ->
             if (!fromUser) return@addOnChangeListener
-            preampText.setText(String.format("%.1f", value))
+            preampText.setText(String.format(Locale.US, "%.1f", value))
             eqViewModel.setPreampGain( value)
             eqViewModel.eqPrefs.savePreampGain(value)
             eqViewModel.pushEqUpdate()
@@ -2184,7 +2184,7 @@ class  MainActivity : AppCompatActivity() {
         preampText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
                 val gain = preampText.text.toString().toFloatOrNull()?.coerceIn(-12f, 12f) ?: 0f
-                preampText.setText(String.format("%.1f", gain))
+                preampText.setText(String.format(Locale.US, "%.1f", gain))
                 preampSlider.value = gain
                 eqViewModel.setPreampGain( gain)
                 eqViewModel.eqPrefs.savePreampGain(gain)
@@ -2661,7 +2661,7 @@ class  MainActivity : AppCompatActivity() {
         bandDbSlider.addOnChangeListener { _, value, fromUser ->
             if (!fromUser || isUpdatingInputs) return@addOnChangeListener
             isUpdatingInputs = true
-            bandDbInput.setText(String.format("%.1f", value))
+            bandDbInput.setText(String.format(Locale.US, "%.1f", value))
             isUpdatingInputs = false
             applyBandDb(value)
         }
@@ -2669,7 +2669,7 @@ class  MainActivity : AppCompatActivity() {
         qSlider.addOnChangeListener { _, value, fromUser ->
             if (!fromUser || isUpdatingInputs) return@addOnChangeListener
             isUpdatingInputs = true
-            bandQInput.setText(String.format("%.2f", value))
+            bandQInput.setText(String.format(Locale.US, "%.2f", value))
             isUpdatingInputs = false
             val bandIndex = eqGraphView.getActiveBandIndex() ?: return@addOnChangeListener
             eqGraphView.setQ(bandIndex, value.toDouble())
@@ -2696,7 +2696,7 @@ class  MainActivity : AppCompatActivity() {
         addDoubleTapReset(qSlider) {
             val defaultQ = 0.71f
             qSlider.value = defaultQ
-            bandQInput.setText(String.format("%.2f", defaultQ))
+            bandQInput.setText(String.format(Locale.US, "%.2f", defaultQ))
             val bandIndex = eqGraphView.getActiveBandIndex() ?: return@addDoubleTapReset
             eqGraphView.setQ(bandIndex, defaultQ.toDouble())
             eqViewModel.pushEqUpdate()
@@ -2848,8 +2848,8 @@ class  MainActivity : AppCompatActivity() {
         val band = eqViewModel.parametricEq.value.getBand(idx)
         if (band != null) {
             bandHzInput.setText(formatHzValue(band.frequency))
-            bandDbInput.setText(String.format("%.1f", band.gain))
-            bandQInput.setText(String.format("%.2f", band.q))
+            bandDbInput.setText(String.format(Locale.US, "%.1f", band.gain))
+            bandQInput.setText(String.format(Locale.US, "%.2f", band.q))
             bandHzSlider.value = hzToSlider(band.frequency)
             bandDbSlider.value = band.gain.coerceIn(-20f, 20f)
             qSlider.value = band.q.toFloat().coerceIn(0.1f, 12f)

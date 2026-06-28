@@ -85,7 +85,10 @@ class EqStateManager(
             ActiveChannel.RIGHT -> rightBandSlots
             ActiveChannel.BOTH -> bothBandSlots
         }
-    val bandColors = mutableMapOf<Int, Int>() // slot index → color int
+    // Thread-safe: используется из UI-потока (onDraw/onTouch EqGraphView)
+    // и из фонового потока загрузки пресетов. ConcurrentHashMap избегает
+    // ConcurrentModificationException.
+    val bandColors = java.util.concurrent.ConcurrentHashMap<Int, Int>() // slot index → color int
     var selectedBandIndex: Int? = null
     var isProcessing = false
     var currentEqUiMode = EqUiMode.PARAMETRIC

@@ -91,6 +91,29 @@ class DynamicsProcessingManager {
     @Volatile private var pendingApply: Runnable? = null
     @Volatile private var pendingLimiter: Runnable? = null
 
+    /**
+     * Создаёт [DynamicsProcessing] с перебором приоритетов от higher к lower.
+     * Некоторые OEM (Xiaomi, OPPO) не могут создать эффект с Int.MAX_VALUE.
+     * Возвращает null, если ни один приоритет не сработал.
+     */
+    private fun createDpWithFallback(
+        sessionId: Int,
+        config: DynamicsProcessing.Config,
+        priorities: List<Int>,
+    ): DynamicsProcessing? {
+        for (p in priorities) {
+            try {
+                val dp = DynamicsProcessing(p, sessionId, config)
+                Log.d(TAG, "DynamicsProcessing created with priority=$p")
+                return dp
+            } catch (e: Exception) {
+                Log.w(TAG, "Priority $p failed: ${e.message}")
+            }
+        }
+        Log.e(TAG, "All priorities exhausted — cannot create DynamicsProcessing")
+        return null
+    }
+
     fun start(eq: ParametricEqualizer) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
             Log.e(TAG, "DynamicsProcessing requires API 28+")
@@ -138,7 +161,17 @@ class DynamicsProcessingManager {
 
         try {
             lastEq = eq
-            dynamicsProcessing = DynamicsProcessing(Int.MAX_VALUE, 0, config).apply {
+            // Пытаемся создать DP с уменьшающимся приоритетом для совместимости
+            // с разными OEM-прошивками (Xiaomi, OPPO, Pixel Adaptive Sound).
+            // Int.MAX_VALUE может вызвать зависание AudioFlinger на некоторых устройствах.
+            val dpInstance = createDpWithFallback(0, config, listOf(
+                Int.MAX_VALUE - 1,
+                100_000,
+                10_000,
+                1_000,
+            )
+            ) ?: error("DynamicsProcessing creation failed for all priorities")
+            dynamicsProcessing = dpInstance.apply {
                 // Stage population order matches Wavelet's a6/b0.smali:
                 // limiter → MBC → pre-EQ → setEnabled. Setting enabled
                 // last avoids DP processing audio with default bands
