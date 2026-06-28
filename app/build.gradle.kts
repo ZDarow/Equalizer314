@@ -22,8 +22,8 @@ android {
         applicationId = "com.bearinmind.equalizer314"
         minSdk = 28
         targetSdk = 35
-        versionCode = 12
-        versionName = "0.0.12-beta"
+        versionCode = 100
+        versionName = "0.1.0-alpha"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -143,7 +143,9 @@ dependencies {
     // org.json mock replacement for unit tests
     testImplementation("org.json:json:20231013")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:rules:1.6.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    androidTestImplementation("androidx.test.espresso:espresso-intents:3.6.1")
 }
 
 // ---- Kover test coverage --------------------------------------------
