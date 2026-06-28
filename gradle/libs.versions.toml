@@ -1,0 +1,88 @@
+[versions]
+# ── Android ──────────────────────────────────────────────────────
+agp = "8.7.3"
+compileSdk = "35"
+minSdk = "28"
+targetSdk = "35"
+
+# ── Kotlin ────────────────────────────────────────────────────────
+kotlin = "2.1.0"
+ksp = "2.1.0-1.0.29"
+coroutines = "1.9.0"
+
+# ── AndroidX Core & UI ──────────────────────────────────────────
+core-ktx = "1.15.0"
+appcompat = "1.7.0"
+material = "1.12.0"
+constraintlayout = "2.2.1"
+recyclerview = "1.3.2"
+activity-ktx = "1.9.3"
+profileinstaller = "1.4.1"
+localbroadcastmanager = "1.1.0"
+
+# ── Lifecycle ────────────────────────────────────────────────────
+lifecycle = "2.8.7"
+
+# ── Room ─────────────────────────────────────────────────────────
+room = "2.6.1"
+
+# ── Testing ──────────────────────────────────────────────────────
+junit = "4.13.2"
+test-ext-junit = "1.2.1"
+test-rules = "1.6.1"
+robolectric = "4.14.1"
+json-mock = "20231013"
+espresso = "3.6.1"
+
+# ── Debug ────────────────────────────────────────────────────────
+leakcanary = "2.14"
+
+# ── Code Quality ────────────────────────────────────────────────
+detekt = "1.23.8"
+kover = "0.9.8"
+ben-manes = "0.54.0"
+
+[libraries]
+# ── AndroidX Core & UI ──────────────────────────────────────────
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
+androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activity-ktx" }
+androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
+androidx-localbroadcastmanager = { group = "androidx.localbroadcastmanager", name = "localbroadcastmanager", version.ref = "localbroadcastmanager" }
+
+# ── Material ────────────────────────────────────────────────────
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+
+# ── Lifecycle ────────────────────────────────────────────────────
+lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
+lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+
+# ── Coroutines ──────────────────────────────────────────────────
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+
+# ── Room ─────────────────────────────────────────────────────────
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+
+# ── Testing ──────────────────────────────────────────────────────
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "test-ext-junit" }
+test-rules = { group = "androidx.test", name = "rules", version.ref = "test-rules" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+json-mock = { group = "org.json", name = "json", version.ref = "json-mock" }
+espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
+espresso-intents = { group = "androidx.test.espresso", name = "espresso-intents", version.ref = "espresso" }
+
+# ── Debug ────────────────────────────────────────────────────────
+leakcanary-android = { group = "com.squareup.leakcanary", name = "leakcanary-android", version.ref = "leakcanary" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
+ben-manes = { id = "com.github.ben-manes.versions", version.ref = "ben-manes" }

@@ -1,10 +1,10 @@
 plugins {
-    id("com.android.application") version "8.7.3" apply false
-    id("org.jetbrains.kotlin.android") version "2.1.0" apply false
-    id("com.google.devtools.ksp") version "2.1.0-1.0.29" apply false
-    id("io.gitlab.arturbosch.detekt") version "1.23.8" apply false
-    id("org.jetbrains.kotlinx.kover") version "0.9.8" apply false
-    id("com.github.ben-manes.versions") version "0.54.0"  // applied at root level
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.ksp) apply false
+    alias(libs.plugins.detekt) apply false
+    alias(libs.plugins.kover) apply false
+    alias(libs.plugins.ben.manes) // applied at root level
 }
 
 tasks.withType<com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask>().configureEach {

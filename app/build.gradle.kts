@@ -1,11 +1,11 @@
 import java.util.Properties
 
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("com.google.devtools.ksp")
-    id("io.gitlab.arturbosch.detekt")
-    id("org.jetbrains.kotlinx.kover")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.detekt)
+    alias(libs.plugins.kover)
 }
 
 kotlin {
@@ -16,12 +16,12 @@ kotlin {
 
 android {
     namespace = "com.bearinmind.equalizer314"
-    compileSdk = 35
+    compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
         applicationId = "com.bearinmind.equalizer314"
-        minSdk = 28
-        targetSdk = 35
+        minSdk = libs.versions.minSdk.get().toInt()
+        targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 100
         versionName = "0.1.0-alpha"
 
@@ -98,34 +98,33 @@ android {
 
 dependencies {
     // Core Android
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("com.google.android.material:material:1.12.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.2.1")
-    implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.material)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.recyclerview)
 
     // Lifecycle
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
-    implementation("androidx.activity:activity-ktx:1.9.3")
+    implementation(libs.lifecycle.runtime.ktx)
+    implementation(libs.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.activity.ktx)
 
     // Baseline Profiles — Startup optimisation
-    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    implementation(libs.androidx.profileinstaller)
 
     // LeakCanary — memory leak detection (debug only)
-    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.14")
+    debugImplementation(libs.leakcanary.android)
 
     // LocalBroadcastManager (for MediaNotificationListener → SessionDetector communication)
-    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
+    implementation(libs.androidx.localbroadcastmanager)
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation(libs.kotlinx.coroutines.android)
 
     // Room — offline preset and binding database
-    val roomVersion = "2.6.1"
-    implementation("androidx.room:room-runtime:$roomVersion")
-    implementation("androidx.room:room-ktx:$roomVersion")
-    ksp("androidx.room:room-compiler:$roomVersion")
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
 
     // (Removed unused androidx.media3-exoplayer/ui/session dependencies.
     // They were an artefact of an earlier capture-based design that
@@ -137,15 +136,15 @@ dependencies {
     // only thing that permission was there for.)
 
     // Testing
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("androidx.test.ext:junit:1.2.1")
-    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation(libs.junit)
+    testImplementation(libs.test.ext.junit)
+    testImplementation(libs.robolectric)
     // org.json mock replacement for unit tests
-    testImplementation("org.json:json:20231013")
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test:rules:1.6.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    androidTestImplementation("androidx.test.espresso:espresso-intents:3.6.1")
+    testImplementation(libs.json.mock)
+    androidTestImplementation(libs.test.ext.junit)
+    androidTestImplementation(libs.test.rules)
+    androidTestImplementation(libs.espresso.core)
+    androidTestImplementation(libs.espresso.intents)
 }
 
 // ---- Kover test coverage --------------------------------------------
@@ -176,4 +175,3 @@ tasks.whenTaskAdded {
         enabled = false
     }
 }
-
