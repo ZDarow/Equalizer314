@@ -30,10 +30,19 @@ import com.bearinmind.equalizer314.state.EqStateManager
 import com.bearinmind.equalizer314.state.EqViewModel
 import com.bearinmind.equalizer314.ui.BandToggleManager
 import com.bearinmind.equalizer314.ui.EqGraphView
+import com.bearinmind.equalizer314.ui.FilterRole
 import com.bearinmind.equalizer314.ui.GraphicEqController
 import com.bearinmind.equalizer314.ui.GraphOverlayLayoutManager
 import com.bearinmind.equalizer314.ui.SimpleEqController
 import com.bearinmind.equalizer314.ui.TableEqController
+import com.bearinmind.equalizer314.ui.buildFilterButtonText
+import com.bearinmind.equalizer314.ui.filterTypeFamily
+import com.bearinmind.equalizer314.ui.formatHzValue
+import com.bearinmind.equalizer314.ui.hzToSlider
+import com.bearinmind.equalizer314.ui.isPeakFamily
+import com.bearinmind.equalizer314.ui.oneOrderVariant
+import com.bearinmind.equalizer314.ui.peakButtonLabel
+import com.bearinmind.equalizer314.ui.sliderToHz
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
@@ -426,10 +435,6 @@ class  MainActivity : AppCompatActivity() {
     private lateinit var eqControlsContainer: LinearLayout
     private lateinit var graphCardView: View
     private lateinit var modeSelectorGroup: LinearLayout
-
-    // Hz slider uses logarithmic mapping: slider 0–1000 → 10–20000 Hz
-    private val hzLogMin = kotlin.math.log10(10f)
-    private val hzLogMax = kotlin.math.log10(20000f)
 
     // Listen for EQ stopped from notification "Turn Off" button
     /** Fires when EqService kicks the DP up from a headless context
@@ -2633,16 +2638,6 @@ class  MainActivity : AppCompatActivity() {
 
     // ---- Band Parameter Sliders + Text Inputs ----
 
-    private fun hzToSlider(hz: Float): Float {
-        val logHz = kotlin.math.log10(hz.coerceIn(10f, 20000f))
-        return ((logHz - hzLogMin) / (hzLogMax - hzLogMin) * 1000f)
-    }
-
-    private fun sliderToHz(pos: Float): Float {
-        val logHz = hzLogMin + (pos / 1000f) * (hzLogMax - hzLogMin)
-        return (10.0).pow(logHz.toDouble()).toFloat()
-    }
-
     @SuppressLint("ClickableViewAccessibility")
     private fun setupBandSliderListeners() {
         bandHzSlider.addOnChangeListener { _, value, fromUser ->
@@ -2836,10 +2831,6 @@ class  MainActivity : AppCompatActivity() {
         }
         bottomSheet.setContentView(sheetLayout)
         bottomSheet.show()
-    }
-
-    private fun formatHzValue(hz: Float): String {
-        return if (hz >= 1000) String.format("%.0f", hz) else String.format("%.1f", hz)
     }
 
     private fun updateBandInputs(bandIndex: Int?) {
@@ -3048,15 +3039,6 @@ class  MainActivity : AppCompatActivity() {
         powerButton.text = if (on) "ON" else "OFF"
     }
 
-    private fun blendColor(from: Int, to: Int, ratio: Float): Int {
-        val inv = 1f - ratio
-        val a = ((from shr 24 and 0xFF) * inv + (to shr 24 and 0xFF) * ratio).toInt()
-        val r = ((from shr 16 and 0xFF) * inv + (to shr 16 and 0xFF) * ratio).toInt()
-        val g = ((from shr 8 and 0xFF) * inv + (to shr 8 and 0xFF) * ratio).toInt()
-        val b = ((from and 0xFF) * inv + (to and 0xFF) * ratio).toInt()
-        return (a shl 24) or (r shl 16) or (g shl 8) or b
-    }
-
     private fun updatePowerUI() {
         powerButton.text = if (eqViewModel.isProcessing.value) "ON" else "OFF"
     }
@@ -3191,8 +3173,8 @@ class  MainActivity : AppCompatActivity() {
 
         // Single row: order matches how buttons are added in
         // setupFilterTypeButtons: PEAK, LSHELF, HSHELF, LPF, HPF, BYPASS.
-        data class Entry(val btn: MaterialButton, val label: String, val role: Role)
-        val roles = listOf(Role.PEAK, Role.SHELF_PASS, Role.SHELF_PASS, Role.SHELF_PASS, Role.SHELF_PASS, Role.BYPASS)
+        data class Entry(val btn: MaterialButton, val label: String, val role: FilterRole)
+        val roles = listOf(FilterRole.PEAK, FilterRole.SHELF_PASS, FilterRole.SHELF_PASS, FilterRole.SHELF_PASS, FilterRole.SHELF_PASS, FilterRole.BYPASS)
         val labels = listOf(getString(R.string.filter_peak), getString(R.string.filter_low_shelf), getString(R.string.filter_high_shelf), getString(R.string.filter_low_pass), getString(R.string.filter_high_pass), getString(R.string.filter_bypass))
         val typesForHighlight = listOf(
             BiquadFilter.FilterType.BELL,
@@ -3216,11 +3198,11 @@ class  MainActivity : AppCompatActivity() {
             val buttonType = typesForHighlight[i]
             val sameFamily = filterTypeFamily(buttonType) == currentFamily
             val isActive = when (e.role) {
-                Role.PEAK -> bandEnabled && inPeakFam
-                Role.SHELF_PASS -> bandEnabled && sameFamily
+                FilterRole.PEAK -> bandEnabled && inPeakFam
+                FilterRole.SHELF_PASS -> bandEnabled && sameFamily
                 // BYPASS is tied to AP: highlighted when band is ALL_PASS
                 // OR when band is disabled (legacy presets).
-                Role.BYPASS -> !bandEnabled || isAllPass
+                FilterRole.BYPASS -> !bandEnabled || isAllPass
             }
 
             if (isActive) {
@@ -3238,88 +3220,19 @@ class  MainActivity : AppCompatActivity() {
             //   • Shelves / passes: current slope if active, else default "12 dB".
             //   • BYPASS: blank. Bypass↔AP mapping is implicit in APO export.
             val primary: String = when (e.role) {
-                Role.PEAK -> peakButtonLabel(currentType, bandEnabled)
+                FilterRole.PEAK -> peakButtonLabel(currentType, bandEnabled, this@MainActivity)
                 else -> e.label
             }
             val subtitle: String = when (e.role) {
-                Role.PEAK -> ""
-                Role.SHELF_PASS -> when {
+                FilterRole.PEAK -> ""
+                FilterRole.SHELF_PASS -> when {
                     sameFamily -> if (currentIs1st) "6 dB" else getString(R.string.msg_12db)
                     else -> getString(R.string.msg_12db)
                 }
-                Role.BYPASS -> ""
+                FilterRole.BYPASS -> ""
             }
             e.btn.text = buildFilterButtonText(primary, subtitle)
         }
-    }
-
-    /** Primary label text for the PEAK button. When the band is on BP or NO
-     *  the label swaps to "B. PASS" / "NOTCH" so the sub-type reads like its
-     *  own filter category rather than a variant badge. "B. PASS" keeps the
-     *  label short so the text stays at full size without shrinking. */
-    private fun peakButtonLabel(current: BiquadFilter.FilterType, bandEnabled: Boolean): String = when {
-        !bandEnabled -> getString(R.string.filter_peak)
-        current == BiquadFilter.FilterType.BAND_PASS -> "B. PASS"
-        current == BiquadFilter.FilterType.NOTCH -> "NOTCH"
-        else -> getString(R.string.filter_peak)
-    }
-
-    private enum class Role { PEAK, SHELF_PASS, BYPASS }
-
-    /** True when the filter type belongs to the PEAK button's dropdown:
-     *  the plain bell plus the two gainless Fc+Q specials (BP / NO).
-     *  ALL_PASS lives on the BYPASS button, not here. */
-    private fun isPeakFamily(t: BiquadFilter.FilterType): Boolean = when (t) {
-        BiquadFilter.FilterType.BELL,
-        BiquadFilter.FilterType.BAND_PASS,
-        BiquadFilter.FilterType.NOTCH -> true
-        else -> false
-    }
-
-
-    /** Collapse 1st- and 2nd-order variants into a single "family" key so the
-     *  filter-type button highlighting treats LShelf / LShelf (6 dB) as the
-     *  same button. */
-    private fun filterTypeFamily(t: BiquadFilter.FilterType): BiquadFilter.FilterType = when (t) {
-        BiquadFilter.FilterType.LOW_SHELF_1 -> BiquadFilter.FilterType.LOW_SHELF
-        BiquadFilter.FilterType.HIGH_SHELF_1 -> BiquadFilter.FilterType.HIGH_SHELF
-        BiquadFilter.FilterType.LOW_PASS_1 -> BiquadFilter.FilterType.LOW_PASS
-        BiquadFilter.FilterType.HIGH_PASS_1 -> BiquadFilter.FilterType.HIGH_PASS
-        else -> t
-    }
-
-    /** Given a 2nd-order filter family button (LOW_SHELF / HIGH_SHELF /
-     *  LOW_PASS / HIGH_PASS), return the matching 1st-order type. */
-    private fun oneOrderVariant(family: BiquadFilter.FilterType): BiquadFilter.FilterType? = when (family) {
-        BiquadFilter.FilterType.LOW_SHELF -> BiquadFilter.FilterType.LOW_SHELF_1
-        BiquadFilter.FilterType.HIGH_SHELF -> BiquadFilter.FilterType.HIGH_SHELF_1
-        BiquadFilter.FilterType.LOW_PASS -> BiquadFilter.FilterType.LOW_PASS_1
-        BiquadFilter.FilterType.HIGH_PASS -> BiquadFilter.FilterType.HIGH_PASS_1
-        else -> null
-    }
-
-    /** Build the filter-button label. Two-line form when a subtitle is
-     *  supplied ("LSHELF\n12 dB"); single-line form when there's no subtitle
-     *  (PEAK, B. PASS, NOTCH, BYPASS) so the visible text sits at the true
-     *  vertical center of the button. Row / button minHeight keeps every
-     *  cell the same size despite the line-count difference. The primary
-     *  label is proportionally shrunk when it's long enough to overflow
-     *  (8+ chars → 70% of the button's textSize). */
-    private fun buildFilterButtonText(primary: String, subtitle: String): CharSequence {
-        val full = if (subtitle.isEmpty()) primary else "$primary\n$subtitle"
-        val span = android.text.SpannableString(full)
-        val shrink = when {
-            primary.length >= 8 -> 0.7f
-            else -> 1f
-        }
-        if (shrink < 1f) {
-            span.setSpan(
-                android.text.style.RelativeSizeSpan(shrink),
-                0, primary.length,
-                android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-            )
-        }
-        return span
     }
 
     /** Apply a chosen filter type to a band and refresh every dependent UI
