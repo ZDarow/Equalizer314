@@ -55,7 +55,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             // Only use release signing config when the keystore is configured
             // (via keystore.properties or CI secrets). Otherwise build unsigned.
             val releaseConfig = signingConfigs.findByName("release")
