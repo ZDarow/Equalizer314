@@ -17,11 +17,13 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnLayout
 import androidx.core.view.updatePadding
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.bearinmind.equalizer314.audio.EqService
+import com.bearinmind.equalizer314.audio.RouteSwitchCoordinator
 import com.bearinmind.equalizer314.dsp.BiquadFilter
 import com.bearinmind.equalizer314.dsp.ParametricToDpConverter
 import com.bearinmind.equalizer314.state.EqStateManager
@@ -83,6 +85,112 @@ class  MainActivity : AppCompatActivity() {
         presetExportLauncher.launch(intent)
     }
 
+    // ---- Whole-app backup / restore ----
+    private val backupExportLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val uri = result.data?.data ?: return@registerForActivityResult
+            try {
+                val json = BackupManager.exportAll(this)
+                contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(json) }
+                android.widget.Toast.makeText(this, "Backup saved", android.widget.Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(this, "Backup failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private val backupImportLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri == null) return@registerForActivityResult
+        try {
+            val text = contentResolver.openInputStream(uri)?.bufferedReader()?.readText()
+            if (text != null && BackupManager.importAll(this, text)) {
+                android.widget.Toast.makeText(this, "Backup restored", android.widget.Toast.LENGTH_SHORT).show()
+                // Re-apply the restored theme choice, then recreate so all
+                // screens, presets, and bindings reload from the new prefs.
+                val light = getSharedPreferences("eq_settings", MODE_PRIVATE).getBoolean("lightTheme", false)
+                androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+                    if (light) androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+                    else androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+                )
+                recreate()
+            } else {
+                android.widget.Toast.makeText(this, "Not a valid Equalizer314 backup", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(this, "Restore failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun launchBackupExport() {
+        val intent = android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(android.content.Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+            putExtra(android.content.Intent.EXTRA_TITLE, "Equalizer314-backup.json")
+        }
+        backupExportLauncher.launch(intent)
+    }
+
+    private fun showBackupRestoreDialog() {
+        val density = resources.displayMetrics.density
+        val dialogView = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding((24 * density).toInt(), (20 * density).toInt(), (24 * density).toInt(), (16 * density).toInt())
+        }
+        val title = android.widget.TextView(this).apply {
+            text = "Backup & Restore"
+            setTextColor(0xFFE2E2E2.toInt()); textSize = 20f
+            setPadding(0, 0, 0, (8 * density).toInt())
+        }
+        val msg = android.widget.TextView(this).apply {
+            text = "Export or import settings, presets & bindings to a .json ; importing will override all current settings in the app"
+            setTextColor(0xFFAAAAAA.toInt()); textSize = 13f
+            setPadding(0, 0, 0, (16 * density).toInt())
+        }
+        val divider = android.view.View(this).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (1 * density).toInt()
+            ).apply { bottomMargin = (12 * density).toInt() }
+            setBackgroundColor(0xFF444444.toInt())
+        }
+        val btnRow = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
+        }
+        fun outlinedBtn(label: String, textColor: Int) =
+            com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                text = label
+                layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginEnd = (3 * density).toInt(); marginStart = (3 * density).toInt()
+                }
+                cornerRadius = (12 * density).toInt()
+                setTextColor(textColor)
+                strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
+                strokeWidth = (1 * density).toInt()
+                setBackgroundColor(0x00000000)
+                insetTop = 0; insetBottom = 0
+            }
+        val importBtn = outlinedBtn("Import", 0xFFDDDDDD.toInt())
+        val exportBtn = outlinedBtn("Export", 0xFFDDDDDD.toInt())
+        btnRow.addView(importBtn)
+        btnRow.addView(exportBtn)
+        dialogView.addView(title)
+        dialogView.addView(msg)
+        dialogView.addView(divider)
+        dialogView.addView(btnRow)
+
+        val dialog = android.app.AlertDialog.Builder(this, R.style.Theme_Equalizer314_Dialog)
+            .setView(dialogView).create()
+        exportBtn.setOnClickListener { dialog.dismiss(); launchBackupExport() }
+        importBtn.setOnClickListener { dialog.dismiss(); backupImportLauncher.launch("application/json") }
+        dialog.show()
+    }
+
     // UI controllers
     private lateinit var graphicController: GraphicEqController
     private lateinit var tableController: TableEqController
@@ -92,6 +200,9 @@ class  MainActivity : AppCompatActivity() {
     private lateinit var presetManager: com.bearinmind.equalizer314.state.PresetManager
     private val graphOverlayLayoutManager = GraphOverlayLayoutManager()
     private val visualizerHelper = com.bearinmind.equalizer314.audio.VisualizerHelper()
+    // Property aliases for upstream-style code references
+    private val stateManager get() = eqViewModel.stateManager
+    private val eqPrefs get() = eqViewModel.eqPrefs
 
     private fun reloadEqFromPrefs() {
         eqViewModel.syncAll()
@@ -117,6 +228,13 @@ class  MainActivity : AppCompatActivity() {
     }
 
     private val targetCurveLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) handlePresetReturn()
+    }
+
+    // The AutoEQ / Generate Custom EQ / Convert cards now live in
+    // PresetsConversionsActivity. It returns RESULT_OK when a preset was
+    // applied there, so we reload the EQ from prefs on return.
+    private val presetsConversionsLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) handlePresetReturn()
     }
 
@@ -239,6 +357,7 @@ class  MainActivity : AppCompatActivity() {
     // Views
     private lateinit var eqGraphView: EqGraphView
     private lateinit var eqToggleButton: MaterialButton
+    private lateinit var eqPowerToggle: MaterialButton
     private lateinit var presetDropdown: MaterialAutoCompleteTextView
     private lateinit var filterTypeGroup: LinearLayout
     private lateinit var qSlider: Slider
@@ -247,12 +366,29 @@ class  MainActivity : AppCompatActivity() {
     private lateinit var powerButton: MaterialButton
     private lateinit var statusText: TextView
     private lateinit var modeDescriptionText: TextView
+    private lateinit var devicePresetStatusText: TextView
     private lateinit var bandToggleGroup: LinearLayout
     private lateinit var bandToggleGroup2: LinearLayout
     private lateinit var triangleIndicator: View
     private lateinit var bandInputGroup: View
     private lateinit var pageEq: View
     private lateinit var pageSettings: View
+
+    // ---- Graph-header button palette (themed) ----
+    // The header buttons sit directly on the EQ graph card, whose
+    // background is colorSurfaceVariant (#1E1E1E dark / #E4E4E4 light).
+    // The light values mirror the dark ones at the same luminance
+    // distance from their background, so both themes keep the same
+    // contrast relationships (see themes.xml for the same convention).
+    private val isLightUi: Boolean
+        get() = (resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) !=
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+    private val graphBtnLitBg: Int get() = if (isLightUi) 0xFFADADAD.toInt() else 0xFF555555.toInt()
+    private val graphBtnLitStroke: Int get() = if (isLightUi) 0xFF7A7A7A.toInt() else 0xFF888888.toInt()
+    private val graphBtnLitContent: Int get() = if (isLightUi) 0xFF252525.toInt() else 0xFFDDDDDD.toInt()
+    private val graphBtnDimStroke: Int get() = if (isLightUi) 0xFFBEBEBE.toInt() else 0xFF444444.toInt()
+    private val graphBtnDimContent: Int get() = if (isLightUi) 0xFF555555.toInt() else 0xFF888888.toInt()
     private lateinit var navSettingsButton: ImageButton
     private lateinit var navPresetsButton: ImageButton
     private lateinit var powerFab: android.widget.ImageButton
@@ -278,6 +414,7 @@ class  MainActivity : AppCompatActivity() {
     private lateinit var modeParametricBtn: MaterialButton
     private lateinit var modeGraphicBtn: MaterialButton
     private lateinit var modeTableBtn: MaterialButton
+    private lateinit var modeSimpleBtn: MaterialButton
     private lateinit var parametricControlsCard: View
     private lateinit var hzControlRow: View
     private lateinit var tableEqCard: View
@@ -295,6 +432,35 @@ class  MainActivity : AppCompatActivity() {
     private val hzLogMax = kotlin.math.log10(20000f)
 
     // Listen for EQ stopped from notification "Turn Off" button
+    /** Fires when EqService kicks the DP up from a headless context
+     *  (currently only the Quick Settings tile). Re-syncs the FAB +
+     *  state-manager flag so MainActivity reflects the new state if
+     *  the user is sitting on it when the tile is tapped, and shows
+     *  the same "DynamicsProcessing Start" toast a FAB tap would —
+     *  the stop receiver already does the symmetric "Stop" toast, so
+     *  this completes the pair. */
+    private val eqStartedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            stateManager.isProcessing = true
+            animatePowerFab(true)
+            com.bearinmind.equalizer314.ui.BottomNavHelper.updatePowerFab(this@MainActivity, true)
+            // Toast is fired by EqService directly so it surfaces even
+            // when MainActivity isn't alive (QS tile path). Don't
+            // double up here.
+            // Bind so the activity can read DP state going forward.
+            if (!stateManager.serviceBound) {
+                try {
+                    bindService(
+                        Intent(this@MainActivity, EqService::class.java),
+                        stateManager.serviceConnection,
+                        BIND_AUTO_CREATE,
+                    )
+                } catch (_: Throwable) {}
+            }
+            updateDevicePresetStatus()
+        }
+    }
+
     private val eqStoppedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             eqViewModel.stateManager.isProcessing = false
@@ -304,8 +470,81 @@ class  MainActivity : AppCompatActivity() {
                 eqViewModel.stateManager.serviceBound = false
             }
             animatePowerFab(false)
-            showPowerSnackbar(false)
+            // State commit only — toast is now fired by EqService
+            // (so it surfaces with the app closed too). EXTRA_SILENT_STOP
+            // used to gate the toast here; now that the toast lives on
+            // the service side, both branches do the same thing.
+            eqPrefs.savePowerState(false)
+            com.bearinmind.equalizer314.ui.BottomNavHelper.updatePowerFab(this@MainActivity, false)
+            updateDevicePresetStatus()
         }
+    }
+
+    /** Refreshes the device/preset status line above the graph in
+     *  response to route changes and preset-name updates. Listens for:
+     *   - ACTION_ROUTE_PRESET_APPLIED (RouteSwitchCoordinator) when a
+     *     device-bound preset auto-applies.
+     *   - ACTION_NOTIFICATION_REFRESH (sent by MainActivity itself
+     *     after the user taps a preset row, but the foreground service
+     *     also re-broadcasts so other listeners stay in sync).
+     *   - ACTION_EQ_STARTED / ACTION_EQ_STOPPED — already handled by
+     *     their dedicated receivers which also call us.
+     */
+    private val statusRefreshReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            updateDevicePresetStatus()
+        }
+    }
+
+    /** Refresh the small device/preset status line above the EQ graph.
+     *
+     *  Always visible — shows what's loaded even when DP is off, so
+     *  the user can see "if I turn this on, here's what will apply."
+     *
+     *  Format: "<preset> · <device>"
+     *  - <preset> is the saved-custom-preset name when one is loaded,
+     *    else "App Set" (matches EqService.buildNotification's
+     *    display rule). For Session-based routing, replaced with
+     *    "Session-based" since no global preset is active.
+     *  - <device> is the cached output route label. Omitted when not
+     *    yet known (service unbound / no route change has fired). */
+    private fun updateDevicePresetStatus() {
+        if (!::devicePresetStatusText.isInitialized) return
+        val routingMode = eqPrefs.getAudioRoutingMode()
+        val activePresetName = eqPrefs.getPresetName()
+        val customPresetsPrefs = getSharedPreferences("custom_presets", MODE_PRIVATE)
+        val isRealPreset = activePresetName.isNotBlank() &&
+            customPresetsPrefs.contains("preset_$activePresetName")
+        val presetDisplay = if (isRealPreset) activePresetName else "none"
+        // Same three-piece logic as EqService.buildNotification's
+        // BigText, but compact onto a single chip line below the
+        // band-info card:  Mode · Preset · Device
+        val appPreset = stateManager.eqService?.sessionEffects?.getCurrentDrivingPreset()
+        val deviceKey = EqService.staticLastDeviceKey
+        val deviceBinding = deviceKey?.let { eqPrefs.getDeviceBinding(it) }
+        val deviceDrivesPreset = routingMode != 1 &&
+            deviceBinding != null &&
+            deviceBinding.presetName == activePresetName
+        val mode = when {
+            routingMode == 1 -> "Session"
+            deviceDrivesPreset -> "Device"
+            else -> "System"
+        }
+        val presetForDisplay = when {
+            routingMode == 1 -> appPreset ?: "none"
+            else -> presetDisplay
+        }
+        // Use EqService's static cache so we still get the current
+        // device label after DP is toggled off (MainActivity unbinds
+        // from the service in stopProcessing, but the foreground
+        // service stays alive and its route monitor keeps updating
+        // the static).
+        val deviceLabel = EqService.staticLastDeviceLabel
+        devicePresetStatusText.text = buildString {
+            append(mode).append(" · ").append(presetForDisplay)
+            if (deviceLabel != null) append(" · ").append(deviceLabel)
+        }
+        devicePresetStatusText.visibility = View.VISIBLE
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -320,17 +559,44 @@ class  MainActivity : AppCompatActivity() {
             WindowInsetsCompat.CONSUMED
         }
 
-        // On fresh app launch, reset power state — user must explicitly turn on
+        // On fresh app launch, decide what to do about DP power state.
+        // Three cases:
+        //   1. Service is already running (QS tile or boot receiver
+        //      started it while MainActivity was dead) — keep the
+        //      persisted pref aligned with that.
+        //   2. Service isn't running but the persisted pref says it
+        //      should be on (last session ended with DP on; user
+        //      rebooted on an OEM that strips BOOT_COMPLETED, or
+        //      force-stopped the app). Auto-start the service —
+        //      ACTION_AUTO_START is idempotent.
+        //   3. Truly off — leave the pref at false.
+        // The earlier behaviour (always overwriting with the live
+        // service flag) wiped the persisted `powerOn=true` on every
+        // cold launch after a reboot, which made the EQ appear to
+        // "turn off by itself" (issue #28).
         if (savedInstanceState == null) {
-            eqViewModel.eqPrefs.savePowerState(false)
+            val dpAlreadyRunning = EqService.isDpRunning
+            val persistedPowerOn = eqViewModel.eqPrefs.getPowerState()
+            when {
+                dpAlreadyRunning -> eqViewModel.eqPrefs.savePowerState(true)
+                persistedPowerOn -> {
+                    val svc = Intent(this, EqService::class.java)
+                        .setAction(EqService.ACTION_AUTO_START)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        startForegroundService(svc)
+                    } else {
+                        startService(svc)
+                    }
+                }
+                else -> eqViewModel.eqPrefs.savePowerState(false)
+            }
             eqViewModel.stateManager.pendingStartEq = false
             // Also re-lock the Experimental settings on every fresh launch
             eqViewModel.eqPrefs.saveExperimentalUnlocked(false)
-            // Force Experimental DSP options to safe defaults (currently disabled
-            // in the UI; see ExperimentalActivity). Overwrite anything a user may
-            // have saved in a previous build.
+            // Force the experimental DP band count to its safe default on a
+            // fresh launch. (Auto-gain is no longer forced off here — it's a
+            // real, on-by-default feature now; see the Auto-Gain settings card.)
             eqViewModel.eqPrefs.saveDpBandCount(128)
-            eqViewModel.eqPrefs.saveAutoGainEnabled(false)
         }
 
         initViews()
@@ -339,23 +605,105 @@ class  MainActivity : AppCompatActivity() {
         syncPreampUI()
         setupListeners()
 
-        ContextCompat.registerReceiver(
-            this,
-            eqStoppedReceiver,
-            IntentFilter(EqService.ACTION_EQ_STOPPED),
-            ContextCompat.RECEIVER_NOT_EXPORTED
-        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(
+                eqStoppedReceiver,
+                IntentFilter(EqService.ACTION_EQ_STOPPED),
+                RECEIVER_NOT_EXPORTED
+            )
+            registerReceiver(
+                eqStartedReceiver,
+                IntentFilter(EqService.ACTION_EQ_STARTED),
+                RECEIVER_NOT_EXPORTED
+            )
+            registerReceiver(
+                statusRefreshReceiver,
+                IntentFilter().apply {
+                    addAction(RouteSwitchCoordinator.ACTION_ROUTE_PRESET_APPLIED)
+                    addAction(EqService.ACTION_NOTIFICATION_REFRESH)
+                },
+                RECEIVER_NOT_EXPORTED
+            )
+        } else {
+            registerReceiver(
+                eqStoppedReceiver,
+                IntentFilter(EqService.ACTION_EQ_STOPPED)
+            )
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(
+                eqStartedReceiver,
+                IntentFilter(EqService.ACTION_EQ_STARTED)
+            )
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(
+                statusRefreshReceiver,
+                IntentFilter().apply {
+                    addAction(RouteSwitchCoordinator.ACTION_ROUTE_PRESET_APPLIED)
+                    addAction(EqService.ACTION_NOTIFICATION_REFRESH)
+                }
+            )
+        }
 
         val savedMode = try { EqUiMode.valueOf(eqViewModel.eqPrefs.getEqUiMode()) } catch (_: Exception) { EqUiMode.PARAMETRIC }
         val effectiveMode = if (eqViewModel.eqPrefs.getSimpleEqEnabled()) EqUiMode.SIMPLE else savedMode
         switchEqUiMode(effectiveMode)
         // Ensure rows are properly ordered after views are laid out
         pageEq.post { reorderToggleRows(animate = false) }
+
+        // Bulletproof graph-header positioning: reposition whenever the
+        // graph's width actually changes. The one-shot post{}/doOnLayout
+        // hooks can fire at a transient width during a theme-toggle
+        // recreate (the window settles to its final width a layout pass
+        // or two later), leaving the buttons computed for the wrong
+        // width. This persistent listener catches that final settle. The
+        // `w != oldW` guard skips same-width passes so setting the
+        // buttons' layoutParams here can't loop.
+        eqGraphView.addOnLayoutChangeListener { _, left, _, right, _, oldLeft, _, oldRight, _ ->
+            val w = right - left
+            val oldW = oldRight - oldLeft
+            if (w > 0 && w != oldW && stateManager.currentEqUiMode != EqUiMode.SIMPLE) {
+                // Defer out of the layout traversal: repositioning calls
+                // requestLayout on the buttons, which mid-pass can apply
+                // against stale measurements. post{} runs it after this
+                // layout completes, reading the settled final width.
+                eqGraphView.post { relayoutGraphHeaderButtons() }
+            }
+        }
+
+        // Restore the Settings page across activity recreation (e.g. the
+        // light/dark theme toggle calls setDefaultNightMode, which
+        // recreates the activity) so flipping the theme doesn't dump the
+        // user back on the EQ page.
+        if (savedInstanceState?.getBoolean("onSettingsPage", false) == true) {
+            pageEq.visibility = View.GONE
+            pageSettings.visibility = View.VISIBLE
+            updateBottomBarHighlight(isEqPage = false)
+        }
+
+        // If the global DP is already running when the activity opens
+        // (e.g. user toggled it on via the QS tile while the activity
+        // was killed), reflect that in the UI and bind to the existing
+        // foreground service so the FAB / EQ updates work as normal.
+        if (EqService.isDpRunning) {
+            stateManager.isProcessing = true
+            animatePowerFab(true)
+            com.bearinmind.equalizer314.ui.BottomNavHelper.updatePowerFab(this, true)
+            if (!stateManager.serviceBound) {
+                try {
+                    bindService(
+                        Intent(this, EqService::class.java),
+                        stateManager.serviceConnection,
+                        BIND_AUTO_CREATE,
+                    )
+                } catch (_: Throwable) {}
+            }
+        }
     }
 
     private fun initViews() {
         eqGraphView = findViewById(R.id.eqGraphView)
         eqToggleButton = findViewById(R.id.eqToggleButton)
+        eqPowerToggle = findViewById(R.id.eqPowerToggle)
         presetDropdown = findViewById(R.id.presetSpinner)
         filterTypeGroup = findViewById(R.id.filterTypeGroup)
         qSlider = findViewById(R.id.qSlider)
@@ -364,6 +712,7 @@ class  MainActivity : AppCompatActivity() {
         powerButton = findViewById(R.id.powerButton)
         statusText = findViewById(R.id.statusText)
         modeDescriptionText = findViewById(R.id.modeDescriptionText)
+        devicePresetStatusText = findViewById(R.id.devicePresetStatusText)
         bandToggleGroup = findViewById(R.id.bandToggleGroup)
         bandToggleGroup2 = findViewById(R.id.bandToggleGroup2)
         triangleIndicator = findViewById<View>(R.id.triangleIndicator).apply {
@@ -391,6 +740,7 @@ class  MainActivity : AppCompatActivity() {
         modeParametricBtn = findViewById(R.id.modeParametricBtn)
         modeGraphicBtn = findViewById(R.id.modeGraphicBtn)
         modeTableBtn = findViewById(R.id.modeTableBtn)
+        modeSimpleBtn = findViewById(R.id.modeSimpleBtn)
         parametricControlsCard = findViewById(R.id.parametricControlsCard)
         hzControlRow = findViewById(R.id.hzControlRow)
         tableEqCard = findViewById(R.id.tableEqCard)
@@ -512,6 +862,14 @@ class  MainActivity : AppCompatActivity() {
             pageEq.visibility = View.VISIBLE
             pageSettings.visibility = View.GONE
             updateBottomBarHighlight(isEqPage = true)
+            // The graph was GONE (width 0) while Settings was showing, so
+            // the header buttons couldn't be positioned. Re-run once the
+            // graph is laid out with its real width — this is the path
+            // that fixes warped buttons after a theme toggle (which leaves
+            // the user on the Settings page across the recreate).
+            if (stateManager.currentEqUiMode != EqUiMode.SIMPLE) {
+                eqGraphView.doOnLayout { eqGraphView.post { relayoutGraphHeaderButtons() } }
+            }
         }
         val navMbcBtn = findViewById<ImageButton>(R.id.navMbcButton)
         val navLimiterBtn = findViewById<ImageButton>(R.id.navLimiterButton)
@@ -531,6 +889,9 @@ class  MainActivity : AppCompatActivity() {
         val vizToggle = findViewById<com.google.android.material.button.MaterialButton>(R.id.visualizerToggle)
         val editBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.editButton)
         val resetBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.resetButton)
+        // Reset is a destructive action — make its icon red in light mode
+        // (dark mode keeps the XML colorOnSurface tint).
+        if (isLightUi) resetBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFFD32F2F.toInt())
         val undoBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.undoButton)
         val redoBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.redoButton)
         val bandPtsBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.bandPointsToggle)
@@ -541,21 +902,157 @@ class  MainActivity : AppCompatActivity() {
         val channelRBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.channelRButton)
         val gapPx = (2 * resources.displayMetrics.density).toInt()
         val vizDensity = resources.displayMetrics.density
+        // post{}, NOT doOnLayout{}: these button offsets are computed from
+        // eqGraphView.width, so they must run after the layout pass has
+        // fully settled to the final width. doOnLayout is a one-shot that
+        // fires on the FIRST layout pass — during a theme-toggle recreate
+        // that pass happens at a transient (mid-transition / pre-inset)
+        // width, which gets baked into every offset and warps the buttons.
+        // The Simple-mode GONE→VISIBLE bunching is handled separately by
+        // the re-layout block in switchEqUiMode (which has its own guard).
         eqGraphView.post {
-            graphOverlayLayoutManager.layoutButtons(
-                graphView = eqGraphView,
-                R.id.visualizerToggle to GraphOverlayLayoutManager.LayoutPosition.VISUALIZER,
-                R.id.editButton to GraphOverlayLayoutManager.LayoutPosition.EDIT,
-                R.id.resetButton to GraphOverlayLayoutManager.LayoutPosition.RESET,
-                R.id.undoButton to GraphOverlayLayoutManager.LayoutPosition.UNDO,
-                R.id.redoButton to GraphOverlayLayoutManager.LayoutPosition.REDO,
-                R.id.bandPointsToggle to GraphOverlayLayoutManager.LayoutPosition.BAND_POINTS,
-                R.id.savePresetButton to GraphOverlayLayoutManager.LayoutPosition.SAVE_PRESET,
-                R.id.altRouteButton to GraphOverlayLayoutManager.LayoutPosition.ALT_ROUTE,
-                R.id.settingsGearButton to GraphOverlayLayoutManager.LayoutPosition.SETTINGS_GEAR,
-                R.id.channelLButton to GraphOverlayLayoutManager.LayoutPosition.CHANNEL_L,
-                R.id.channelRButton to GraphOverlayLayoutManager.LayoutPosition.CHANNEL_R,
-            )
+            val viewWidth = eqGraphView.width
+            if (viewWidth <= 0) return@post
+            val vPadPx = 80
+            val gridLine10k = (viewWidth * 3.0 / 3.301).toInt()
+            val btnTop = gapPx
+            val btnBottom = vPadPx - gapPx
+            val btnHeight = btnBottom - btnTop
+            val specWidth = (viewWidth - gapPx) - (gridLine10k + gapPx)
+
+            // Spectrum button: between 10kHz line and right edge
+            val specLeft = gridLine10k + gapPx
+            val specLp = vizToggle.layoutParams as android.widget.FrameLayout.LayoutParams
+            specLp.width = specWidth
+            specLp.height = btnHeight
+            specLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            specLp.leftMargin = specLeft
+            specLp.topMargin = btnTop
+            vizToggle.layoutParams = specLp
+            vizToggle.minimumWidth = 0; vizToggle.minimumHeight = 0
+            vizToggle.setPadding(0, 0, 0, 0)
+
+            // Edit button: to the left of spectrum
+            val editLeft = specLeft - gapPx - specWidth
+            val editLp = editBtn.layoutParams as android.widget.FrameLayout.LayoutParams
+            editLp.width = specWidth
+            editLp.height = btnHeight
+            editLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            editLp.leftMargin = editLeft.coerceAtLeast(gapPx)
+            editLp.topMargin = btnTop
+            editBtn.layoutParams = editLp
+            editBtn.minimumWidth = 0; editBtn.minimumHeight = 0
+            editBtn.setPadding(0, 0, 0, 0)
+
+            // Reset button: to the left of edit
+            val resetLeft = editLeft - gapPx - specWidth
+            val resetLp = resetBtn.layoutParams as android.widget.FrameLayout.LayoutParams
+            resetLp.width = specWidth
+            resetLp.height = btnHeight
+            resetLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            resetLp.leftMargin = resetLeft.coerceAtLeast(gapPx)
+            resetLp.topMargin = btnTop
+            resetBtn.layoutParams = resetLp
+            resetBtn.minimumWidth = 0; resetBtn.minimumHeight = 0
+            resetBtn.setPadding(0, 0, 0, 0)
+            resetBtn.visibility = android.view.View.GONE
+
+            // EQ on/off toggle: occupies the (hidden) reset slot,
+            // immediately to the left of the Edit button.
+            val eqPowerLp = eqPowerToggle.layoutParams as android.widget.FrameLayout.LayoutParams
+            eqPowerLp.width = specWidth
+            eqPowerLp.height = btnHeight
+            eqPowerLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            eqPowerLp.leftMargin = resetLeft.coerceAtLeast(gapPx)
+            eqPowerLp.topMargin = btnTop
+            eqPowerToggle.layoutParams = eqPowerLp
+            eqPowerToggle.minimumWidth = 0; eqPowerToggle.minimumHeight = 0
+            eqPowerToggle.setPadding(0, 0, 0, 0)
+            applyEqToggleVisual(stateManager.parametricEq.isEnabled)
+
+            // Undo button: below reset
+            val undoLp = undoBtn.layoutParams as android.widget.FrameLayout.LayoutParams
+            undoLp.width = specWidth
+            undoLp.height = btnHeight
+            undoLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            undoLp.leftMargin = resetLeft.coerceAtLeast(gapPx)
+            undoLp.topMargin = btnTop + btnHeight + gapPx
+            undoBtn.layoutParams = undoLp
+            undoBtn.minimumWidth = 0; undoBtn.minimumHeight = 0
+            undoBtn.setPadding(0, 0, 0, 0)
+
+            // Redo button: below edit
+            val redoLp = redoBtn.layoutParams as android.widget.FrameLayout.LayoutParams
+            redoLp.width = specWidth
+            redoLp.height = btnHeight
+            redoLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            redoLp.leftMargin = editLeft.coerceAtLeast(gapPx)
+            redoLp.topMargin = btnTop + btnHeight + gapPx
+            redoBtn.layoutParams = redoLp
+            redoBtn.minimumWidth = 0; redoBtn.minimumHeight = 0
+            redoBtn.setPadding(0, 0, 0, 0)
+
+            // Band points toggle: top-left, same size
+            val bpLp = bandPtsBtn.layoutParams as android.widget.FrameLayout.LayoutParams
+            bpLp.width = specWidth
+            bpLp.height = btnHeight
+            bpLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            bpLp.leftMargin = gapPx
+            bpLp.topMargin = btnTop
+            bandPtsBtn.layoutParams = bpLp
+            bandPtsBtn.minimumWidth = 0; bandPtsBtn.minimumHeight = 0
+            bandPtsBtn.setPadding(0, 0, 0, 0)
+
+            // View-options popout buttons (revealed by the eye): the
+            // ON/OFF visibility toggle sits below the eye, the per-band
+            // fill toggle sits below the save button — mirroring how
+            // undo/redo sit below reset/edit on the right side.
+            val onOffBtn0 = findViewById<com.google.android.material.button.MaterialButton>(R.id.bandPointsOnOffBtn)
+            val onOffLp = onOffBtn0.layoutParams as android.widget.FrameLayout.LayoutParams
+            onOffLp.width = specWidth
+            onOffLp.height = btnHeight
+            onOffLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            onOffLp.leftMargin = gapPx
+            onOffLp.topMargin = btnTop + btnHeight + gapPx
+            onOffBtn0.layoutParams = onOffLp
+            onOffBtn0.minimumWidth = 0; onOffBtn0.minimumHeight = 0
+            onOffBtn0.setPadding(0, 0, 0, 0)
+
+            val fillBtn0 = findViewById<com.google.android.material.button.MaterialButton>(R.id.bandFillToggle)
+            val fillLp = fillBtn0.layoutParams as android.widget.FrameLayout.LayoutParams
+            fillLp.width = specWidth
+            fillLp.height = btnHeight
+            fillLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            fillLp.leftMargin = gapPx + specWidth + gapPx
+            fillLp.topMargin = btnTop + btnHeight + gapPx
+            fillBtn0.layoutParams = fillLp
+            fillBtn0.minimumWidth = 0; fillBtn0.minimumHeight = 0
+            fillBtn0.setPadding(0, 0, 0, 0)
+
+            // Save preset button: right next to eye button
+            val saveLeft = gapPx + specWidth + gapPx
+            val saveLp = saveBtn.layoutParams as android.widget.FrameLayout.LayoutParams
+            saveLp.width = specWidth
+            saveLp.height = btnHeight
+            saveLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            saveLp.leftMargin = saveLeft
+            saveLp.topMargin = btnTop
+            saveBtn.layoutParams = saveLp
+            saveBtn.minimumWidth = 0; saveBtn.minimumHeight = 0
+            saveBtn.setPadding(0, 0, 0, 0)
+
+            // Alt-route button: right after save preset button
+            val altRouteLeft = saveLeft + specWidth + gapPx
+            val altRouteLp = altRouteBtn.layoutParams as android.widget.FrameLayout.LayoutParams
+            altRouteLp.width = specWidth
+            altRouteLp.height = btnHeight
+            altRouteLp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            altRouteLp.leftMargin = altRouteLeft
+            altRouteLp.topMargin = btnTop
+            altRouteBtn.layoutParams = altRouteLp
+            altRouteBtn.minimumWidth = 0; altRouteBtn.minimumHeight = 0
+            altRouteBtn.setPadding(0, 0, 0, 0)
+
             // Mini L/R badge overlaid on the top-right of altRouteButton.
             val badge = findViewById<android.widget.TextView>(R.id.altRouteChannelBadge)
             graphOverlayLayoutManager.repositionChannelBadge(badge)
@@ -824,14 +1321,46 @@ class  MainActivity : AppCompatActivity() {
                     layoutParams = android.widget.LinearLayout.LayoutParams(thumbW, thumbH)
                 }
 
-                // Left side: preset name
+                // Left side: preset name stacked over a small preamp
+                // subtitle ("+8.0 dB" / "-7.0 dB" / "0.0 dB"). Pulled
+                // out of the preset JSON's `preamp` field, defaulting
+                // to 0.0 for legacy presets that pre-date the preamp
+                // save. Hidden entirely if the JSON couldn't be parsed.
                 val nameText = android.widget.TextView(this).apply {
                     text = name
-                    setTextColor(0xFFE2E2E2.toInt())
+                    // Preset rows sit on the light page surface, so the
+                    // name must be dark in light mode (the old #E2E2E2 was
+                    // near-invisible there). Dark stays light in dark mode.
+                    setTextColor(if (isLightUi) 0xFF202020.toInt() else 0xFFE2E2E2.toInt())
                     textSize = 14f
                     isSingleLine = true
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                    )
+                }
+                val presetPreamp: Double? = try {
+                    org.json.JSONObject(presetJson ?: "{}").optDouble("preamp", 0.0)
+                } catch (_: Exception) { null }
+                val preampSubtitle = android.widget.TextView(this).apply {
+                    text = presetPreamp?.let {
+                        com.bearinmind.equalizer314.ui.PresetDropdownAdapter.formatPreamp(it)
+                    } ?: ""
+                    setTextColor(0xFF888888.toInt())
+                    textSize = 11f
+                    isSingleLine = true
+                    visibility = if (presetPreamp == null) android.view.View.GONE else android.view.View.VISIBLE
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                    )
+                }
+                val nameCol = android.widget.LinearLayout(this).apply {
+                    orientation = android.widget.LinearLayout.VERTICAL
                     layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                     gravity = android.view.Gravity.CENTER_VERTICAL
+                    addView(nameText)
+                    addView(preampSubtitle)
                 }
 
                 // Right side: graph + filters count stacked vertically
@@ -911,10 +1440,128 @@ class  MainActivity : AppCompatActivity() {
                     presetExportLauncher.launch(intent)
                 }
 
+                // Overwrite button — re-saves the CURRENT EQ into this
+                // preset (handy for tweaking a loaded preset and saving the
+                // change back without making a new one / deleting the old).
+                val overwriteBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        (36 * density).toInt(), (36 * density).toInt()).apply {
+                        marginStart = (8 * density).toInt()
+                    }
+                    cornerRadius = (12 * density).toInt()
+                    setPadding(0, 0, 0, 0)
+                    insetTop = 0; insetBottom = 0
+                    minWidth = 0; minimumWidth = 0; minHeight = 0; minimumHeight = 0
+                    setBackgroundColor(0x00000000)
+                    icon = resources.getDrawable(R.drawable.ic_save, theme)
+                    iconGravity = com.google.android.material.button.MaterialButton.ICON_GRAVITY_TEXT_START
+                    iconPadding = 0
+                    iconTint = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
+                    iconSize = (18 * density).toInt()
+                    strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
+                    strokeWidth = (1 * density).toInt()
+                }
+                overwriteBtn.setOnClickListener {
+                    val d = resources.displayMetrics.density
+                    // Styled identically to the "+" Save Custom Preset
+                    // dialog, but pre-filled with this preset's name and
+                    // titled / labelled for overwrite.
+                    val dlgView = android.widget.LinearLayout(this).apply {
+                        orientation = android.widget.LinearLayout.VERTICAL
+                        setPadding((24 * d).toInt(), (20 * d).toInt(), (24 * d).toInt(), (16 * d).toInt())
+                    }
+                    val dlgTitle = android.widget.TextView(this).apply {
+                        text = "Overwrite Custom Preset"
+                        setTextColor(0xFFE2E2E2.toInt()); textSize = 20f
+                        setPadding(0, 0, 0, (12 * d).toInt())
+                    }
+                    val dlgInputBox = android.widget.FrameLayout(this).apply {
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                            bottomMargin = (16 * d).toInt()
+                        }
+                        background = android.graphics.drawable.GradientDrawable().apply {
+                            setColor(0x00000000)
+                            setStroke((1 * d).toInt(), 0xFF555555.toInt())
+                            cornerRadius = 12 * d
+                        }
+                    }
+                    val dlgInput = android.widget.EditText(this).apply {
+                        setText(name)
+                        setTextColor(0xFFFFFFFF.toInt())
+                        setHintTextColor(0xFF888888.toInt())
+                        inputType = android.text.InputType.TYPE_CLASS_TEXT
+                        background = null
+                        val pad = (14 * d).toInt()
+                        setPadding(pad, pad, pad, pad)
+                        isSingleLine = true
+                    }
+                    dlgInputBox.addView(dlgInput)
+                    val dlgDiv = android.view.View(this).apply {
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (1 * d).toInt()).apply {
+                            bottomMargin = (12 * d).toInt()
+                        }
+                        setBackgroundColor(0xFF444444.toInt())
+                    }
+                    val dlgBtnRow = android.widget.LinearLayout(this).apply {
+                        orientation = android.widget.LinearLayout.HORIZONTAL
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
+                    }
+                    val dlgCancelBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                        text = "Cancel"
+                        layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                            marginEnd = (3 * d).toInt()
+                        }
+                        cornerRadius = (12 * d).toInt()
+                        setTextColor(0xFFEF9A9A.toInt())
+                        strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
+                        strokeWidth = (1 * d).toInt()
+                        setBackgroundColor(0x00000000)
+                        insetTop = 0; insetBottom = 0
+                    }
+                    val dlgOkBtn = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                        text = "Overwrite"
+                        layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                            marginStart = (3 * d).toInt()
+                        }
+                        cornerRadius = (12 * d).toInt()
+                        setTextColor(0xFFDDDDDD.toInt())
+                        setBackgroundColor(0x00000000)
+                        strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
+                        strokeWidth = (1 * d).toInt()
+                        insetTop = 0; insetBottom = 0
+                    }
+                    dlgBtnRow.addView(dlgCancelBtn)
+                    dlgBtnRow.addView(dlgOkBtn)
+                    dlgView.addView(dlgTitle)
+                    dlgView.addView(dlgInputBox)
+                    dlgView.addView(dlgDiv)
+                    dlgView.addView(dlgBtnRow)
+                    val dlg = android.app.AlertDialog.Builder(this, R.style.Theme_Equalizer314_Dialog)
+                        .setView(dlgView).create()
+                    dlgCancelBtn.setOnClickListener { dlg.dismiss() }
+                    dlgOkBtn.setOnClickListener {
+                        val newName = dlgInput.text.toString().trim().ifEmpty { name }
+                        // Write the current EQ under the (possibly renamed)
+                        // preset. Same name → in-place overwrite; renamed →
+                        // saved under the new name too (added to the set).
+                        presetManager.save(newName, buildCurrentPresetJson())
+                        populatePresetPicker()
+                        android.widget.Toast.makeText(this, "Updated \"$newName\"", android.widget.Toast.LENGTH_SHORT).show()
+                        dlg.dismiss()
+                    }
+                    dlg.show()
+                }
+
                 rightCol.addView(thumbnail)
                 rightCol.addView(filtersText)
-                presetRow.addView(nameText)
+                presetRow.addView(nameCol)
                 presetRow.addView(rightCol)
+                presetRow.addView(overwriteBtn)
                 presetRow.addView(exportBtn)
                 presetRow.addView(deleteBtn)
                 // Tap to load preset
@@ -932,13 +1579,41 @@ class  MainActivity : AppCompatActivity() {
                     eqViewModel.persistLeftRightIfCse()
                     eqViewModel.initBandSlots()
                     bandToggleManager.setupToggles()
+                    // Apply the loaded preset's preamp. Read it from the raw
+                    // preset JSON so the slider reflects what was saved even
+                    // if the current in-memory preamp differs.
+                    val presetJson = presetManager.getJson(name)
+                    val preampFromPreset = if (presetJson != null) {
+                        try { org.json.JSONObject(presetJson).optDouble("preamp", 0.0).toFloat() } catch (_: Exception) { 0f }
+                    } else 0f
+                    eqViewModel.stateManager.preampGainDb = preampFromPreset
+                    eqViewModel.eqPrefs.savePreampGain(preampFromPreset)
+                    // Sync the preamp slider + text so the user sees the loaded value.
+                    preampSlider.value = preampFromPreset.coerceIn(-12f, 12f)
+                    preampText.setText(String.format("%.1f", preampFromPreset))
+                    // Persist the loaded preset's name so the foreground
+                    // notification, anything else that reads
+                    // getPresetName(), and the next save-preset prompt
+                    // all reflect what's actually loaded.
+                    eqViewModel.eqPrefs.savePresetName(name)
+                    // Sync the preset dropdown
+                    presetDropdown.setText(name, false)
+                    // Broadcast a refresh so EqService rebuilds the notification
+                    sendBroadcast(
+                        Intent(EqService.ACTION_NOTIFICATION_REFRESH)
+                            .setPackage(packageName)
+                    )
                     if (eqViewModel.isProcessing.value) {
-                        val (lEq, rEq) = eqViewModel.getChannelEqs()
                         eqViewModel.eqService.value?.let { svc ->
                             svc.dynamicsManager.stop()
-                            svc.dynamicsManager.run { requestedBandCount = eqViewModel.eqPrefs.getDpBandCount(); start(eqViewModel.parametricEq.value) }
-                            svc.updateEqPerChannel(lEq, rEq)
+                            svc.dynamicsManager.start(eqViewModel.parametricEq.value)
                         }
+                        // Propagate the loaded preset's preamp (+ current
+                        // balance / channel gains) into DP's input-gain stage.
+                        // The old manual updateEqPerChannel path never copied
+                        // preampGainDb into the DynamicsProcessingManager, so
+                        // the preamp shown on the preset never actually applied.
+                        stateManager.pushEqUpdate()
                     }
                     refreshChannelPopoutDim()
                     // Close picker with animation
@@ -951,11 +1626,33 @@ class  MainActivity : AppCompatActivity() {
                         presetPickerScroll.alpha = 1f
                     }.start()
                     saveBtn.setBackgroundColor(0x00000000)
-                    saveBtn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                    saveBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
+                    saveBtn.strokeColor = android.content.res.ColorStateList.valueOf(graphBtnDimStroke)
+                    saveBtn.iconTint = android.content.res.ColorStateList.valueOf(graphBtnDimContent)
                     android.widget.Toast.makeText(this, getString(R.string.msg_loaded, name), android.widget.Toast.LENGTH_SHORT).show()
                 }
                 presetPickerContainer.addView(presetRow)
+            }
+        }
+
+        // Bound the preset picker to the viewport space below the graph so
+        // it scrolls internally instead of growing the page (which made
+        // the whole screen scroll past the graph). Measured after layout
+        // via post{}; the page is reset to the top first so the picker's
+        // computed top is accurate.
+        fun boundPresetPickerHeight() {
+            pageEq.scrollTo(0, 0)
+            presetPickerScroll.post {
+                var t = 0
+                var v: android.view.View? = presetPickerScroll
+                while (v != null && v !== pageEq) {
+                    t += v.top
+                    v = v.parent as? android.view.View
+                }
+                val avail = pageEq.height - t
+                val lp = presetPickerScroll.layoutParams
+                lp.height = if (avail > 0) avail
+                            else android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                presetPickerScroll.layoutParams = lp
             }
         }
 
@@ -963,6 +1660,7 @@ class  MainActivity : AppCompatActivity() {
             presetPickerOpen = !presetPickerOpen
             if (presetPickerOpen) {
                 populatePresetPicker()
+                boundPresetPickerHeight()
                 presetPickerScroll.visibility = android.view.View.VISIBLE
                 presetPickerScroll.alpha = 0f
                 presetPickerScroll.animate().alpha(1f).setDuration(200).setInterpolator(android.view.animation.DecelerateInterpolator()).start()
@@ -970,9 +1668,9 @@ class  MainActivity : AppCompatActivity() {
                     eqControlsContainerLocal.visibility = android.view.View.GONE
                     eqControlsContainerLocal.alpha = 1f
                 }.start()
-                saveBtn.setBackgroundColor(0xFF555555.toInt())
-                saveBtn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
-                saveBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFFDDDDDD.toInt())
+                saveBtn.setBackgroundColor(graphBtnLitBg)
+                saveBtn.strokeColor = android.content.res.ColorStateList.valueOf(graphBtnLitStroke)
+                saveBtn.iconTint = android.content.res.ColorStateList.valueOf(graphBtnLitContent)
             } else {
                 eqControlsContainerLocal.visibility = android.view.View.VISIBLE
                 eqControlsContainerLocal.alpha = 0f
@@ -982,33 +1680,82 @@ class  MainActivity : AppCompatActivity() {
                     presetPickerScroll.alpha = 1f
                 }.start()
                 saveBtn.setBackgroundColor(0x00000000)
-                saveBtn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                saveBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
+                saveBtn.strokeColor = android.content.res.ColorStateList.valueOf(graphBtnDimStroke)
+                saveBtn.iconTint = android.content.res.ColorStateList.valueOf(graphBtnDimContent)
             }
         }
-        // Band points toggle: active by default (points shown)
+        // Eye button: opens the view-options popout (ON/OFF visibility
+        // toggle + per-band fill toggle), animated the same way the
+        // edit button reveals reset/undo/redo. The dots-visibility
+        // toggle itself moved onto the popped-out ON/OFF button.
         var bandPointsVisible = true
-        bandPtsBtn.setBackgroundColor(0xFF555555.toInt())
-        bandPtsBtn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
-        bandPtsBtn.strokeWidth = (2 * vizDensity).toInt()
-        bandPtsBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFFDDDDDD.toInt())
+        var bandCurvesVisible = false
+        var viewOptionsOpen = false
+        val onOffBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.bandPointsOnOffBtn)
+        val fillBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.bandFillToggle)
+
+        fun paintLit(btn: com.google.android.material.button.MaterialButton, lit: Boolean) {
+            if (lit) {
+                btn.setBackgroundColor(graphBtnLitBg)
+                btn.strokeColor = android.content.res.ColorStateList.valueOf(graphBtnLitStroke)
+                btn.strokeWidth = (2 * vizDensity).toInt()
+                btn.setTextColor(graphBtnLitContent)
+                btn.iconTint = android.content.res.ColorStateList.valueOf(graphBtnLitContent)
+            } else {
+                btn.setBackgroundColor(0x00000000)
+                btn.strokeColor = android.content.res.ColorStateList.valueOf(graphBtnDimStroke)
+                btn.strokeWidth = (1 * vizDensity).toInt()
+                btn.setTextColor(graphBtnDimContent)
+                btn.iconTint = android.content.res.ColorStateList.valueOf(graphBtnDimContent)
+            }
+        }
+        // Initial state: eye dim (popout closed), points on.
+        paintLit(bandPtsBtn, false)
+        bandPtsBtn.iconTint = android.content.res.ColorStateList.valueOf(graphBtnLitContent)
+        onOffBtn.text = "ON"
+        paintLit(onOffBtn, true)
+        paintLit(fillBtn, false)
+
         bandPtsBtn.setOnClickListener {
+            viewOptionsOpen = !viewOptionsOpen
+            val offsetY = -(bandPtsBtn.height.toFloat() + gapPx)
+            if (viewOptionsOpen) {
+                onOffBtn.visibility = android.view.View.VISIBLE
+                fillBtn.visibility = android.view.View.VISIBLE
+                onOffBtn.bringToFront(); fillBtn.bringToFront()
+                onOffBtn.alpha = 0f; onOffBtn.scaleX = 0.3f; onOffBtn.scaleY = 0.3f; onOffBtn.translationY = offsetY
+                fillBtn.alpha = 0f; fillBtn.scaleX = 0.3f; fillBtn.scaleY = 0.3f; fillBtn.translationY = offsetY
+                onOffBtn.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
+                    .setDuration(250).setInterpolator(android.view.animation.OvershootInterpolator(1.0f)).start()
+                fillBtn.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
+                    .setDuration(250).setStartDelay(40).setInterpolator(android.view.animation.OvershootInterpolator(1.0f)).start()
+                paintLit(bandPtsBtn, true)
+            } else {
+                fillBtn.animate().alpha(0f).scaleX(0.3f).scaleY(0.3f).translationY(offsetY)
+                    .setDuration(200).setInterpolator(android.view.animation.AccelerateInterpolator())
+                    .withEndAction { fillBtn.visibility = android.view.View.GONE; fillBtn.translationY = 0f }.start()
+                onOffBtn.animate().alpha(0f).scaleX(0.3f).scaleY(0.3f).translationY(offsetY)
+                    .setDuration(200).setStartDelay(40).setInterpolator(android.view.animation.AccelerateInterpolator())
+                    .withEndAction { onOffBtn.visibility = android.view.View.GONE; onOffBtn.translationY = 0f }.start()
+                paintLit(bandPtsBtn, false)
+                bandPtsBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFFDDDDDD.toInt())
+            }
+        }
+
+        // ON/OFF — toggles the band-point dots (the eye's old job).
+        onOffBtn.setOnClickListener {
             bandPointsVisible = !bandPointsVisible
             eqGraphView.showBandPoints = bandPointsVisible
             eqGraphView.invalidate()
-            if (bandPointsVisible) {
-                bandPtsBtn.setIconResource(R.drawable.ic_visibility)
-                bandPtsBtn.setBackgroundColor(0xFF555555.toInt())
-                bandPtsBtn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
-                bandPtsBtn.strokeWidth = (2 * vizDensity).toInt()
-                bandPtsBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFFDDDDDD.toInt())
-            } else {
-                bandPtsBtn.setIconResource(R.drawable.ic_visibility_off)
-                bandPtsBtn.setBackgroundColor(0x00000000)
-                bandPtsBtn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                bandPtsBtn.strokeWidth = (1 * vizDensity).toInt()
-                bandPtsBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
-            }
+            onOffBtn.text = if (bandPointsVisible) "ON" else "OFF"
+            paintLit(onOffBtn, bandPointsVisible)
+        }
+
+        // Fill — toggles the per-band colored curves overlay (issue #40).
+        fillBtn.setOnClickListener {
+            bandCurvesVisible = !bandCurvesVisible
+            eqGraphView.showBandCurves = bandCurvesVisible
+            paintLit(fillBtn, bandCurvesVisible)
         }
         // Reset button: reset EQ to flat
         resetBtn.setOnClickListener {
@@ -1051,10 +1798,21 @@ class  MainActivity : AppCompatActivity() {
             if (editMode) {
                 val offsetY = -(editBtn.height.toFloat() + gapPx)
 
-                // Show reset, undo, redo — all pop out from edit button
+                // Show reset, undo, redo — all pop out from edit button.
                 resetBtn.visibility = android.view.View.VISIBLE
                 undoBtn.visibility = android.view.View.VISIBLE
                 redoBtn.visibility = android.view.View.VISIBLE
+                // Reset shares the slot with the EQ ON/OFF toggle (left of
+                // Edit). Bring the edit-mode buttons to the front, AND fade
+                // the ON/OFF toggle out — reset's background is transparent,
+                // so without fading the toggle's text would show through.
+                // The toggle fades back in when edit mode closes.
+                resetBtn.bringToFront()
+                undoBtn.bringToFront()
+                redoBtn.bringToFront()
+                eqPowerToggle.isClickable = false
+                eqPowerToggle.animate().alpha(0f).setDuration(200)
+                    .setInterpolator(android.view.animation.AccelerateInterpolator()).start()
                 resetBtn.alpha = 0f; resetBtn.scaleX = 0.3f; resetBtn.scaleY = 0.3f; resetBtn.translationY = offsetY
                 undoBtn.alpha = 0f; undoBtn.scaleX = 0.3f; undoBtn.scaleY = 0.3f; undoBtn.translationY = offsetY
                 redoBtn.alpha = 0f; redoBtn.scaleX = 0.3f; redoBtn.scaleY = 0.3f; redoBtn.translationY = offsetY
@@ -1066,9 +1824,9 @@ class  MainActivity : AppCompatActivity() {
                 redoBtn.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
                     .setDuration(250).setStartDelay(80).setInterpolator(android.view.animation.OvershootInterpolator(1.0f)).start()
 
-                editBtn.setBackgroundColor(0xFF555555.toInt())
-                editBtn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
-                editBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFFDDDDDD.toInt())
+                editBtn.setBackgroundColor(graphBtnLitBg)
+                editBtn.strokeColor = android.content.res.ColorStateList.valueOf(graphBtnLitStroke)
+                editBtn.iconTint = android.content.res.ColorStateList.valueOf(graphBtnLitContent)
             } else {
                 val offsetY = -(editBtn.height.toFloat() + gapPx)
 
@@ -1082,9 +1840,14 @@ class  MainActivity : AppCompatActivity() {
                     .setDuration(200).setStartDelay(80).setInterpolator(android.view.animation.AccelerateInterpolator())
                     .withEndAction { resetBtn.visibility = android.view.View.GONE; resetBtn.translationY = 0f }.start()
 
+                // Fade the EQ ON/OFF toggle back in as the popouts collapse.
+                eqPowerToggle.animate().alpha(1f).setStartDelay(80).setDuration(220)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .withEndAction { eqPowerToggle.isClickable = true }.start()
+
                 editBtn.setBackgroundColor(0x00000000)
-                editBtn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
-                editBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
+                editBtn.strokeColor = android.content.res.ColorStateList.valueOf(graphBtnDimStroke)
+                editBtn.iconTint = android.content.res.ColorStateList.valueOf(graphBtnDimContent)
             }
         }
 
@@ -1105,16 +1868,16 @@ class  MainActivity : AppCompatActivity() {
         fun updateVizToggleStyle(active: Boolean) {
             if (active) {
                 vizToggle.alpha = 1.0f
-                vizToggle.setBackgroundColor(0xFF555555.toInt())
-                vizToggle.strokeColor = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
+                vizToggle.setBackgroundColor(graphBtnLitBg)
+                vizToggle.strokeColor = android.content.res.ColorStateList.valueOf(graphBtnLitStroke)
                 vizToggle.strokeWidth = (2 * vizDensity).toInt()
-                vizToggle.iconTint = android.content.res.ColorStateList.valueOf(0xFFDDDDDD.toInt())
+                vizToggle.iconTint = android.content.res.ColorStateList.valueOf(graphBtnLitContent)
             } else {
                 vizToggle.alpha = 1.0f
                 vizToggle.setBackgroundColor(0x00000000)
-                vizToggle.strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
+                vizToggle.strokeColor = android.content.res.ColorStateList.valueOf(graphBtnDimStroke)
                 vizToggle.strokeWidth = (1 * vizDensity).toInt()
-                vizToggle.iconTint = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
+                vizToggle.iconTint = android.content.res.ColorStateList.valueOf(graphBtnDimContent)
             }
         }
         // Restore spectrum state from preferences
@@ -1150,15 +1913,10 @@ class  MainActivity : AppCompatActivity() {
             if (eqViewModel.isProcessing.value) stopProcessing() else startProcessing()
         }
 
-        // EQ toggle
-        eqToggleButton.setOnClickListener {
-            val eq = eqViewModel.parametricEq.value
-            eq.isEnabled = !eq.isEnabled
-            updateEqToggleUI()
-            if (eqViewModel.isProcessing.value) {
-                eqViewModel.eqService.value?.setEqEnabled(eq.isEnabled)
-            }
-        }
+        // EQ toggle — both the text button and the graph-header icon
+        // drive the same toggle.
+        eqToggleButton.setOnClickListener { toggleEq() }
+        eqPowerToggle.setOnClickListener { toggleEq() }
 
         // Preset dropdown
         presetDropdown.setOnItemClickListener { parent, _, position, _ ->
@@ -1229,9 +1987,14 @@ class  MainActivity : AppCompatActivity() {
         setupColorSwatches()
 
         // EQ mode selector
-        modeParametricBtn.setOnClickListener { switchEqUiMode(EqUiMode.PARAMETRIC) }
-        modeGraphicBtn.setOnClickListener { switchEqUiMode(EqUiMode.GRAPHIC) }
-        modeTableBtn.setOnClickListener { switchEqUiMode(EqUiMode.TABLE) }
+        // The three "advanced" modes clear the Simple flag; the Simple
+        // card sets it. Persisting here mirrors the experimental
+        // settings switch so the choice survives a restart and the two
+        // entry points stay consistent.
+        modeParametricBtn.setOnClickListener { eqPrefs.saveSimpleEqEnabled(false); switchEqUiMode(EqUiMode.PARAMETRIC) }
+        modeGraphicBtn.setOnClickListener { eqPrefs.saveSimpleEqEnabled(false); switchEqUiMode(EqUiMode.GRAPHIC) }
+        modeTableBtn.setOnClickListener { eqPrefs.saveSimpleEqEnabled(false); switchEqUiMode(EqUiMode.TABLE) }
+        modeSimpleBtn.setOnClickListener { eqPrefs.saveSimpleEqEnabled(true); switchEqUiMode(EqUiMode.SIMPLE) }
 
         // Settings controls
         setupSettingsListeners()
@@ -1239,9 +2002,47 @@ class  MainActivity : AppCompatActivity() {
 
     // ---- Settings ----
 
+    /** Serializes the current EQ state (bands + preamp + Channel-Side-EQ)
+     *  to a preset JSON string. Shared by the "+" save-new flow and the
+     *  per-row overwrite, so a saved and an overwritten preset are byte-for
+     *  byte the same format. */
+    private fun buildCurrentPresetJson(): String {
+        stateManager.eqPrefs.saveState(stateManager.parametricEq)
+        stateManager.persistLeftRightIfCse()
+        fun serialize(eq: com.bearinmind.equalizer314.dsp.ParametricEqualizer): org.json.JSONArray {
+            val arr = org.json.JSONArray()
+            for (b in eq.getAllBands()) {
+                arr.put(org.json.JSONObject().apply {
+                    put("frequency", b.frequency)
+                    put("gain", b.gain)
+                    put("q", b.q)
+                    put("filterType", b.filterType.name)
+                    put("enabled", b.enabled)
+                })
+            }
+            return arr
+        }
+        val json = org.json.JSONObject()
+        json.put("preamp", stateManager.preampGainDb)
+        val cseOn = eqPrefs.getChannelSideEqEnabled()
+        json.put("channelSideEqEnabled", cseOn)
+        if (cseOn) {
+            val (lEq, rEq) = eqViewModel.stateManager.getChannelEqs()
+            json.put("leftBands", serialize(lEq))
+            json.put("rightBands", serialize(rEq))
+            // Back-compat: also write the active EQ under the legacy "bands".
+            json.put("bands", serialize(eqViewModel.stateManager.parametricEq))
+        } else {
+            json.put("bands", serialize(eqViewModel.stateManager.parametricEq))
+        }
+        return json.toString()
+    }
+
     private fun updateAutoEqStatus() {
+        // The AutoEQ status card moved to PresetsConversionsActivity, so on
+        // the main Settings page this view no longer exists — bail safely.
+        val statusText = findViewById<TextView>(R.id.autoEqStatusText) ?: return
         val name = eqViewModel.eqPrefs.getAutoEqName()
-        val statusText = findViewById<TextView>(R.id.autoEqStatusText)
         if (!name.isNullOrBlank()) {
             val source = eqViewModel.eqPrefs.getAutoEqSource() ?: ""
             statusText.text = "$name by $source"
@@ -1255,8 +2056,8 @@ class  MainActivity : AppCompatActivity() {
     }
 
     private fun updateTargetStatus() {
+        val statusText = findViewById<TextView>(R.id.targetStatusText) ?: return
         val name = eqViewModel.eqPrefs.getSelectedTargetName()
-        val statusText = findViewById<TextView>(R.id.targetStatusText)
         if (!name.isNullOrBlank()) {
             val type = eqViewModel.eqPrefs.getSelectedTargetType() ?: ""
             statusText.text = if (type.isNotBlank()) "$name \u00B7 $type" else name
@@ -1289,17 +2090,18 @@ class  MainActivity : AppCompatActivity() {
     }
 
     private fun setupSettingsListeners() {
-        // Simple EQ toggle (settings page)
-        val simpleEqSwitch = findViewById<com.google.android.material.materialswitch.MaterialSwitch>(R.id.simpleEqSwitch)
-        simpleEqSwitch.isChecked = eqViewModel.eqPrefs.getSimpleEqEnabled()
-        simpleEqSwitch.setOnCheckedChangeListener { _, isChecked ->
-            eqViewModel.eqPrefs.saveSimpleEqEnabled(isChecked)
-            if (isChecked && eqViewModel.currentEqUiMode.value == EqUiMode.SIMPLE) {
-                switchEqUiMode(EqUiMode.SIMPLE)
-            } else if (!isChecked && eqViewModel.currentEqUiMode.value == EqUiMode.SIMPLE) {
-                val fallback = try { EqUiMode.valueOf(eqViewModel.eqPrefs.getEqUiMode()) } catch (_: Exception) { EqUiMode.PARAMETRIC }
-                switchEqUiMode(fallback)
-            }
+        // Light/dark theme toggle (settings page). Switch ON = light.
+        // setDefaultNightMode recreates all live activities, which
+        // re-inflates everything in the new palette; EqApp re-applies
+        // the saved choice on the next cold start.
+        val themeSwitch = findViewById<com.google.android.material.materialswitch.MaterialSwitch>(R.id.themeSwitch)
+        themeSwitch.isChecked = eqViewModel.eqPrefs.getLightTheme()
+        themeSwitch.setOnCheckedChangeListener { _, isChecked ->
+            eqViewModel.eqPrefs.saveLightTheme(isChecked)
+            androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+                if (isChecked) androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+                else androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+            )
         }
 
         // Channel Side EQ card (settings page) — opens the per-channel editor
@@ -1308,10 +2110,18 @@ class  MainActivity : AppCompatActivity() {
             overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
         }
 
-        // Convert-to-APO card — opens the Wavelet/Poweramp converter
-        findViewById<View>(R.id.convertToApoCard).setOnClickListener {
-            startActivity(Intent(this, ConvertToApoActivity::class.java))
+        // Presets & Conversions — opens the sub-screen grouping AutoEQ &
+        // Presets, Generate Custom EQ, and Convert to APO. RESULT_OK comes
+        // back when an AutoEQ/Target preset was applied there, so reload
+        // the EQ from prefs (same flow the loose cards used).
+        findViewById<View>(R.id.presetsConversionsCard).setOnClickListener {
+            presetsConversionsLauncher.launch(Intent(this, PresetsConversionsActivity::class.java))
             overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+        }
+
+        // Backup & Restore — whole-app export/import.
+        findViewById<View>(R.id.backupRestoreCard).setOnClickListener {
+            showBackupRestoreDialog()
         }
 
         // Audio Effects Pipeline — placeholder screen for chaining/reordering
@@ -1341,16 +2151,6 @@ class  MainActivity : AppCompatActivity() {
         experimentalCard.setOnClickListener {
             if (!eqViewModel.eqPrefs.getExperimentalUnlocked()) return@setOnClickListener
             startActivity(Intent(this, ExperimentalActivity::class.java))
-            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-        }
-        // AutoEQ card (settings page)
-        findViewById<View>(R.id.autoEqCard).setOnClickListener {
-            autoEqLauncher.launch(Intent(this, AutoEqActivity::class.java))
-            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-        }
-        // Target card (settings page) — opens Target Curve screen
-        findViewById<View>(R.id.targetCard).setOnClickListener {
-            targetCurveLauncher.launch(Intent(this, TargetCurveActivity::class.java))
             overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
         }
 
@@ -1398,6 +2198,76 @@ class  MainActivity : AppCompatActivity() {
     }
 
     // ---- EQ UI Mode Switching ----
+
+    /** Pixel-positions the graph-header overlay buttons from the graph's
+     *  current width. Safe to call repeatedly (idempotent). Bails if the
+     *  graph isn't measured yet (width 0) — e.g. while GONE in Simple
+     *  mode. Called from the startup post{}, from switchEqUiMode after a
+     *  GONE→VISIBLE flip, and from onWindowFocusChanged so a theme-toggle
+     *  recreate re-lays-out at the *final* window width instead of the
+     *  transient mid-transition width that warped the buttons. */
+    private fun relayoutGraphHeaderButtons() {
+        if (!::eqGraphView.isInitialized) return
+        val viewWidth = eqGraphView.width
+        if (viewWidth <= 0) return
+        val vizDensity = resources.displayMetrics.density
+        val gapPx = (2 * vizDensity).toInt()
+        val vPadPx = 80
+        val gridLine10k = (viewWidth * 3.0 / 3.301).toInt()
+        val btnTop = gapPx
+        val btnHeight = vPadPx - 2 * gapPx
+        val specWidth = (viewWidth - gapPx) - (gridLine10k + gapPx)
+        val specLeft = gridLine10k + gapPx
+
+        fun reposition(btn: View, leftMargin: Int, topMargin: Int = btnTop) {
+            val lp = btn.layoutParams as? android.widget.FrameLayout.LayoutParams ?: return
+            lp.width = specWidth; lp.height = btnHeight
+            lp.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            lp.leftMargin = leftMargin; lp.topMargin = topMargin
+            btn.layoutParams = lp
+        }
+
+        val vizToggle = findViewById<View>(R.id.visualizerToggle)
+        val editBtn = findViewById<View>(R.id.editButton)
+        val resetBtn = findViewById<View>(R.id.resetButton)
+        val undoBtn = findViewById<View>(R.id.undoButton)
+        val redoBtn = findViewById<View>(R.id.redoButton)
+        val bandPtsBtn = findViewById<View>(R.id.bandPointsToggle)
+        val saveBtn = findViewById<View>(R.id.savePresetButton)
+
+        val editLeftPx = (specLeft - gapPx - specWidth).coerceAtLeast(gapPx)
+        val resetLeftPx = (specLeft - 2 * (gapPx + specWidth)).coerceAtLeast(gapPx)
+        val row2Top = btnTop + btnHeight + gapPx
+
+        reposition(vizToggle, specLeft)
+        reposition(editBtn, editLeftPx)
+        reposition(resetBtn, resetLeftPx)
+        // EQ on/off toggle shares the reset slot (left of edit).
+        reposition(findViewById(R.id.eqPowerToggle), resetLeftPx)
+        // Undo sits directly below reset; redo sits directly below edit
+        reposition(undoBtn, resetLeftPx, row2Top)
+        reposition(redoBtn, editLeftPx, row2Top)
+        reposition(bandPtsBtn, gapPx)
+        val saveLeftPx = gapPx + specWidth + gapPx
+        reposition(saveBtn, saveLeftPx)
+        // View-options popout: ON/OFF below the eye, fill toggle below save.
+        reposition(findViewById(R.id.bandPointsOnOffBtn), gapPx, row2Top)
+        reposition(findViewById(R.id.bandFillToggle), saveLeftPx, row2Top)
+
+        // Alt-route button: after save on row 1
+        val altRouteLeftPx = saveLeftPx + specWidth + gapPx
+        reposition(findViewById(R.id.altRouteButton), altRouteLeftPx)
+        // Settings gear: right of alt-route on row 1 (popout member)
+        val settingsLeftPx = altRouteLeftPx + specWidth + gapPx
+        reposition(findViewById(R.id.settingsGearButton), settingsLeftPx)
+        // L / R popout on row 2 — L below alt-route, R below settings
+        reposition(findViewById(R.id.channelLButton), altRouteLeftPx, row2Top)
+        reposition(findViewById(R.id.channelRButton), settingsLeftPx, row2Top)
+
+        // Keep the mini L/R badge glued to the alt-route button.
+        val badge = findViewById<android.widget.TextView>(R.id.altRouteChannelBadge)
+        graphOverlayLayoutManager.repositionChannelBadge(badge, altRouteLeftPx)
+    }
 
     private fun switchEqUiMode(mode: EqUiMode) {
         // Clean up table mode bands when leaving
@@ -1479,27 +2349,9 @@ class  MainActivity : AppCompatActivity() {
             bandToggleManager.setupToggles()
             eqGraphView.updateBandLevels()
 
-            // Re-position the graph overlay buttons (visibility, save, reset, edit,
-            // spectrum). They were positioned via eqGraphView.post{} at startup, but
-            // when the graph card was GONE in SIMPLE mode, the view's width was 0.
-            // Now that it's VISIBLE again, we need to re-layout after the view has
-            // its real width.
-            eqGraphView.post {
-                graphOverlayLayoutManager.layoutButtons(
-                    graphView = eqGraphView,
-                    R.id.visualizerToggle to GraphOverlayLayoutManager.LayoutPosition.VISUALIZER,
-                    R.id.editButton to GraphOverlayLayoutManager.LayoutPosition.EDIT,
-                    R.id.resetButton to GraphOverlayLayoutManager.LayoutPosition.RESET,
-                    R.id.undoButton to GraphOverlayLayoutManager.LayoutPosition.UNDO,
-                    R.id.redoButton to GraphOverlayLayoutManager.LayoutPosition.REDO,
-                    R.id.bandPointsToggle to GraphOverlayLayoutManager.LayoutPosition.BAND_POINTS,
-                    R.id.savePresetButton to GraphOverlayLayoutManager.LayoutPosition.SAVE_PRESET,
-                    R.id.altRouteButton to GraphOverlayLayoutManager.LayoutPosition.ALT_ROUTE,
-                    R.id.settingsGearButton to GraphOverlayLayoutManager.LayoutPosition.SETTINGS_GEAR,
-                    R.id.channelLButton to GraphOverlayLayoutManager.LayoutPosition.CHANNEL_L,
-                    R.id.channelRButton to GraphOverlayLayoutManager.LayoutPosition.CHANNEL_R,
-                )
-            }
+            // Re-position the graph overlay buttons once the card has its
+            // real width again (it was width 0 while GONE in SIMPLE mode).
+            eqGraphView.doOnLayout { relayoutGraphHeaderButtons() }
         }
 
         when (mode) {
@@ -1636,8 +2488,12 @@ class  MainActivity : AppCompatActivity() {
                 tableController.buildTable()
             }
             EqUiMode.SIMPLE -> {
-                // Hide standard EQ UI
-                modeSelectorGroup.visibility = View.GONE
+                // Keep the mode selector visible so Simple is a true peer
+                // of Parametric/Graphic/Table — the user can switch back
+                // by tapping another card. Only the graph + advanced
+                // controls are hidden; the simple sliders render below
+                // the selector (simpleEqContainer is the last child).
+                modeSelectorGroup.visibility = View.VISIBLE
                 graphCardView.visibility = View.GONE
                 eqControlsContainer.visibility = View.GONE
 
@@ -1672,17 +2528,21 @@ class  MainActivity : AppCompatActivity() {
                 simpleEqController.buildSliders()
 
                 // Reparent the existing preamp card from eqControlsContainer into
-                // simpleEqContainer (between the bars/preset area and controls card).
+                // simpleEqContainer as the last child (preamp sits below the
+                // bars / preset area). Append via childCount rather than a
+                // hardcoded index — the index shifted when the "Simple EQ Mode"
+                // header was removed, and appending is robust to future layout
+                // changes in SimpleEqController.buildSliders().
                 val preampCard = findViewById<View>(R.id.preampCardBar)
                 (preampCard.parent as? android.view.ViewGroup)?.removeView(preampCard)
-                // Insert at index 5: header(0), controls(1), graph(2), bars(3), presetPicker(4), preamp(5)
-                simpleEqContainer.addView(preampCard, 5)
+                simpleEqContainer.addView(preampCard, simpleEqContainer.childCount)
                 preampCard.translationY = 0f
-                // Set consistent 8dp bottom margin (remove the XML topMargin=8dp to
-                // avoid double-spacing since bars card already has bottomMargin=8dp)
+                // Consistent 12dp inter-card gap to match the graph / bars /
+                // controls cards (topMargin 0 so the bars card's bottom
+                // margin isn't doubled).
                 (preampCard.layoutParams as? LinearLayout.LayoutParams)?.apply {
                     topMargin = 0
-                    bottomMargin = (8 * resources.displayMetrics.density).toInt()
+                    bottomMargin = (12 * resources.displayMetrics.density).toInt()
                 }
             }
         }
@@ -1755,7 +2615,8 @@ class  MainActivity : AppCompatActivity() {
         val buttons = listOf(
             modeParametricBtn to EqUiMode.PARAMETRIC,
             modeGraphicBtn to EqUiMode.GRAPHIC,
-            modeTableBtn to EqUiMode.TABLE
+            modeTableBtn to EqUiMode.TABLE,
+            modeSimpleBtn to EqUiMode.SIMPLE
         )
         for ((btn, mode) in buttons) {
             if (mode == eqViewModel.currentEqUiMode.value) {
@@ -1904,7 +2765,7 @@ class  MainActivity : AppCompatActivity() {
     private fun applyBandDbFromInput() {
         if (isUpdatingInputs) return
         val db = bandDbInput.text.toString().toFloatOrNull() ?: return
-        val clamped = db.coerceIn(-12f, 12f)
+        val clamped = db.coerceIn(-20f, 20f)
         isUpdatingInputs = true
         bandDbSlider.value = clamped
         isUpdatingInputs = false
@@ -1990,7 +2851,7 @@ class  MainActivity : AppCompatActivity() {
             bandDbInput.setText(String.format("%.1f", band.gain))
             bandQInput.setText(String.format("%.2f", band.q))
             bandHzSlider.value = hzToSlider(band.frequency)
-            bandDbSlider.value = band.gain.coerceIn(-12f, 12f)
+            bandDbSlider.value = band.gain.coerceIn(-20f, 20f)
             qSlider.value = band.q.toFloat().coerceIn(0.1f, 12f)
 
             // dB slider / input are disabled for every gainless filter type:
@@ -2058,7 +2919,7 @@ class  MainActivity : AppCompatActivity() {
                         gravity = android.view.Gravity.CENTER
                     }
                     background = android.graphics.drawable.GradientDrawable().apply {
-                        setColor(0xFF333333.toInt())
+                        setColor(0xFF404040.toInt())
                         cornerRadius = 6 * density
                         setStroke((1 * density).toInt(), 0xFF666666.toInt())
                     }
@@ -2206,9 +3067,47 @@ class  MainActivity : AppCompatActivity() {
         com.bearinmind.equalizer314.ui.BottomNavHelper.updateStatus(this, eqViewModel.eqPrefs)
     }
 
+    /** Flip the EQ on/off. Shared by the text button and the graph-
+     *  header icon. Toggles `parametricEq.isEnabled` and, while
+     *  processing, pushes it to the live DP via setEqEnabled. */
+    private fun toggleEq() {
+        val eq = eqViewModel.stateManager.parametricEq
+        eq.isEnabled = !eq.isEnabled
+        // Persist immediately so the bottom-nav status label (which
+        // reads the eqEnabled pref) and the next cold start agree.
+        eqViewModel.eqPrefs.saveEqEnabled(eq.isEnabled)
+        updateEqToggleUI()
+        com.bearinmind.equalizer314.ui.BottomNavHelper.updateStatus(this, eqViewModel.eqPrefs)
+        if (eqViewModel.stateManager.isProcessing) {
+            eqViewModel.stateManager.eqService?.setEqEnabled(eq.isEnabled)
+        }
+    }
+
     private fun updateEqToggleUI() {
         val enabled = eqViewModel.parametricEq.value.isEnabled
         eqToggleButton.text = if (enabled) "EQ: ON" else "EQ: OFF"
+        if (::eqPowerToggle.isInitialized) applyEqToggleVisual(enabled)
+    }
+
+    /** Active/inactive styling for the graph-header EQ toggle. Shows
+     *  "ON" / "OFF" text, mirroring the visualizer button's lit-when-on
+     *  look: filled background + brighter stroke + bright text when EQ
+     *  is on; dim outlined when off. */
+    private fun applyEqToggleVisual(enabled: Boolean) {
+        if (!::eqPowerToggle.isInitialized) return
+        val d = resources.displayMetrics.density
+        eqPowerToggle.text = if (enabled) "ON" else "OFF"
+        if (enabled) {
+            eqPowerToggle.setBackgroundColor(graphBtnLitBg)
+            eqPowerToggle.strokeColor = android.content.res.ColorStateList.valueOf(graphBtnLitStroke)
+            eqPowerToggle.strokeWidth = (2 * d).toInt()
+            eqPowerToggle.setTextColor(graphBtnLitContent)
+        } else {
+            eqPowerToggle.setBackgroundColor(0x00000000)
+            eqPowerToggle.strokeColor = android.content.res.ColorStateList.valueOf(graphBtnDimStroke)
+            eqPowerToggle.strokeWidth = (1 * d).toInt()
+            eqPowerToggle.setTextColor(if (isLightUi) 0xFF8B8B8B.toInt() else 0xFF777777.toInt())
+        }
     }
 
     // ---- Filter Type Buttons ----
@@ -2683,17 +3582,20 @@ class  MainActivity : AppCompatActivity() {
         val lBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.channelLButton) ?: return
         val rBtn = findViewById<com.google.android.material.button.MaterialButton>(R.id.channelRButton) ?: return
         val density = resources.displayMetrics.density
+        // The "L"/"R" glyphs read lighter than the icon buttons, so give
+        // them a darker dim color in light mode than the shared header dim.
+        val lrDim = if (isLightUi) 0xFF2E2E2E.toInt() else 0xFF888888.toInt()
         fun paint(btn: com.google.android.material.button.MaterialButton, pressed: Boolean) {
             if (pressed) {
-                btn.setBackgroundColor(0xFF555555.toInt())
-                btn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF888888.toInt())
+                btn.setBackgroundColor(graphBtnLitBg)
+                btn.strokeColor = android.content.res.ColorStateList.valueOf(graphBtnLitStroke)
                 btn.strokeWidth = (2 * density).toInt()
-                btn.setTextColor(0xFFE3E3E3.toInt())
+                btn.setTextColor(graphBtnLitContent)
             } else {
                 btn.setBackgroundColor(0x00000000)
-                btn.strokeColor = android.content.res.ColorStateList.valueOf(0xFF444444.toInt())
+                btn.strokeColor = android.content.res.ColorStateList.valueOf(graphBtnDimStroke)
                 btn.strokeWidth = (1 * density).toInt()
-                btn.setTextColor(0xFFBBBBBB.toInt())
+                btn.setTextColor(lrDim)
             }
         }
         val badge = findViewById<android.widget.TextView>(R.id.altRouteChannelBadge)
@@ -2746,6 +3648,10 @@ class  MainActivity : AppCompatActivity() {
     private fun rebindActiveEq() {
         val eq = eqViewModel.parametricEq.value
         eqGraphView.setParametricEqualizer(eq)
+        // Point the graph at the now-active channel's slot list — each channel
+        // keeps its own, so a switch must refresh the labels (and the band
+        // count they're sized against) or they'd lag a channel behind.
+        eqGraphView.setBandSlotLabels(eqViewModel.stateManager.bandSlots)
         eqGraphView.updateBandLevels()
         eqViewModel.pushEqUpdate()
 
@@ -2763,6 +3669,7 @@ class  MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        updateDevicePresetStatus()
         // Pick up any limiter changes made in LimiterActivity while we were
         // paused. LimiterActivity writes prefs directly and never touches
         // EqStateManager's mirror fields, so without this sync the next
@@ -2790,8 +3697,16 @@ class  MainActivity : AppCompatActivity() {
         // Set FAB from saved power state — instant, no animation
         val savedPower = eqViewModel.eqPrefs.getPowerState()
         com.bearinmind.equalizer314.ui.BottomNavHelper.setPowerFabInstant(this, savedPower)
-        if (eqViewModel.serviceBound.value && eqViewModel.eqService.value != null) {
+        if (eqViewModel.stateManager.serviceBound && eqViewModel.eqService.value != null) {
             eqViewModel.stateManager.isProcessing = eqViewModel.eqService.value!!.dynamicsManager.isActive
+            // Safety net: returning to the app after an app-switch dropout
+            // should restore the EQ even if the service watchdog hasn't
+            // ticked yet (e.g. the OEM never fired a playback callback).
+            eqViewModel.eqService.value?.let { svc ->
+                if (svc.dynamicsManager.isActive && svc.dynamicsManager.hasLostControl()) {
+                    svc.requestWatchdogCheck()
+                }
+            }
         } else {
             eqViewModel.stateManager.isProcessing = savedPower
         }
@@ -2853,6 +3768,8 @@ class  MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         visualizerHelper.stop()
         try { unregisterReceiver(eqStoppedReceiver) } catch (_: Exception) {}
+        try { unregisterReceiver(eqStartedReceiver) } catch (_: Exception) {}
+        try { unregisterReceiver(statusRefreshReceiver) } catch (_: Exception) {}
         super.onDestroy()
     }
 
@@ -2884,6 +3801,30 @@ class  MainActivity : AppCompatActivity() {
             vizBtn.strokeWidth = (2 * d).toInt()
             vizBtn.iconTint = android.content.res.ColorStateList.valueOf(0xFFDDDDDD.toInt())
         }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // When the window is focused the graph is at its final laid-out
+        // width. Re-assert the header-button positions here so a
+        // light/dark theme toggle (which recreates the activity with a
+        // fade transition, during which the startup post{} can fire at a
+        // transient width) ends up correct. Skipped in Simple mode, where
+        // the graph card is hidden and the buttons don't apply.
+        if (hasFocus && ::eqGraphView.isInitialized &&
+            eqViewModel.stateManager.currentEqUiMode != EqUiMode.SIMPLE) {
+            eqGraphView.post { relayoutGraphHeaderButtons() }
+        }
+    }
+
+    override fun onSaveInstanceState(outState: android.os.Bundle) {
+        super.onSaveInstanceState(outState)
+        // Which page is open — restored in onCreate after a recreation
+        // (theme toggle / config change) so the user stays where they were.
+        outState.putBoolean(
+            "onSettingsPage",
+            ::pageSettings.isInitialized && pageSettings.visibility == View.VISIBLE
+        )
     }
 
     override fun onNewIntent(intent: Intent) {

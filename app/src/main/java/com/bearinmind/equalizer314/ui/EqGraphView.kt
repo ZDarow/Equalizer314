@@ -51,6 +51,15 @@ class EqGraphView @JvmOverloads constructor(
     var verticalPadding = 80f
     // Fill the area between the EQ curve and the 0dB line with a translucent color
     var showCurveFill = false
+    // Per-band curve overlay (issue #40): draw each enabled band's
+    // individual response as a thin line + translucent fill in the
+    // band's custom color (falls back to grey), under the summed
+    // white curve — the digital-console / FabFilter look.
+    var showBandCurves = false
+        set(value) {
+            field = value
+            invalidate()
+        }
     // When true, band points are non-interactive (no dragging, no labels inside dots)
     // and drawn smaller — purely visual indicators.
     var readOnlyPoints = false
@@ -404,7 +413,9 @@ class EqGraphView @JvmOverloads constructor(
         val graphWidth = width.toFloat()
         val graphHeight = height - 2 * vPad
 
-        canvas.drawColor(0xFF1E1E1E.toInt())
+        // Graph background = colorSurfaceVariant in both palettes
+        // (#1E1E1E dark / #E4E4E4 light) — keep in sync with themes.xml.
+        canvas.drawColor(if (isLightTheme()) 0xFFE4E4E4.toInt() else 0xFF1E1E1E.toInt())
 
         drawGrid(canvas, vPad, graphWidth, graphHeight)
 
@@ -729,6 +740,67 @@ class EqGraphView @JvmOverloads constructor(
             }
         }
 
+        // Per-band curves (issue #40): each enabled band's individual
+        // response as a thin colored line + translucent matching fill,
+        // drawn BEFORE the sum curve so the white line stays on top.
+        // Skipped in MBC mode (the EQ curve is already de-emphasised
+        // there) and for effectively-flat bands (0 dB bells would just
+        // re-trace the 0 line and add clutter).
+        if (showBandCurves && mbcCrossovers == null) {
+            val zeroY = vPad + graphHeight * (1f - (0f - minGain) / (maxGain - minGain))
+            val density = resources.displayMetrics.density
+            for (b in 0 until eq.getBandCount()) {
+                if (eq.getBand(b)?.enabled != true) continue
+                val bandPath = Path()
+                var started = false
+                var maxAbsDb = 0f
+                for (i in 0 until numSamples) {
+                    val x = graphWidth * i / (numSamples - 1)
+                    val logFreq = logMin + (x / graphWidth) * (logMax - logMin)
+                    val freq = 10f.pow(logFreq)
+                    val db = eq.getBandFrequencyResponse(b, freq)
+                    if (db.isNaN() || db.isInfinite()) continue
+                    if (abs(db) > maxAbsDb) maxAbsDb = abs(db)
+                    // No clamping — same convention as the white sum
+                    // curve: LP/HP cuts dive past the inner plot edge and
+                    // the canvas clips at the view bounds, so the fill
+                    // runs through the whole graph (SQ-5 style) instead
+                    // of stopping at the top/bottom gridline.
+                    val yB = vPad + graphHeight * (1f - (db - minGain) / (maxGain - minGain))
+                    if (!started) { bandPath.moveTo(x, yB); started = true }
+                    else bandPath.lineTo(x, yB)
+                }
+                if (!started || maxAbsDb < 0.1f) continue
+                val baseColor = getBandColor(b) ?: 0xFF888888.toInt()
+                val fillPath = Path(bandPath).apply {
+                    lineTo(graphWidth, zeroY)
+                    lineTo(0f, zeroY)
+                    close()
+                }
+                canvas.drawPath(fillPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = (baseColor and 0x00FFFFFF) or 0x26000000
+                    style = Paint.Style.FILL
+                })
+                canvas.drawPath(bandPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    // Dim outline — the translucent fill carries the color;
+                    // the line is just a subtle edge so it doesn't compete
+                    // with the white sum curve.
+                    color = (baseColor and 0x00FFFFFF) or 0x55000000
+                    style = Paint.Style.STROKE
+                    strokeWidth = 1.2f * density
+                })
+            }
+            // Re-draw the 0 dB reference line on top of the band fills
+            // (they just painted over the grid) — slightly brighter than
+            // the grid so the reference cuts through the colored regions,
+            // SQ-5 style.
+            canvas.drawLine(0f, zeroY, graphWidth, zeroY, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = if (isLightTheme()) 0xFFADADAD.toInt() else 0xFF555555.toInt()
+                strokeWidth = 1f * density
+                style = Paint.Style.STROKE
+            })
+        }
+
         // Fill between curve and 0dB line
         if (showCurveFill && pathStarted) {
             val zeroY = vPad + graphHeight * (1f - (0f - minGain) / (maxGain - minGain))
@@ -992,7 +1064,8 @@ class EqGraphView @JvmOverloads constructor(
             // Ripple glow when dragging this crossover (full height of graph)
             if (i == draggingCrossover) {
                 val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = 0xFFBBBBBB.toInt(); alpha = 40; style = Paint.Style.FILL
+                    color = if (isLightTheme()) 0xFF474747.toInt() else 0xFFBBBBBB.toInt()
+                    alpha = 40; style = Paint.Style.FILL
                 }
                 val glowPad = 24f
                 val cornerR = 10f
@@ -1113,7 +1186,7 @@ class EqGraphView @JvmOverloads constructor(
         if (readOnlyPoints) {
             val smallRadius = 6f
             val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = 0xFFCCCCCC.toInt()
+                color = if (isLightTheme()) 0xFF363636.toInt() else 0xFFCCCCCC.toInt()
                 style = Paint.Style.FILL
             }
             for (point in bandPoints) {
@@ -1181,6 +1254,50 @@ class EqGraphView @JvmOverloads constructor(
         strokeWidth = 2f
     }
 
+    // All paints above default to the dark palette. When the app is in
+    // light mode (Settings → Light Theme), flip them here. This init
+    // block must stay AFTER every paint property declaration — Kotlin
+    // runs initializers in declaration order, so moving it up would
+    // touch null paints. The view is reconstructed on theme change
+    // (setDefaultNightMode recreates the activity), so a one-shot init
+    // is enough.
+    init {
+        if (isLightTheme()) {
+            // Exact mirrors of the dark values: each grey sits at the
+            // same luminance distance from the light graph bg (#E4E4E4)
+            // as its dark counterpart does from #1E1E1E, so the light
+            // theme keeps the dark theme's contrast relationships.
+            gridPaint.color = 0xFFCFCFCF.toInt()              // dark #333333
+            curvePaint.color = 0xFF585858.toInt()             // dark #AAAAAA
+            pointBgPaint.color = 0xFFE4E4E4.toInt()           // graph bg
+            pointRingPaint.color = 0xFF585858.toInt()         // dark #AAAAAA
+            activePointRingPaint.color = 0xFF363636.toInt()   // dark #CCCCCC
+            activePointFillPaint.color = 0xFF474747.toInt()   // dark #BBBBBB
+            activePointNumberPaint.color = 0xFFFFFFFF.toInt() // dark used black on light fill
+            disabledPointPaint.color = 0xFFADADAD.toInt()     // dark #555555
+            disabledPointNumberPaint.color = 0xFF8B8B8B.toInt() // dark #777777
+            pointNumberPaint.color = 0xFF111111.toInt()       // dark #FFFFFF
+            textPaint.color = 0xFF7A7A7A.toInt()              // dark #888888
+            titleTextPaint.color = 0xFF111111.toInt()         // dark #FFFFFF
+            spectrumLinePaint.color = 0xFF7A7A7A.toInt()      // dark #888888
+            mbcCurvePaint.color = 0xFF252525.toInt()          // dark #DDDDDD
+            mbcFillPaint.color = 0x18000000                   // dark 0x18FFFFFF
+            mbcDotPaint.color = 0xFF111111.toInt()            // dark #FFFFFF
+            mbcDotRingPaint.color = 0xFF585858.toInt()        // dark #AAAAAA
+            mbcCrossoverLinePaint.color = 0xAA474747.toInt()  // dark 0xAABBBBBB
+            mbcTriTouchPaint.color = 0x14585858               // dark 0x14AAAAAA
+            graphicBarPaint.color = 0x88585858.toInt()        // dark 0x88AAAAAA
+            graphicConnectLinePaint.color = 0xFF363636.toInt() // dark #CCCCCC
+            labelPaint.color = 0xFF585858.toInt()             // dark #AAAAAA
+            labelBgPaint.color = 0xFFE6E6E6.toInt()           // dark #1C1C1C (container)
+            labelStrokePaint.color = 0xFFBEBEBE.toInt()       // dark #444444
+        }
+    }
+
+    private fun isLightTheme(): Boolean =
+        (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) !=
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+
     private fun drawActivePointLabel(canvas: Canvas, point: BandPoint) {
         val currentFilterType = parametricEq?.getBand(point.bandIndex)?.filterType?.name ?: "BELL"
         val actualGain = parametricEq?.getBand(point.bandIndex)?.gain ?: point.gain
@@ -1191,7 +1308,12 @@ class EqGraphView @JvmOverloads constructor(
         val padV = 8f
         val cornerRadius = 12f * resources.displayMetrics.density
         val labelX = (width - labelWidth) / 2f
-        val labelY = 42f
+        // Baseline moved up so the band card sits flush near the top
+        // edge of the graph (rect.top = labelY - 24f = 6f). The
+        // device/preset overlay chip in activity_main.xml stacks
+        // directly below this card — keep its layout_marginTop in
+        // sync with the new rect.bottom (labelY + padV = 38f).
+        val labelY = 30f
 
         val rect = android.graphics.RectF(
             labelX - padH, labelY - 24f,

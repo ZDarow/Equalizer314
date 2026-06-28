@@ -45,6 +45,10 @@ class DynamicsProcessingManager {
     /** User-configured band count (128..1024); used instead of hardcoded 127. */
     var requestedBandCount: Int = 127
         set(value) { field = value.coerceIn(128, 1024) }
+
+    // @Volatile: read off the main thread by EqService's watchdog and by
+    // EqService.isDpRunning mirrors, written from start()/stop().
+    @Volatile
     var isActive = false
         private set
 
@@ -221,6 +225,52 @@ class DynamicsProcessingManager {
                 start(lastEq!!)
             }
         }, 100)
+    }
+
+    /** Force a clean recreate of the live DP on the *current* output
+     *  device using the last-applied EQ. Used on output route changes
+     *  (BT ↔ speaker etc.) to dodge OEM output-effect conflicts that
+     *  otherwise leave the new route muted until DP is re-toggled —
+     *  e.g. Pixel Adaptive Sound on Android 14. Equivalent to a manual
+     *  power off/on but preserves the current bands. No-op (returns
+     *  false) when DP isn't active or has no remembered EQ. Caller is
+     *  responsible for re-applying MBC per-band params / bypass after,
+     *  same as any other start(). */
+    fun reattachActive(): Boolean {
+        if (!isActive) return false
+        val eq = lastEq ?: return false
+        stop()
+        start(eq)
+        return isActive
+    }
+
+    /** True when the EQ is supposed to be live but our session-0 effect has
+     *  silently lost control or been disabled by another app / the OEM
+     *  audio policy (the "EQ goes flat after switching apps" case that the
+     *  OnControl/OnEnable listeners often miss on aggressive ROMs). Safe to
+     *  call from any thread: returns false when DP isn't active, and any
+     *  native read on a torn-down handle is caught and treated as "lost"
+     *  (so the caller does a clean reattach). */
+    fun hasLostControl(): Boolean {
+        if (!isActive) return false
+        val dp = dynamicsProcessing ?: return false
+        return try {
+            !dp.hasControl() || !dp.enabled
+        } catch (e: Throwable) {
+            Log.w(TAG, "hasLostControl read threw — treating as lost", e)
+            true
+        }
+    }
+
+    /** Cooldown gate shared with [reclaimSession] (same lastReclaimTime /
+     *  reclaimCooldownMs) so the watchdog and the listener path can't both
+     *  fire a recreate inside the 2s window. Consumes the window when it
+     *  returns true. */
+    fun reclaimCooldownElapsed(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastReclaimTime < reclaimCooldownMs) return false
+        lastReclaimTime = now
+        return true
     }
 
     fun updateFromEqualizer(eq: ParametricEqualizer) {

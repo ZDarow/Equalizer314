@@ -22,8 +22,8 @@ android {
         applicationId = "com.bearinmind.equalizer314"
         minSdk = 28
         targetSdk = 35
-        versionCode = 8
-        versionName = "0.0.8-beta"
+        versionCode = 12
+        versionName = "0.0.12-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -102,6 +102,7 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
 
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
@@ -126,11 +127,14 @@ dependencies {
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
 
-    // ExoPlayer (Media3) for audio playback with custom AudioProcessors
-    val media3Version = "1.5.1"
-    implementation("androidx.media3:media3-exoplayer:$media3Version")
-    implementation("androidx.media3:media3-ui:$media3Version")
-    implementation("androidx.media3:media3-session:$media3Version")
+    // (Removed unused androidx.media3-exoplayer/ui/session dependencies.
+    // They were an artefact of an earlier capture-based design that
+    // never shipped. The current implementation uses Android's native
+    // DynamicsProcessing API and EnvironmentalReverb directly, no
+    // ExoPlayer involvement. Removing them also strips the transitively-
+    // added android.permission.ACCESS_NETWORK_STATE — "View network
+    // connections" on the Play Store / settings UI — which was the
+    // only thing that permission was there for.)
 
     // Testing
     testImplementation("junit:junit:4.13.2")

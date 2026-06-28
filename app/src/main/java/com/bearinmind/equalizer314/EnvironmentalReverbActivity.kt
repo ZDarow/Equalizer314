@@ -31,6 +31,27 @@ class EnvironmentalReverbActivity : AppCompatActivity() {
     private lateinit var xyColumns: DiffusionDensityColumnsView
     private var isUpdating = false
 
+    // Debounced "push live values to the reverb engine" trigger.
+    // Slider drags fire dozens of onChange events per second; we
+    // coalesce them down to one service intent per 30 ms so the
+    // foreground service isn't churned by every pixel of drag.
+    private val reverbPushHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val reverbPushRunnable = Runnable {
+        try {
+            val intent = android.content.Intent(this, com.bearinmind.equalizer314.audio.EqService::class.java)
+                .setAction(com.bearinmind.equalizer314.audio.EqService.ACTION_APPLY_REVERB)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+        } catch (_: Throwable) { /* service may not be running yet — fine */ }
+    }
+    private fun schedulePushReverbParams() {
+        reverbPushHandler.removeCallbacks(reverbPushRunnable)
+        reverbPushHandler.postDelayed(reverbPushRunnable, 30L)
+    }
+
     // Slider/text refs cached so the visualizer's drag handles can push
     // matching slider positions and text values back through the UI.
     private lateinit var decayTimeSlider: Slider
@@ -45,8 +66,6 @@ class EnvironmentalReverbActivity : AppCompatActivity() {
     private lateinit var revDelayText: EditText
     private lateinit var reflectLevelSlider: Slider
     private lateinit var reflectLevelText: EditText
-    private lateinit var earlyReflWidthSlider: Slider
-    private lateinit var earlyReflWidthText: EditText
     private lateinit var roomHFLevelSlider: Slider
     private lateinit var roomHFLevelText: EditText
     // Master "Room Level" card at the top of the screen — the only
@@ -77,7 +96,6 @@ class EnvironmentalReverbActivity : AppCompatActivity() {
         visualizer.diffusionPct = eqPrefs.getReverbDiffusionPct()
         visualizer.densityPct = eqPrefs.getReverbDensityPct()
         visualizer.roomHFLevelDb = eqPrefs.getReverbRoomHFLevelDb()
-        visualizer.earlyReflectionsWidthMs = eqPrefs.getReverbEarlyReflectionsWidthMs()
 
         decayTimeSlider = findViewById(R.id.reverbDecayTimeSlider)
         decayTimeText = findViewById(R.id.reverbDecayTimeText)
@@ -91,8 +109,6 @@ class EnvironmentalReverbActivity : AppCompatActivity() {
         revDelayText = findViewById(R.id.reverbDelayText)
         reflectLevelSlider = findViewById(R.id.reverbReflectLevelSlider)
         reflectLevelText = findViewById(R.id.reverbReflectLevelText)
-        earlyReflWidthSlider = findViewById(R.id.reverbEarlyReflWidthSlider)
-        earlyReflWidthText = findViewById(R.id.reverbEarlyReflWidthText)
         roomHFLevelSlider = findViewById(R.id.reverbRoomHFLevelSlider)
         roomHFLevelText = findViewById(R.id.reverbRoomHFLevelText)
         reverbMasterLevelSlider = findViewById(R.id.reverbMasterLevelSlider)
@@ -124,11 +140,6 @@ class EnvironmentalReverbActivity : AppCompatActivity() {
             "%.0f", eqPrefs.getReverbDelayMs(), eqPrefs::saveReverbDelayMs
         ) { visualizer.reverbDelayMs = it }
         wire(
-            earlyReflWidthSlider, earlyReflWidthText,
-            "%.0f", eqPrefs.getReverbEarlyReflectionsWidthMs(),
-            eqPrefs::saveReverbEarlyReflectionsWidthMs
-        ) { visualizer.earlyReflectionsWidthMs = it }
-        wire(
             reflectLevelSlider, reflectLevelText,
             "%.0f", eqPrefs.getReverbReflectionsLevelDb(), eqPrefs::saveReverbReflectionsLevelDb
         ) { visualizer.reflectionsLevelDb = it }
@@ -151,6 +162,7 @@ class EnvironmentalReverbActivity : AppCompatActivity() {
             eqPrefs.saveReverbDensityPct(dens)
             visualizer.diffusionPct = diff
             visualizer.densityPct = dens
+            schedulePushReverbParams()
         }
         xyGraph.onChanged = { diff, dens ->
             xyColumns.diffusionPct = diff
@@ -165,7 +177,10 @@ class EnvironmentalReverbActivity : AppCompatActivity() {
 
         // Drag handles on the visualizer route back here so the slider,
         // text input, and persisted value all stay in sync.
-        visualizer.onParameterChanged = { param, value -> applyVisualizerChange(param, value) }
+        visualizer.onParameterChanged = { param, value ->
+            applyVisualizerChange(param, value)
+            schedulePushReverbParams()
+        }
 
         // Click-to-expand "Graph parameters" panel inside the IR card.
         // TransitionManager animates both the dropdown's height change
@@ -226,10 +241,6 @@ class EnvironmentalReverbActivity : AppCompatActivity() {
                 eqPrefs.saveReverbRoomHFLevelDb(value)
                 pushSlider(roomHFLevelSlider, roomHFLevelText, "%.0f", value)
             }
-            ReverbVisualizerView.Param.EARLY_REFLECTIONS_WIDTH -> {
-                eqPrefs.saveReverbEarlyReflectionsWidthMs(value)
-                pushSlider(earlyReflWidthSlider, earlyReflWidthText, "%.0f", value)
-            }
         }
     }
 
@@ -261,6 +272,7 @@ class EnvironmentalReverbActivity : AppCompatActivity() {
                 text.setText(String.format(format, value))
                 save(value)
                 onValueChanged(value)
+                schedulePushReverbParams()
             }
         }
         text.setOnEditorActionListener { _, _, _ ->
@@ -273,9 +285,15 @@ class EnvironmentalReverbActivity : AppCompatActivity() {
                 isUpdating = false
                 save(v)
                 onValueChanged(v)
+                schedulePushReverbParams()
             }
             true
         }
+    }
+
+    override fun onDestroy() {
+        reverbPushHandler.removeCallbacks(reverbPushRunnable)
+        super.onDestroy()
     }
 
     override fun finish() {

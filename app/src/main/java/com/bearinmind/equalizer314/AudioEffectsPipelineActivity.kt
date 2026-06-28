@@ -75,6 +75,25 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
 
         findViewById<ImageButton>(R.id.audioPipelineBackButton).setOnClickListener { finish() }
 
+        // Info button toggles the "how-to" card with the same smooth
+        // height animation the Apps / Devices sections use elsewhere.
+        // The card itself sits between the top bar and the pipeline
+        // list, hidden by default in XML. The icon brightens when the
+        // card is visible and dims again when hidden so the user has
+        // a glance-clear "lit / not lit" cue.
+        val infoCard = findViewById<MaterialCardView>(R.id.audioPipelineInfoCard)
+        val infoButton = findViewById<ImageButton>(R.id.audioPipelineInfoButton)
+        infoButton.setOnClickListener {
+            // Read the pre-toggle visibility, flip it, then drive both
+            // the card animation and the icon tint off the predicted
+            // next state. (toggleInfoCard changes visibility itself —
+            // synchronously on expand, on animation-end on collapse —
+            // so reading the live value after the call is racy.)
+            val willBeVisible = infoCard.visibility != View.VISIBLE
+            toggleInfoCard(infoCard)
+            updateInfoButtonTint(infoButton, lit = willBeVisible)
+        }
+
         recyclerView = findViewById(R.id.audioPipelineRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
         loadOrder()
@@ -92,14 +111,30 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
                 val newState = !(enabledMap[effect] ?: false)
                 enabledMap[effect] = newState
                 eqPrefs.setAudioEffectEnabled(effect.name, newState)
+                if (effect == EffectId.ENVIRONMENTAL_REVERB) {
+                    // Let the service attach (or release) per-session
+                    // reverbs to match the new toggle state.
+                    val intent = android.content.Intent(this, com.bearinmind.equalizer314.audio.EqService::class.java)
+                        .setAction(com.bearinmind.equalizer314.audio.EqService.ACTION_APPLY_REVERB)
+                    try {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                            startForegroundService(intent)
+                        } else {
+                            startService(intent)
+                        }
+                    } catch (_: Throwable) { /* service may not be running */ }
+                }
             },
             onHandleTouch = { vh -> touchHelper.startDrag(vh) },
             onCardClick = { effect -> openDetailScreen(effect) },
             descriptionFor = { effect ->
-                if (effect == EffectId.AUDIO_OUTPUT) {
-                    currentAudioOutputDescription() ?: effect.description
-                } else effect.description
+                when (effect) {
+                    EffectId.AUDIO_OUTPUT -> currentAudioOutputDescription() ?: effect.description
+                    EffectId.AUDIO_INPUT -> currentChannelInputDescription()
+                    else -> effect.description
+                }
             },
+            priorityFor = { effect -> currentPriorityFor(effect) },
         )
         recyclerView.adapter = adapter
         touchHelper.attachToRecyclerView(recyclerView)
@@ -199,6 +234,10 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
                 startActivity(android.content.Intent(this, AudioOutputActivity::class.java))
                 overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
             }
+            EffectId.AUDIO_INPUT -> {
+                startActivity(android.content.Intent(this, ChannelInputActivity::class.java))
+                overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+            }
             else -> { /* detail screens for the other effects land later */ }
         }
     }
@@ -210,11 +249,121 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Re-bind the Audio Output card so its description picks up
-        // any device that was connected / disconnected while this
-        // screen wasn't visible.
-        val pos = items.indexOf(EffectId.AUDIO_OUTPUT)
-        if (pos >= 0 && ::adapter.isInitialized) adapter.notifyItemChanged(pos)
+        // Re-bind the Audio Output + Channel Input cards so their
+        // descriptions pick up state that may have changed while this
+        // screen wasn't visible — current routed device for Audio
+        // Output, current routing mode for Channel Input.
+        if (::adapter.isInitialized) {
+            val outPos = items.indexOf(EffectId.AUDIO_OUTPUT)
+            if (outPos >= 0) adapter.notifyItemChanged(outPos)
+            val inPos = items.indexOf(EffectId.AUDIO_INPUT)
+            if (inPos >= 0) adapter.notifyItemChanged(inPos)
+        }
+    }
+
+    /** Tints the info button bright when the card is shown (lit
+     *  state, `colorOnSurface`) and dim when it's hidden
+     *  (`colorOnSurfaceVariant`). The dim color is the same one the
+     *  rest of the app uses for secondary glyphs, so the icon reads
+     *  as "off" at a glance. */
+    private fun updateInfoButtonTint(button: ImageButton, lit: Boolean) {
+        val attr = if (lit)
+            com.google.android.material.R.attr.colorOnSurface
+        else
+            com.google.android.material.R.attr.colorOnSurfaceVariant
+        val tint = com.google.android.material.color.MaterialColors.getColor(button, attr)
+        button.imageTintList = android.content.res.ColorStateList.valueOf(tint)
+    }
+
+    /** Smooth height-based show/hide for the info card. Same animation
+     *  feel as the Apps / Devices collapsible sections elsewhere in
+     *  the app — 500 ms FastOutSlowInInterpolator on the View's
+     *  `layoutParams.height` so the show / hide reads as a deliberate
+     *  slide rather than a pop. */
+    private fun toggleInfoCard(card: View) {
+        val expand = card.visibility != View.VISIBLE
+        val interp = androidx.interpolator.view.animation.FastOutSlowInInterpolator()
+        val duration = 500L
+        if (expand) {
+            card.visibility = View.VISIBLE
+            val parent = card.parent as View
+            val widthSpec = View.MeasureSpec.makeMeasureSpec(parent.width, View.MeasureSpec.EXACTLY)
+            val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            card.measure(widthSpec, heightSpec)
+            val target = card.measuredHeight
+            android.animation.ValueAnimator.ofInt(0, target).apply {
+                this.duration = duration
+                interpolator = interp
+                addUpdateListener {
+                    card.layoutParams.height = it.animatedValue as Int
+                    card.requestLayout()
+                }
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        card.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                        card.requestLayout()
+                    }
+                })
+                start()
+            }
+        } else {
+            val start = card.height
+            android.animation.ValueAnimator.ofInt(start, 0).apply {
+                this.duration = duration
+                interpolator = interp
+                addUpdateListener {
+                    card.layoutParams.height = it.animatedValue as Int
+                    card.requestLayout()
+                }
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        card.visibility = View.GONE
+                        card.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                        card.requestLayout()
+                    }
+                })
+                start()
+            }
+        }
+    }
+
+    /** Reads the persisted audio-routing-mode pref and returns the
+     *  user-facing label for the Channel Input pipeline card. Mode
+     *  0 = System-wide, 1 = Session-based. Stays in sync with the
+     *  chips inside ChannelInputActivity. */
+    private fun currentChannelInputDescription(): String =
+        when (eqPrefs.getAudioRoutingMode()) {
+            1 -> "Session-based"
+            else -> "System-wide"
+        }
+
+    /** Computes which scope is currently driving the audio for the
+     *  pipeline-screen priority pill. The hierarchy (highest first):
+     *    1. Session-based routing → Channel Input is in charge
+     *       (per-app DPs handle audio).
+     *    2. System-wide + Device auto-switch ON → Audio Output is in
+     *       charge (overwrites the global preset on route changes).
+     *    3. System-wide + Device auto-switch OFF → Channel Input is
+     *       in charge by default (the global session-0 mix is the
+     *       only scope doing anything; Channel Input represents that
+     *       entry point).
+     *  Returns null for every effect outside the two relevant cards;
+     *  the adapter then hides the pill on that card. */
+    private fun currentPriorityFor(effect: EffectId): CardPriority? {
+        val sessionBased = eqPrefs.getAudioRoutingMode() == 1
+        val autoSwitch = eqPrefs.getDeviceAutoSwitchEnabled()
+        // Audio Output wins only in the narrow System-wide + auto-
+        // switch ON window. Every other state hands Priority to
+        // Channel Input — including plain System-wide manual mode,
+        // since the global session-0 preset is the audio scope.
+        val outputWins = !sessionBased && autoSwitch
+        return when (effect) {
+            EffectId.AUDIO_INPUT ->
+                if (outputWins) CardPriority.NOT_PRIORITY else CardPriority.PRIORITY
+            EffectId.AUDIO_OUTPUT ->
+                if (outputWins) CardPriority.PRIORITY else CardPriority.NOT_PRIORITY
+            else -> null
+        }
     }
 
     /**
@@ -246,6 +395,11 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
 
     // ---- Adapter --------------------------------------------------------
 
+    /** Which card is currently driving the audio. Only Channel Input
+     *  and Audio Output participate; every other effect returns null
+     *  from [PipelineAdapter.priorityFor] and gets no indicator. */
+    private enum class CardPriority { PRIORITY, NOT_PRIORITY }
+
     private class PipelineAdapter(
         private val items: List<EffectId>,
         private val isEnabled: (EffectId) -> Boolean,
@@ -257,6 +411,10 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
          *  the static "Speakers, headphones, or other connected output"
          *  fallback. Defaults to the enum's `description`. */
         private val descriptionFor: (EffectId) -> String = { it.description },
+        /** Priority indicator for the Channel Input / Audio Output
+         *  cards. Returns null for every other effect (no indicator).
+         *  Resolved by the activity from routing-mode + auto-switch. */
+        private val priorityFor: (EffectId) -> CardPriority? = { null },
     ) : RecyclerView.Adapter<PipelineAdapter.ViewHolder>() {
 
         override fun getItemCount() = items.size
@@ -324,6 +482,7 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
                 ctx.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, tc, true)
                 setTextColor(tc.data)
             }
+            textCol.addView(title)
             val description = TextView(ctx).apply {
                 setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodySmall)
                 val tc = android.util.TypedValue()
@@ -331,9 +490,25 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
                 setTextColor(tc.data)
                 setPadding(0, (4 * density).toInt(), 0, 0)
             }
-            textCol.addView(title)
             textCol.addView(description)
             row.addView(textCol)
+
+            // Pill lives OUTSIDE textCol as a sibling of textCol in the
+            // horizontal row, so it inherits the row's CENTER_VERTICAL
+            // gravity — vertically centered against the combined height
+            // of (title + description), not pinned to the title's line.
+            val pill = TextView(ctx).apply {
+                setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_LabelSmall)
+                val padH = (12 * density).toInt()
+                val padV = (4 * density).toInt()
+                setPadding(padH, padV, padH, padV)
+                gravity = android.view.Gravity.CENTER
+                visibility = View.GONE
+            }
+            row.addView(pill, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { marginStart = (8 * density).toInt() })
 
             // Right-side power button — styled like the main Power FAB
             // (12dp rounded square with stroke). Background drawable is set
@@ -353,7 +528,7 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
             }
             row.addView(power)
 
-            return ViewHolder(card, title, description, handle, power)
+            return ViewHolder(card, title, description, handle, power, pill)
         }
 
         @SuppressLint("ClickableViewAccessibility")
@@ -411,6 +586,46 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
                 isClickable = true
                 isFocusable = true
             }
+
+            paintPriority(holder, priorityFor(effect))
+        }
+
+        /** Renders the priority affordance on a card. The card stroke
+         *  and left-edge stripe were considered earlier; both got
+         *  pulled in favor of just the outline-only pill, which carries
+         *  the same signal at a fraction of the visual noise. Cards
+         *  that don't participate (every effect except Channel Input /
+         *  Audio Output) pass [priority] = null and the pill collapses. */
+        private fun paintPriority(holder: ViewHolder, priority: CardPriority?) {
+            val ctx = holder.itemView.context
+            val density = ctx.resources.displayMetrics.density
+
+            if (priority == null) {
+                holder.pill.visibility = View.GONE
+                return
+            }
+
+            // Red for Not Priority stands out harder than yellow on
+            // the dark surface — flagged scopes shout, current scope
+            // affirms (green). Reuses the same Material Red 200 the
+            // "Now playing" idle-speaker icon uses, so the palette
+            // stays consistent.
+            val green = androidx.core.content.ContextCompat.getColor(ctx, R.color.pulse_active_green)
+            val red = androidx.core.content.ContextCompat.getColor(ctx, R.color.pulse_inactive_red)
+            val active = priority == CardPriority.PRIORITY
+            val accent = if (active) green else red
+
+            // Outline-only pill, vertically centered against the card
+            // row. Transparent fill with a colored stroke and matching
+            // text color so the label reads against the card background.
+            holder.pill.visibility = View.VISIBLE
+            holder.pill.text = if (active) "Priority" else "Not Priority"
+            holder.pill.setTextColor(accent)
+            holder.pill.background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = 100 * density
+                setColor(0x00000000)
+                setStroke((1.5f * density).toInt(), accent)
+            }
         }
 
         private fun paintPower(view: ImageView, enabled: Boolean) {
@@ -443,6 +658,7 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
             val description: TextView,
             val handle: ImageView,
             val power: ImageView,
+            val pill: TextView,
         ) : RecyclerView.ViewHolder(view)
     }
 

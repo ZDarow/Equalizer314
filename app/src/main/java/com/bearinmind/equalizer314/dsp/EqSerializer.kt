@@ -36,6 +36,20 @@ object EqSerializer {
         return arr
     }
 
+    /** Serialize bands with optional [slot] indices. When provided, each
+     *  band JSON includes a "slot" key. Keeps the index/slot association
+     *  across save/restore cycles for per-channel EQ layouts. */
+    fun bandsToJson(eq: ParametricEqualizer, slots: List<Int>): JSONArray {
+        val arr = JSONArray()
+        for (i in 0 until eq.getBandCount()) {
+            val band = eq.getBand(i) ?: continue
+            val json = bandToJson(band)
+            if (i < slots.size) json.put("slot", slots[i])
+            arr.put(json)
+        }
+        return arr
+    }
+
     /** Serialize a single [EqualizerBand] into a [JSONObject]. */
     fun bandToJson(band: ParametricEqualizer.EqualizerBand): JSONObject = JSONObject().apply {
         put("frequency", band.frequency.toDouble())

@@ -31,48 +31,95 @@
                 android:paddingTop="0dp"
                 android:paddingBottom="0dp">
 
-                <!-- EQ Mode Selector -->
+                <!-- EQ Mode Selector — 2×2 grid: Parametric / Graphic on
+                     the first row, Table / Simple on the second. Buttons
+                     are slimmed top-to-bottom (insets 0, small vertical
+                     padding) and the whole group is pushed down a touch
+                     so the graph below isn't crowded by the extra row. -->
                 <LinearLayout
                     android:id="@+id/modeSelectorGroup"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:layout_marginTop="12dp"
                     android:layout_marginBottom="8dp">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/modeParametricBtn"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="0dp"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginEnd="4dp"
-                        android:text="@string/eq_mode_parametric"
-                        android:textSize="12sp"
-                        app:cornerRadius="12dp" />
+                        android:orientation="horizontal">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/modeGraphicBtn"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="4dp"
-                        android:layout_marginEnd="4dp"
-                        android:text="@string/eq_mode_graphic"
-                        android:textSize="12sp"
-                        app:cornerRadius="12dp" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/modeParametricBtn"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
+                            android:text="@string/eq_mode_parametric"
+                            android:textSize="12sp"
+                            android:minHeight="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:paddingTop="7dp"
+                            android:paddingBottom="7dp"
+                            app:cornerRadius="12dp" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/modeTableBtn"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="0dp"
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/modeGraphicBtn"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="Graphic"
+                            android:textSize="12sp"
+                            android:minHeight="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:paddingTop="7dp"
+                            android:paddingBottom="7dp"
+                            app:cornerRadius="12dp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="4dp"
-                        android:text="@string/eq_mode_table"
-                        android:textSize="12sp"
-                        app:cornerRadius="12dp" />
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/modeTableBtn"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
+                            android:text="@string/eq_mode_table"
+                            android:textSize="12sp"
+                            android:minHeight="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:paddingTop="7dp"
+                            android:paddingBottom="7dp"
+                            app:cornerRadius="12dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/modeSimpleBtn"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="@string/eq_mode_simple"
+                            android:textSize="12sp"
+                            android:minHeight="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:paddingTop="7dp"
+                            android:paddingBottom="7dp"
+                            app:cornerRadius="12dp" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <!-- EQ Graph Card -->
@@ -95,6 +142,37 @@
                             android:layout_width="match_parent"
                             android:layout_height="246dp" />
 
+                        <!-- Active device + preset indicator overlay.
+                             Uses raw-pixel units (px) so it renders at
+                             the same physical size as the canvas-drawn
+                             band-info card in EqGraphView, which also
+                             uses raw pixels (textSize 20f, padH 14f,
+                             padV 8f). Same drawable / colours so the
+                             two read as siblings. Positioned 40px from
+                             the top so it sits just below the band
+                             card (band card rect.bottom = labelY 30 +
+                             padV 8 = 38). Both cards float together
+                             near the top edge of the graph. Text set
+                             by MainActivity.updateDevicePresetStatus(). -->
+                        <TextView
+                            android:id="@+id/devicePresetStatusText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="top|center_horizontal"
+                            android:layout_marginTop="40px"
+                            android:background="@drawable/band_label_card_bg"
+                            android:paddingStart="14px"
+                            android:paddingEnd="14px"
+                            android:paddingTop="8px"
+                            android:paddingBottom="8px"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="20px"
+                            android:singleLine="true"
+                            android:ellipsize="middle"
+                            android:maxWidth="280dp"
+                            android:includeFontPadding="false"
+                            android:visibility="gone" />
+
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/bandPointsToggle"
                             style="?attr/materialButtonOutlinedStyle"
@@ -111,11 +189,57 @@
                             app:icon="@drawable/ic_visibility"
                             app:iconGravity="textStart"
                             app:iconPadding="0dp"
-                            app:iconTint="@null"
+                            app:iconTint="?attr/colorOnSurface"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.MbcEqButton"
-                            app:strokeColor="#FF444444"
+                            app:strokeColor="?attr/colorOutline"
                             app:strokeWidth="1dp"
                             android:contentDescription="@string/cd_toggle_band_points" />
+
+                        <!-- View-options popout (revealed by the eye button,
+                             same animation as the edit popout). ON/OFF
+                             toggles the band-point dots; the fill icon
+                             toggles the per-band colored curves overlay. -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/bandPointsOnOffBtn"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="top|start"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:padding="0dp"
+                            android:text="ON"
+                            android:textSize="9sp"
+                            android:textAllCaps="true"
+                            android:visibility="gone"
+                            app:iconPadding="0dp"
+                            app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
+                            app:strokeColor="?attr/colorOutline"
+                            app:strokeWidth="1dp"
+                            android:contentDescription="Toggle band point visibility" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/bandFillToggle"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="top|start"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:padding="3dp"
+                            android:visibility="gone"
+                            app:icon="@drawable/ic_band_fill"
+                            app:iconGravity="textStart"
+                            app:iconPadding="0dp"
+                            app:iconTint="?attr/colorOnSurface"
+                            app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
+                            app:strokeColor="?attr/colorOutline"
+                            app:strokeWidth="1dp"
+                            android:contentDescription="Toggle per-band curves" />
 
 <com.google.android.material.button.MaterialButton
                             android:id="@+id/savePresetButton"
@@ -133,9 +257,9 @@
                             app:icon="@drawable/ic_save"
                             app:iconGravity="textStart"
                             app:iconPadding="0dp"
-                            app:iconTint="@null"
+                            app:iconTint="?attr/colorOnSurface"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
-                            app:strokeColor="#FF444444"
+                            app:strokeColor="?attr/colorOutline"
                             app:strokeWidth="1dp"
                             android:contentDescription="@string/cd_save_preset" />
 
@@ -155,9 +279,9 @@
                             app:icon="@drawable/ic_alt_route_right"
                             app:iconGravity="textStart"
                             app:iconPadding="0dp"
-                            app:iconTint="@null"
+                            app:iconTint="?attr/colorOnSurface"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
-                            app:strokeColor="#FF444444"
+                            app:strokeColor="?attr/colorOutline"
                             app:strokeWidth="1dp"
                             android:contentDescription="@string/cd_toggle_channel_routing" />
 
@@ -174,7 +298,7 @@
                             android:text="L"
                             android:textSize="6sp"
                             android:textStyle="bold"
-                            android:textColor="#FFE3E3E3"
+                            android:textColor="?attr/colorOnSurface"
                             android:includeFontPadding="false"
                             android:background="@drawable/bg_channel_badge"
                             android:paddingStart="2dp"
@@ -202,9 +326,9 @@
                             app:icon="@drawable/ic_settings_gear"
                             app:iconGravity="textStart"
                             app:iconPadding="0dp"
-                            app:iconTint="@null"
+                            app:iconTint="?attr/colorOnSurface"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
-                            app:strokeColor="#FF444444"
+                            app:strokeColor="?attr/colorOutline"
                             app:strokeWidth="1dp"
                             android:contentDescription="@string/cd_open_settings" />
 
@@ -222,11 +346,11 @@
                             android:minHeight="0dp"
                             android:padding="3dp"
                             android:text="@string/channel_l"
-                            android:textColor="#FFBBBBBB"
+                            android:textColor="?attr/colorOnSurfaceVariant"
                             android:textSize="12sp"
                             android:visibility="gone"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
-                            app:strokeColor="#FF444444"
+                            app:strokeColor="?attr/colorOutline"
                             app:strokeWidth="1dp"
                             android:contentDescription="@string/cd_left_channel" />
 
@@ -244,11 +368,11 @@
                             android:minHeight="0dp"
                             android:padding="3dp"
                             android:text="@string/channel_r"
-                            android:textColor="#FFBBBBBB"
+                            android:textColor="?attr/colorOnSurfaceVariant"
                             android:textSize="12sp"
                             android:visibility="gone"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
-                            app:strokeColor="#FF444444"
+                            app:strokeColor="?attr/colorOutline"
                             app:strokeWidth="1dp"
                             android:contentDescription="@string/cd_right_channel" />
 
@@ -267,9 +391,9 @@
                             app:iconSize="16dp"
                             app:iconGravity="textStart"
                             app:iconPadding="0dp"
-                            app:iconTint="@null"
+                            app:iconTint="?attr/colorOnSurface"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
-                            app:strokeColor="#FF444444"
+                            app:strokeColor="?attr/colorOutline"
                             app:strokeWidth="1dp"
                             android:contentDescription="@string/cd_reset_to_defaults" />
 
@@ -288,9 +412,9 @@
                             app:icon="@drawable/ic_undo"
                             app:iconGravity="textStart"
                             app:iconPadding="0dp"
-                            app:iconTint="@null"
+                            app:iconTint="?attr/colorOnSurface"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
-                            app:strokeColor="#FF444444"
+                            app:strokeColor="?attr/colorOutline"
                             app:strokeWidth="1dp"
                             android:contentDescription="@string/cd_undo" />
 
@@ -309,9 +433,9 @@
                             app:icon="@drawable/ic_redo"
                             app:iconGravity="textStart"
                             app:iconPadding="0dp"
-                            app:iconTint="@null"
+                            app:iconTint="?attr/colorOnSurface"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
-                            app:strokeColor="#FF444444"
+                            app:strokeColor="?attr/colorOutline"
                             app:strokeWidth="1dp"
                             android:contentDescription="@string/cd_redo" />
 
@@ -329,11 +453,35 @@
                             app:icon="@drawable/ic_edit"
                             app:iconGravity="textStart"
                             app:iconPadding="0dp"
-                            app:iconTint="@null"
+                            app:iconTint="?attr/colorOnSurface"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
-                            app:strokeColor="#FF444444"
+                            app:strokeColor="?attr/colorOutline"
                             app:strokeWidth="1dp"
                             android:contentDescription="@string/cd_edit" />
+
+                        <!-- EQ on/off toggle. Positioned at runtime in the
+                             reset slot (immediately left of Edit) by the
+                             eqGraphView.post block in MainActivity. Mirrors
+                             the existing eqToggleButton ("EQ: ON/OFF"). -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/eqPowerToggle"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="top|end"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:padding="0dp"
+                            android:text="OFF"
+                            android:textSize="9sp"
+                            android:textAllCaps="true"
+                            app:iconPadding="0dp"
+                            app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
+                            app:strokeColor="?attr/colorOutline"
+                            app:strokeWidth="1dp"
+                            android:contentDescription="Toggle EQ on or off" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/visualizerToggle"
@@ -349,9 +497,9 @@
                             app:icon="@drawable/ic_spectrum"
                             app:iconGravity="textStart"
                             app:iconPadding="0dp"
-                            app:iconTint="@null"
+                            app:iconTint="?attr/colorOnSurface"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.SpectrumButton"
-                            app:strokeColor="#FF444444"
+                            app:strokeColor="?attr/colorOutline"
                             app:strokeWidth="1dp"
                             android:contentDescription="@string/cd_toggle_visualizer" />
                     </FrameLayout>
@@ -524,8 +672,8 @@
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:valueFrom="-12"
-                                    android:valueTo="12"
+                                    android:valueFrom="-20"
+                                    android:valueTo="20"
                                     android:value="0"
                                     app:labelBehavior="gone" />
 
@@ -854,12 +1002,15 @@
                     android:paddingEnd="16dp"
                     android:paddingBottom="16dp">
 
-                <!-- AutoEQ Card -->
+                <!-- Presets & Conversions — opens a sub-screen grouping
+                     AutoEQ & Presets, Generate Custom EQ, and Convert to APO. -->
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/autoEqCard"
+                    android:id="@+id/presetsConversionsCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
+                    android:clickable="true"
+                    android:focusable="true"
                     app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="0dp"
@@ -879,7 +1030,6 @@
                             android:textColor="?attr/colorOnSurface" />
 
                         <TextView
-                            android:id="@+id/autoEqStatusText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="@string/status_select_or_import_preset"
@@ -959,9 +1109,9 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Simple EQ Card -->
+                <!-- Light Theme Card -->
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/simpleEqCard"
+                    android:id="@+id/themeCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
@@ -986,21 +1136,21 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="@string/simple_eq_mode"
+                                android:text="@string/settings_light_theme"
                                 android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                                 android:textColor="?attr/colorOnSurface" />
 
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="@string/settings_simple_eq_desc"
+                                android:text="@string/settings_light_theme_desc"
                                 android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                                 android:textColor="?attr/colorOnSurfaceVariant"
                                 android:paddingTop="4dp" />
                         </LinearLayout>
 
                         <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/simpleEqSwitch"
+                            android:id="@+id/themeSwitch"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="16dp" />
@@ -1051,10 +1201,10 @@ android:text="@string/title_channel_side_options"
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Convert to APO format — opens a screen that converts
-                     Wavelet / Poweramp EQ exports to APO config text. -->
+                <!-- Backup & Restore — export/import all settings, presets,
+                     and bindings so they survive a reinstall / source switch. -->
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/convertToApoCard"
+                    android:id="@+id/backupRestoreCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
@@ -1081,14 +1231,14 @@ android:text="@string/title_channel_side_options"
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-android:text="@string/title_convert_to_apo"
-                                 android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                                 android:textColor="?attr/colorOnSurface" />
+                                android:text="@string/title_backup_restore"
+                                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                                android:textColor="?attr/colorOnSurface" />
 
-                             <TextView
-                                 android:layout_width="match_parent"
-                                 android:layout_height="wrap_content"
-                                 android:text="@string/convert_desc"
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/backup_restore_desc"
                                 android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                                 android:textColor="?attr/colorOnSurfaceVariant"
                                 android:paddingTop="4dp" />
@@ -1142,6 +1292,61 @@ android:text="@string/title_convert_to_apo"
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- Auto-Gain Card — clip protection (auto headroom). On by default.
+                     Same compact layout as the Experimental card for size parity. -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Gain Reduction"
+                                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                                android:textColor="?attr/colorOnSurface" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Automatically reduces gain to prevent clipping"
+                                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                                android:textColor="?attr/colorOnSurfaceVariant"
+                                android:paddingTop="4dp" />
+                        </LinearLayout>
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/autoGainSwitch"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp" />
+
+                        <!-- Hidden — kept so MainActivity's offset-readout code keeps working -->
+                        <TextView
+                            android:id="@+id/autoGainOffsetText"
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            android:visibility="gone" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/experimentalCard"
                     android:layout_width="match_parent"
@@ -1191,7 +1396,7 @@ android:text="@string/title_experimental"
                             android:background="@drawable/bg_icon_outline_ripple"
                             android:scaleType="centerInside"
                             android:contentDescription="@string/cd_lock_experimental"
-                            app:tint="#FFBBBBBB" />
+                            app:tint="?attr/colorOnSurfaceVariant" />
 
                         <!-- Hidden views kept for code references -->
                         <com.google.android.material.button.MaterialButton
@@ -1366,61 +1571,6 @@ android:text="@string/preamp_label"
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Auto-Gain Card (hidden — moved to Experimental screen) -->
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:visibility="gone"
-                    android:layout_marginBottom="12dp"
-                    app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="0dp"
-                    app:strokeWidth="0dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="16dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-android:text="@string/settings_auto_gain"
-                                 android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                                 android:textColor="?attr/colorOnSurface" />
-
-                            <com.google.android.material.materialswitch.MaterialSwitch
-                                android:id="@+id/autoGainSwitch"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content" />
-                        </LinearLayout>
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="@string/settings_auto_gain_desc"
-                            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:paddingTop="4dp" />
-
-                        <TextView
-                            android:id="@+id/autoGainOffsetText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Offset: 0.0 dB"
-                            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:paddingTop="2dp" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
 
                 <!-- Old inline limiter controls removed — now in LimiterActivity -->
 

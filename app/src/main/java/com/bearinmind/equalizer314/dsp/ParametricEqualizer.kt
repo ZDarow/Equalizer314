@@ -66,7 +66,13 @@ class ParametricEqualizer(private val sampleRate: Int = 48000) {
         bands.add(band)
 
         val filter = BiquadFilter(frequency, gain, filterType, sampleRate, q).apply {
-            useVicanekMethod = true
+            // RBJ bell (not Vicanek). RBJ's +G and -G peaking filters are
+            // exact inverses (numerator↔denominator swap via A and 1/A),
+            // so opposite bells cancel perfectly — in the graph AND the
+            // audio (the DP converter samples this same response). Vicanek
+            // matched only DC/center/Nyquist, leaving ripple between them
+            // that broke cancellation (issue #41).
+            useVicanekMethod = false
         }
         filters.add(filter)
     }
@@ -76,7 +82,13 @@ class ParametricEqualizer(private val sampleRate: Int = 48000) {
         bands.add(index, band)
 
         val filter = BiquadFilter(frequency, gain, filterType, sampleRate, q).apply {
-            useVicanekMethod = true
+            // RBJ bell (not Vicanek). RBJ's +G and -G peaking filters are
+            // exact inverses (numerator↔denominator swap via A and 1/A),
+            // so opposite bells cancel perfectly — in the graph AND the
+            // audio (the DP converter samples this same response). Vicanek
+            // matched only DC/center/Nyquist, leaving ripple between them
+            // that broke cancellation (issue #41).
+            useVicanekMethod = false
         }
         filters.add(index, filter)
     }
@@ -148,6 +160,18 @@ class ParametricEqualizer(private val sampleRate: Int = 48000) {
         }
 
         return 20f * kotlin.math.log10(totalMagnitude.coerceAtLeast(0.0001f))
+    }
+
+    /** Response of a single band in dB at [frequency]. Used by the
+     *  graph's per-band curve overlay (issue #40) to draw each
+     *  filter's individual contribution under the summed white curve.
+     *  Returns 0 dB for an out-of-range index or a disabled band so
+     *  callers can skip drawing flat lines. */
+    fun getBandFrequencyResponse(index: Int, frequency: Float): Float {
+        val filter = filters.getOrNull(index) ?: return 0f
+        if (bands.getOrNull(index)?.enabled != true) return 0f
+        val magnitude = filter.getFrequencyResponse(frequency)
+        return 20f * kotlin.math.log10(magnitude.coerceAtLeast(0.0001f))
     }
 
     /**

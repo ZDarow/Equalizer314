@@ -52,7 +52,9 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Description card -->
+            <!-- Description card — temporarily hidden. The plan is to
+                 surface this copy as a tooltip on the screen header
+                 down the road, so the markup stays for reference.
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -71,6 +73,12 @@
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:textColor="?attr/colorOnSurfaceVariant" />
             </com.google.android.material.card.MaterialCardView>
+            -->
+
+            <!-- Master toggle for device-binding auto-switching. Sits
+                 above the device sections the same way Channel Input's
+                 "Session detection" card sits above its lists. -->
+            <include layout="@layout/card_device_auto_switch" />
 
             <!-- Section label sits OUTSIDE the card, like every other
                  section header on this screen. -->
@@ -161,13 +169,13 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="?attr/selectableItemBackground"
+                android:background="@drawable/ripple_rounded_header"
                 android:clickable="true"
                 android:focusable="true"
-                android:paddingStart="4dp"
-                android:paddingEnd="4dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp">
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
 
                 <TextView
                     android:layout_width="0dp"
@@ -182,7 +190,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="▸"
-                    android:textSize="14sp"
+                    android:textSize="22sp"
                     android:textColor="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
 

@@ -281,4 +281,18 @@
     <!-- Spectrum extra -->
     <string name="spectrum_release">Spectrum Release</string>
     <string name="spectrum_release_desc">Controls how fast the spectrum falls after a peak. Lower = slower, smoother falloff</string>
+
+    <!-- EQ Mode -->
+    <string name="eq_mode_simple">Simple</string>
+
+    <!-- Settings: Light Theme -->
+    <string name="settings_light_theme">Light Theme</string>
+    <string name="settings_light_theme_desc">Switch between light &amp; dark mode</string>
+
+    <!-- Settings: Backup & Restore -->
+    <string name="title_backup_restore">Backup &amp; Restore</string>
+    <string name="backup_restore_desc">Backup and restore settings, presets &amp; bindings</string>
+
+    <!-- Error messages -->
+    <string name="msg_err_parse_eq">Couldn\'t parse the generated EQ</string>
 </resources>
