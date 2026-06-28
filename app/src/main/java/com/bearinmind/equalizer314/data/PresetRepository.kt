@@ -15,26 +15,34 @@ class PresetRepository private constructor(
     /** Observe all presets sorted by last-updated (newest first). */
     val allPresets: Flow<List<PresetEntity>> = dao.observeAll()
 
-    /** All preset names. */
+    /** All preset names — delegates to [PresetDao.getAllNames]. */
     suspend fun getAllNames(): List<String> = dao.getAllNames()
 
-    /** Get a single preset. */
+    /** Get a single preset by name, or null when not found. */
     suspend fun getByName(name: String): PresetEntity? = dao.getByName(name)
 
     /** Save (insert or replace) a preset. */
     suspend fun save(preset: PresetEntity) = dao.upsert(preset)
 
-    /** Delete a preset. */
+    /** Delete a preset by name. */
     suspend fun deleteByName(name: String) = dao.deleteByName(name)
 
-    /** Count of stored presets. */
+    /** Total number of stored presets. */
     suspend fun count(): Int = dao.count()
 
-    /** Build a [PresetEntity] from legacy SharedPreferences JSON. */
+    /**
+     * Build a [PresetEntity] from legacy SharedPreferences JSON format.
+     * @param name  preset name
+     * @param json  legacy JSON string (parametric or simple-EQ)
+     */
     fun fromLegacyJson(name: String, json: String): PresetEntity =
         PresetConverter.fromLegacyJson(name, json)
 
-    /** Convert back to legacy SharedPreferences JSON. */
+    /**
+     * Serialize a [PresetEntity] back to legacy SharedPreferences JSON.
+     * @param preset  the entity to convert
+     * @return JSON string in legacy format
+     */
     fun toLegacyJson(preset: PresetEntity): String =
         PresetConverter.toLegacyJson(preset)
 
@@ -42,6 +50,10 @@ class PresetRepository private constructor(
         @Volatile
         private var instance: PresetRepository? = null
 
+        /**
+         * Thread-safe singleton accessor.
+         * @param context  application context (used only on first call)
+         */
         fun getInstance(context: Context): PresetRepository {
             return instance ?: synchronized(this) {
                 instance ?: PresetRepository(

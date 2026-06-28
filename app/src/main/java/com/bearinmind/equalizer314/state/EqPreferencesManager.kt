@@ -8,14 +8,23 @@ import com.bearinmind.equalizer314.dsp.ParametricEqualizer
 import org.json.JSONArray
 import org.json.JSONObject
 
+/**
+ * Persistence layer for all EQ settings.
+ *
+ * Backed by four [SharedPreferences] files:
+ * - `eq_settings` — core EQ state, limiter, MBC, spectrum, theme, etc.
+ * - `device_bindings` — per-Bluetooth-device preset auto-switching.
+ * - `app_bindings` — per-app (session-broadcast) preset binding.
+ * - `custom_presets` — shared preset pool used by all EQ modes.
+ */
 class EqPreferencesManager(context: Context) {
 
     private val prefs = context.getSharedPreferences("eq_settings", Context.MODE_PRIVATE)
     private val bindingsPrefs = context.getSharedPreferences("device_bindings", Context.MODE_PRIVATE)
     private val appBindingsPrefs = context.getSharedPreferences("app_bindings", Context.MODE_PRIVATE)
-    // The single shared custom-preset pool — the same file the advanced
-    // (Parametric/Graphic/Table), AutoEQ, and device-binding code use.
-    // Simple-mode presets live here too so all four modes share one pool.
+    /** The single shared custom-preset pool — the same file the advanced
+     *  (Parametric/Graphic/Table), AutoEQ, and device-binding code use.
+     *  Simple-mode presets live here too so all four modes share one pool. */
     private val customPresetsPrefs = context.getSharedPreferences("custom_presets", Context.MODE_PRIVATE)
 
     init {
@@ -51,6 +60,8 @@ class EqPreferencesManager(context: Context) {
      *  OPEN_AUDIO_EFFECT_CONTROL_SESSION. */
     data class AppBinding(val packageName: String, val presetName: String)
 
+    /** Persist the full EQ band array (with optional slot indices) and the enabled
+     *  flag to [prefs]. Used to save the active EQ on state changes. */
     fun saveState(eq: ParametricEqualizer, slots: List<Int>? = null) {
         // Use EqSerializer for core band → JSON conversion
         val bandsJson = EqSerializer.bandsToJson(eq)
@@ -70,6 +81,8 @@ class EqPreferencesManager(context: Context) {
             .apply()
     }
 
+    /** Restore the previously saved EQ band array + enabled flag into [eq].
+     *  No-op when no saved state exists. */
     fun restoreState(eq: ParametricEqualizer) {
         val bandsStr = prefs.getString("bands", null) ?: return
         if (!EqSerializer.loadBandsTo(eq, bandsStr)) return
@@ -82,6 +95,7 @@ class EqPreferencesManager(context: Context) {
      *  status label can read it without rebuilding the whole EQ. */
     fun getEqEnabled(): Boolean = prefs.getBoolean("eqEnabled", true)
 
+    /** Persist the EQ enabled/disabled flag independently. */
     fun saveEqEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("eqEnabled", enabled).apply()
     }
@@ -104,10 +118,12 @@ class EqPreferencesManager(context: Context) {
         return ok
     }
 
+    /** Persist the left-channel EQ bands (CSE mode). */
     fun saveLeftBands(eq: ParametricEqualizer, slots: List<Int>? = null) {
         prefs.edit().putString("leftBands", serializeBands(eq, slots)).apply()
     }
 
+    /** Persist the right-channel EQ bands (CSE mode). */
     fun saveRightBands(eq: ParametricEqualizer, slots: List<Int>? = null) {
         prefs.edit().putString("rightBands", serializeBands(eq, slots)).apply()
     }
@@ -120,6 +136,8 @@ class EqPreferencesManager(context: Context) {
         return loadBands(eq, s)
     }
 
+    /** Populate [eq] from the `rightBands` pref. Returns true when the pref
+     *  existed and parsed successfully. */
     fun restoreRightBands(eq: ParametricEqualizer): Boolean {
         val s = prefs.getString("rightBands", null) ?: return false
         return loadBands(eq, s)
@@ -133,6 +151,7 @@ class EqPreferencesManager(context: Context) {
         prefs.edit().remove("leftBands").remove("rightBands").apply()
     }
 
+    /** Retrieve the saved slot indices for the shared "both" EQ bands, or null if absent. */
     fun getSavedSlots(): List<Int>? = parseSavedSlots(prefs.getString("bands", null))
 
     /** Per-channel slot layouts, parsed from the same `slot` field embedded in
@@ -140,6 +159,7 @@ class EqPreferencesManager(context: Context) {
      *  never saved) so callers fall back to a sequential layout. */
     fun getSavedLeftSlots(): List<Int>? = parseSavedSlots(prefs.getString("leftBands", null))
 
+    /** Retrieve the saved slot indices for the right-channel bands, or null if absent. */
     fun getSavedRightSlots(): List<Int>? = parseSavedSlots(prefs.getString("rightBands", null))
 
     /** Extract the `slot` field from a serialized band array. Returns null if
@@ -159,18 +179,21 @@ class EqPreferencesManager(context: Context) {
         }
     }
 
+    /** Persist the currently selected preset name. */
     fun savePresetName(name: String) {
         prefs.edit().putString("presetName", name).apply()
     }
 
     fun getPresetName(): String = prefs.getString("presetName", "Flat") ?: "Flat"
 
+    /** Persist the number of bands allocated in DynamicsProcessing. */
     fun saveDpBandCount(count: Int) {
         prefs.edit().putInt("dpBandCount", count).apply()
     }
 
     fun getDpBandCount(): Int = prefs.getInt("dpBandCount", 128)
 
+    /** Persist the active EQ UI mode (PARAMETRIC / GRAPHIC / TABLE / SIMPLE). */
     fun saveEqUiMode(mode: String) {
         prefs.edit().putString("eqUiMode", mode).apply()
     }
@@ -180,6 +203,7 @@ class EqPreferencesManager(context: Context) {
         return if (mode == "TYPED") "TABLE" else mode
     }
 
+    /** Persist the slot→colour mapping as a JSON object. */
     fun saveBandColors(colors: Map<Int, Int>) {
         val json = JSONObject()
         for ((slot, color) in colors) {
@@ -188,6 +212,7 @@ class EqPreferencesManager(context: Context) {
         prefs.edit().putString("bandColors", json.toString()).apply()
     }
 
+    /** Restore the saved slot→colour mapping, or empty map when none exists. */
     fun getBandColors(): Map<Int, Int> {
         val str = prefs.getString("bandColors", null) ?: return emptyMap()
         val json = JSONObject(str)
@@ -238,6 +263,8 @@ class EqPreferencesManager(context: Context) {
     fun getSpectrumEnabled(): Boolean = prefs.getBoolean("spectrumEnabled", false)
 
     // Imported presets (stored as JSON array of names + raw text stored per preset)
+    /** Import a text-based preset (e.g. APO format) and store it. Replaces any
+     *  existing preset with the same [name]. */
     fun addImportedPreset(name: String, rawText: String) {
         val list = getImportedPresets().toMutableList()
         list.removeAll { it == name }
@@ -247,6 +274,7 @@ class EqPreferencesManager(context: Context) {
             .putString("importedPreset_$name", rawText)
             .apply()
     }
+    /** Remove an imported preset by name. */
     fun removeImportedPreset(name: String) {
         val list = getImportedPresets().toMutableList()
         list.remove(name)
@@ -297,6 +325,7 @@ class EqPreferencesManager(context: Context) {
     // here; the chain executor reads this back to know which effects run
     // and in what order. Stored as a comma-separated list because the set
     // is small and stable.
+    /** Persist the drag-reordered audio effects pipeline as a comma-separated list. */
     fun saveAudioEffectsOrder(order: List<String>) {
         prefs.edit().putString("audioEffectsOrder", order.joinToString(",")).apply()
     }
@@ -339,6 +368,7 @@ class EqPreferencesManager(context: Context) {
     fun getReverbDensityPct(): Float = prefs.getFloat("reverbDensityPct", 100f)
 
     // Imported targets (stored as JSON array of names)
+    /** Import a target-curve file and store it. */
     fun addImportedTarget(name: String, rawText: String = "") {
         val list = getImportedTargets().toMutableList()
         list.removeAll { it == name }
@@ -348,6 +378,7 @@ class EqPreferencesManager(context: Context) {
         editor.apply()
     }
     fun getImportedTargetText(name: String): String? = prefs.getString("importedTarget_$name", null)
+    /** Remove an imported target by name. */
     fun removeImportedTarget(name: String) {
         val list = getImportedTargets().toMutableList()
         list.remove(name)
@@ -363,6 +394,7 @@ class EqPreferencesManager(context: Context) {
     }
 
     // Imported measurements
+    /** Import a measurement file (e.g. FR from a sweep) and store it. */
     fun addImportedMeasurement(name: String, rawText: String) {
         val list = getImportedMeasurements().toMutableList()
         list.removeAll { it == name }
@@ -372,6 +404,7 @@ class EqPreferencesManager(context: Context) {
             .putString("importedMeas_$name", rawText)
             .apply()
     }
+    /** Remove an imported measurement by name. */
     fun removeImportedMeasurement(name: String) {
         val list = getImportedMeasurements().toMutableList()
         list.remove(name)
@@ -412,6 +445,7 @@ class EqPreferencesManager(context: Context) {
     fun getAutoEqSource(): String? = prefs.getString("autoEqSource", null)
 
     // Generated Custom EQ persistence
+    /** Persist an AutoEQ-generated EQ (APO text + timestamp). */
     fun saveGeneratedEq(apoText: String, timestamp: String) {
         prefs.edit().putString("generatedEqApo", apoText).putString("generatedEqTimestamp", timestamp).apply()
     }
@@ -441,6 +475,7 @@ class EqPreferencesManager(context: Context) {
     fun saveMbcBandCount(count: Int) { prefs.edit().putInt("mbcBandCount", count).apply() }
     fun getMbcBandCount(): Int = prefs.getInt("mbcBandCount", 3)
 
+    /** Persist parameters for a single MBC band to SharedPreferences. */
     fun saveMbcBand(i: Int, enabled: Boolean, cutoff: Float, attack: Float, release: Float,
                     ratio: Float, threshold: Float, knee: Float, noiseGate: Float,
                     expander: Float, preGain: Float, postGain: Float, range: Float) {
@@ -534,10 +569,13 @@ class EqPreferencesManager(context: Context) {
     //   • Loading any preset INTO Simple samples that preset's composite
     //     response at the 10 Simple frequencies, so even an arbitrary
     //     parametric/AutoEQ preset renders as its best 10-bar match.
+    /** Returns all custom preset names (shared pool, sorted alphabetically). */
     fun getSimpleEqPresetNames(): List<String> {
         return (customPresetsPrefs.getStringSet("preset_names", emptySet()) ?: emptySet()).sorted()
     }
 
+    /** Convert 10-band Simple-mode [gains] into a full JSON preset and save it to
+     *  the shared custom-preset pool. */
     fun saveSimpleEqPreset(name: String, gains: FloatArray, preamp: Float = 0f) {
         val bands = JSONArray()
         for (i in SIMPLE_FREQS.indices) {
@@ -606,6 +644,7 @@ class EqPreferencesManager(context: Context) {
         } catch (_: Exception) { null }
     }
 
+    /** Delete a preset from the shared pool. */
     fun deleteSimpleEqPreset(name: String) {
         val names = (customPresetsPrefs.getStringSet("preset_names", emptySet()) ?: emptySet()).toMutableSet() - name
         customPresetsPrefs.edit()
@@ -667,6 +706,7 @@ class EqPreferencesManager(context: Context) {
 
     // ---- Device bindings (per-output-device EQ auto-switching) ----
 
+    /** Persist a device→preset binding. */
     fun saveDeviceBinding(b: Binding) {
         val json = JSONObject()
             .put("key", b.key)
@@ -675,6 +715,7 @@ class EqPreferencesManager(context: Context) {
         bindingsPrefs.edit().putString("binding_${b.key}", json.toString()).apply()
     }
 
+    /** Look up a device binding by its stable identity key. */
     fun getDeviceBinding(key: String): Binding? {
         val str = bindingsPrefs.getString("binding_$key", null) ?: return null
         return runCatching {
@@ -683,6 +724,7 @@ class EqPreferencesManager(context: Context) {
         }.getOrNull()
     }
 
+    /** Return all stored device bindings. */
     fun getAllDeviceBindings(): List<Binding> {
         val out = mutableListOf<Binding>()
         for ((k, _) in bindingsPrefs.all) {
@@ -696,6 +738,7 @@ class EqPreferencesManager(context: Context) {
         return out
     }
 
+    /** Remove a device binding by key. */
     fun removeDeviceBinding(key: String) {
         bindingsPrefs.edit().remove("binding_$key").apply()
     }
@@ -753,6 +796,7 @@ class EqPreferencesManager(context: Context) {
 
     // ---- App bindings (per-package EQ on session-open broadcasts) ----
 
+    /** Persist an app→preset binding. */
     fun saveAppBinding(binding: AppBinding) {
         val json = JSONObject()
             .put("packageName", binding.packageName)
@@ -760,6 +804,7 @@ class EqPreferencesManager(context: Context) {
         appBindingsPrefs.edit().putString("binding_${binding.packageName}", json.toString()).apply()
     }
 
+    /** Look up an app binding by package name. */
     fun getAppBinding(packageName: String): AppBinding? {
         val str = appBindingsPrefs.getString("binding_$packageName", null) ?: return null
         return runCatching {
@@ -768,6 +813,7 @@ class EqPreferencesManager(context: Context) {
         }.getOrNull()
     }
 
+    /** Return all stored app bindings. */
     fun getAllAppBindings(): List<AppBinding> {
         val out = mutableListOf<AppBinding>()
         for ((k, _) in appBindingsPrefs.all) {
@@ -781,6 +827,7 @@ class EqPreferencesManager(context: Context) {
         return out
     }
 
+    /** Remove an app binding by package name. */
     fun removeAppBinding(packageName: String) {
         appBindingsPrefs.edit().remove("binding_$packageName").apply()
     }

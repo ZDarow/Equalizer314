@@ -195,6 +195,11 @@ class PresetManager(private val prefs: SharedPreferences) {
 
 /**
  * Result of parsing a stored preset.
+ *
+ * @property cseOn Whether the preset stores separate left/right band configurations.
+ * @property bothBands Bands for the shared channel (used when CSE is off).
+ * @property leftBands Bands for the left channel (used when CSE is on).
+ * @property rightBands Bands for the right channel (used when CSE is on).
  */
 interface ParsedPreset {
     val cseOn: Boolean

@@ -15,19 +15,33 @@ import com.bearinmind.equalizer314.ui.EqGraphView
 import com.bearinmind.equalizer314.EqUiMode
 import com.bearinmind.equalizer314.R
 
+/**
+ * Core state coordinator for the EQ engine.
+ *
+ * Owns the three [ParametricEqualizer] instances (shared, left, right), manages audio
+ * service binding, and drives the [ParametricToDpConverter] bridge. High-level
+ * operations (init, preset load, start/stop) are triggered from [EqViewModel].
+ *
+ * @param context Application context for service binding and preferences.
+ * @param eqPrefs Persistence layer for all EQ settings.
+ */
 class EqStateManager(
     private val context: Context,
     val eqPrefs: EqPreferencesManager
 ) {
     companion object {
+        /** Maximum number of EQ bands supported. */
         const val MAX_BANDS = 16
+        /** Minimum number of EQ bands supported. */
         const val MIN_BANDS = 1
+        /** Default palette of 8 colours assigned to bands in round-robin. */
         val COLOR_PALETTE = intArrayOf(
             0xFFE53935.toInt(), 0xFFFF9800.toInt(), 0xFFFFEB3B.toInt(), 0xFF4CAF50.toInt(),
             0xFF00BCD4.toInt(), 0xFF2196F3.toInt(), 0xFF7C4DFF.toInt(), 0xFFE91E63.toInt()
         )
     }
 
+    /** Which channel the current editing session targets. */
     enum class ActiveChannel { BOTH, LEFT, RIGHT }
 
     // Query the device's actual audio output sample rate so the biquad
@@ -133,6 +147,8 @@ class EqStateManager(
         ParametricEqualizer.logSpacedFrequencies(MAX_BANDS)
     }
 
+    /** Initialise the three EQ instances from persisted state, restore preamp,
+     *  limiter, and channel-side settings, then attach everything to [graphView]. */
     fun initEq(graphView: EqGraphView) {
         bothEq.isEnabled = true
         eqPrefs.restoreState(bothEq)
@@ -198,6 +214,8 @@ class EqStateManager(
         }
     }
 
+    /** Push the full current EQ band state + preamp + channel balance to the
+     *  live [DynamicsProcessor]. No-op when processing is off. */
     fun pushEqUpdate() {
         if (!isProcessing) return
         val dm = eqService?.dynamicsManager ?: return
@@ -367,6 +385,7 @@ class EqStateManager(
         dm.updateChannelSettings()
     }
 
+    /** Push limiter parameters to the live DynamicsProcessor. No-op when processing is off. */
     fun pushLimiterUpdate() {
         if (!isProcessing) return
         val dm = eqService?.dynamicsManager ?: return
@@ -379,11 +398,13 @@ class EqStateManager(
         dm.updateLimiter()
     }
 
+    /** Return the last auto-gain offset computed by the DynamicsProcessor, or 0 if idle. */
     fun getAutoGainOffset(): Float {
         return eqService?.dynamicsManager?.lastAutoGainOffset ?: 0f
     }
 
 
+    /** Load a stored preset by name into the current EQ and refresh the graph. */
     fun loadPreset(name: String, graphView: EqGraphView) {
         parametricEq.loadPreset(name)
         graphView.updateBandLevels()
@@ -391,6 +412,9 @@ class EqStateManager(
         pushEqUpdate()
     }
 
+    /** Request EQ processing to start. Checks Android version and notification
+     *  permission, then launches [EqService] and binds to it. When the service is
+     *  already bound, calls [doStartEq] immediately. */
     fun startProcessing(doStartEq: () -> Unit, animatePower: (Boolean) -> Unit) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
             Toast.makeText(context, "DynamicsProcessing requires Android 9+", Toast.LENGTH_LONG).show()
@@ -418,6 +442,8 @@ class EqStateManager(
         }
     }
 
+    /** Sync all DSP params (preamp, limiter, MBC) to the bound service and start
+     *  DynamicsProcessing. In CSE mode the distinct L/R EQs are also pushed. */
     fun doStartEq(animatePower: (Boolean) -> Unit) {
         val service = eqService ?: return
         // Sync all DSP params before starting
@@ -462,6 +488,8 @@ class EqStateManager(
         }
     }
 
+    /** Unbind the service and stop it. Unbinding first avoids a race where the
+     *  service is destroyed before the unbind completes. */
     fun stopProcessing(animatePower: (Boolean) -> Unit) {
         animatePower(false)
         // Unbind first, then stop: unbindService triggers onServiceDisconnected
@@ -476,6 +504,7 @@ class EqStateManager(
         isProcessing = false
     }
 
+    /** Map a [BiquadFilter.FilterType] to its corresponding drawable resource ID. */
     fun getFilterIconRes(filterType: BiquadFilter.FilterType): Int {
         return when (filterType) {
             BiquadFilter.FilterType.BELL -> R.drawable.ic_filter_bell
@@ -493,6 +522,7 @@ class EqStateManager(
         }
     }
 
+    /** Look up the icon resource for the filter type at the given band [index]. */
     fun getFilterIconForBand(index: Int): Int? {
         val filterType = parametricEq.getBand(index)?.filterType ?: return null
         return getFilterIconRes(filterType)

@@ -24,8 +24,13 @@ import androidx.room.RoomDatabase
 )
 abstract class EqDatabase : RoomDatabase() {
 
+    /** Room DAO for preset entities. */
     abstract fun presetDao(): PresetDao
+
+    /** Room DAO for device-binding entities. */
     abstract fun deviceBindingDao(): DeviceBindingDao
+
+    /** Room DAO for seen-device entities. */
     abstract fun seenDeviceDao(): SeenDeviceDao
 
     companion object {
@@ -39,6 +44,10 @@ abstract class EqDatabase : RoomDatabase() {
         // to app/schemas/ via room.schemaLocation — use the v1.json as
         // the reference for writing MIGRATION_1_2.
 
+        /**
+         * Thread-safe singleton accessor for the Room database.
+         * @param context  application context (used only on first call)
+         */
         fun getInstance(context: Context): EqDatabase {
             return instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(

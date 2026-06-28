@@ -3,8 +3,22 @@ package com.bearinmind.equalizer314.dsp
 import kotlin.math.*
 
 /**
- * Biquad filter implementation for parametric EQ
- * Supports Bell, Low Shelf, High Shelf, Low Pass, High Pass filters
+ * Biquad filter implementation for parametric EQ.
+ *
+ * Supports peaking bell, shelving (1st/2nd order), pass (1st/2nd order),
+ * band-pass, notch, and all-pass filter types. Coefficients are calculated
+ * using RBJ cookbook formulae by default; bell filters may optionally use
+ * the Vicanek method when [useVicanekMethod] is true.
+ *
+ * The transfer function is the standard direct-form-I biquad:
+ *
+ *     H(z) = (b0 + b1·z⁻¹ + b2·z⁻²) / (1 + a1·z⁻¹ + a2·z⁻²)
+ *
+ * @param frequency  centre or corner frequency in Hz
+ * @param gain       gain in dB (ignored for pass/notch/all-pass types)
+ * @param filterType filter topology — see [FilterType]
+ * @param sampleRate audio sample rate in Hz (default 48000)
+ * @param q          quality factor (0.1–10.0, default 0.707 = Butterworth)
  */
 class BiquadFilter(
     var frequency: Float,
@@ -21,19 +35,37 @@ class BiquadFilter(
     private val sampleRate: Int = 48000,
     var q: Double = 0.707  // Q factor (0.1 to 10.0, default Butterworth)
 ) {
+    /**
+     * Biquad filter type, mapped to Equalizer APO naming where applicable.
+     *
+     * | Value           | APO name | Description                           | Order |
+     * |-----------------|----------|---------------------------------------|-------|
+     * | BELL            | PK       | Peaking bell at Fc with Q             | 2nd   |
+     * | LOW_SHELF       | LSC      | Low shelf, 12 dB/oct                  | 2nd   |
+     * | HIGH_SHELF      | HSC      | High shelf, 12 dB/oct                 | 2nd   |
+     * | LOW_PASS        | LPQ      | Low pass, 12 dB/oct, with Q           | 2nd   |
+     * | HIGH_PASS       | HPQ      | High pass, 12 dB/oct, with Q          | 2nd   |
+     * | LOW_SHELF_1     | LS       | Low shelf, 6 dB/oct                   | 1st   |
+     * | HIGH_SHELF_1    | HS       | High shelf, 6 dB/oct                  | 1st   |
+     * | LOW_PASS_1      | LP       | Low pass, 6 dB/oct (no Q)             | 1st   |
+     * | HIGH_PASS_1     | HP       | High pass, 6 dB/oct (no Q)            | 1st   |
+     * | BAND_PASS       | BP       | Constant-skirt band-pass, peak = Q    | 2nd   |
+     * | NOTCH           | NO       | Notch — deep null at Fc               | 2nd   |
+     * | ALL_PASS        | AP       | All-pass — flat magnitude, phase only | 2nd   |
+     */
     enum class FilterType {
-        BELL,           // APO "PK" — peaking bell at Fc with Q
-        LOW_SHELF,      // APO "LSC" / "LS 12 dB" — 2nd-order low shelf, 12 dB/oct
-        HIGH_SHELF,     // APO "HSC" / "HS 12 dB" — 2nd-order high shelf, 12 dB/oct
-        LOW_PASS,       // APO "LPQ" — 2nd-order low pass, 12 dB/oct, with Q
-        HIGH_PASS,      // APO "HPQ" — 2nd-order high pass, 12 dB/oct, with Q
-        LOW_SHELF_1,    // APO "LS" / "LS 6 dB" — 1st-order low shelf, 6 dB/oct
-        HIGH_SHELF_1,   // APO "HS" / "HS 6 dB" — 1st-order high shelf, 6 dB/oct
-        LOW_PASS_1,     // APO "LP" — 1st-order low pass, 6 dB/oct (no Q)
-        HIGH_PASS_1,    // APO "HP" — 1st-order high pass, 6 dB/oct (no Q)
-        BAND_PASS,      // APO "BP" — 2nd-order band-pass (constant skirt, peak gain = Q)
-        NOTCH,          // APO "NO" — 2nd-order notch, deep dip at Fc
-        ALL_PASS,       // APO "AP" — 2nd-order all-pass (flat magnitude, phase only)
+        BELL,
+        LOW_SHELF,
+        HIGH_SHELF,
+        LOW_PASS,
+        HIGH_PASS,
+        LOW_SHELF_1,
+        HIGH_SHELF_1,
+        LOW_PASS_1,
+        HIGH_PASS_1,
+        BAND_PASS,
+        NOTCH,
+        ALL_PASS,
     }
 
     // Biquad coefficients
@@ -66,6 +98,7 @@ class BiquadFilter(
         calculateCoefficients()
     }
 
+    /** Update all filter parameters and recalculate biquad coefficients. */
     fun updateParameters(freq: Float, gainDb: Float, type: FilterType, qFactor: Double = 0.707) {
         frequency = freq
         gain = gainDb
@@ -74,6 +107,16 @@ class BiquadFilter(
         calculateCoefficients()
     }
 
+    /**
+     * Calculate biquad coefficients using RBJ cookbook formulae.
+     *
+     * For each [filterType], the appropriate RBJ design equations are applied.
+     * Bell filters optionally delegate to [calculateVicanekBell] when
+     * [useVicanekMethod] is true. All coefficients are normalised so that
+     * a0 becomes 1:
+     *
+     *     H(z) = (b0 + b1·z⁻¹ + b2·z⁻²) / (1 + a1·z⁻¹ + a2·z⁻²)
+     */
     private fun calculateCoefficients() {
         // Raw omega — no bilinear pre-warping for any filter type.
         // Pre-warping uses tan() which diverges near Nyquist, causing
@@ -254,6 +297,14 @@ class BiquadFilter(
         b0 /= a0; b1 /= a0; b2 /= a0; a1 /= a0; a2 /= a0
     }
 
+    /**
+     * Vicanek's improved bell filter with matched DC / centre / Nyquist.
+     *
+     * Matches the analog prototype at three key points (ω = 0, ω₀, π) instead
+     * of relying on bilinear-transform pre-warping, yielding better symmetry
+     * and reduced ripple. See Vicanek, "Biquad Calculation for Digital Filters
+     * with Matched DC, Center and Nyquist Frequencies" (2016).
+     */
     private fun calculateVicanekBell(omega: Double, cosOmega: Double, sinOmega: Double) {
         val G = 10.0.pow(gain / 20.0)
         val omega0 = omega
@@ -315,11 +366,14 @@ class BiquadFilter(
         buffer[offset + 1] = outputR.toFloat()
     }
 
+    /** Reset filter state — clears all history buffers (x1, x2, y1, y2 for both channels). */
     fun reset() {
         x1L = 0.0; x2L = 0.0; y1L = 0.0; y2L = 0.0
         x1R = 0.0; x2R = 0.0; y1R = 0.0; y2R = 0.0
     }
 
+    /** Evaluate the filter's magnitude response at [freq] Hz.
+     *  @return linear magnitude gain (not dB) — convert with 20·log10(). */
     fun getFrequencyResponse(freq: Float): Float {
         val omega = 2.0 * PI * freq / sampleRate
         val c = cos(omega)

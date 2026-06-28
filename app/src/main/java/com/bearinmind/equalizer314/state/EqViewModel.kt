@@ -11,6 +11,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+/**
+ * AndroidViewModel that bridges [EqStateManager] and [EqPreferencesManager] to Compose/UI
+ * via [StateFlow] properties. Writes go through setter methods that update state, persist
+ * preferences, and sync reactive flows in a single call.
+ */
 class EqViewModel(application: Application) : AndroidViewModel(application) {
 
     val eqPrefs: EqPreferencesManager = EqPreferencesManager(application)
@@ -114,12 +119,15 @@ class EqViewModel(application: Application) : AndroidViewModel(application) {
         _displayToBandIndex.value = stateManager.displayToBandIndex
     }
 
+    /** Pull all state from [stateManager] into the reactive [StateFlow] properties. */
     fun syncAll() {
         syncFromStateManager()
     }
 
     // ---- Initialisation ----
 
+    /** Initialise the EQ graph and restore persisted state. Must be called once
+     *  after the ViewModel is created with the live [EqGraphView] reference. */
     fun init(graphView: EqGraphView) {
         stateManager.initEq(graphView)
         syncFromStateManager()
@@ -157,6 +165,8 @@ class EqViewModel(application: Application) : AndroidViewModel(application) {
         eqPrefs.saveAutoGainEnabled(enabled)
     }
 
+    /** Toggle the EQ on/off. When processing is active the change is pushed to
+     *  the audio service immediately. */
     fun setEqEnabled(enabled: Boolean) {
         stateManager.parametricEq.isEnabled = enabled
         _eqEnabled.value = enabled
@@ -165,6 +175,7 @@ class EqViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Switch the EQ editing mode and persist the choice. */
     fun setEqUiMode(mode: EqUiMode) {
         stateManager.currentEqUiMode = mode
         _eqUiMode.value = mode
@@ -236,18 +247,23 @@ class EqViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- Wrapper methods for EqStateManager imperative operations ----
 
+    /** Push the current EQ band state + preamp to the DynamicsProcessor immediately. */
     fun pushEqUpdate() {
         stateManager.pushEqUpdate()
     }
 
+    /** Coalesce rapid EQ updates into at most one write per ~16 ms frame. */
     fun pushEqUpdateThrottled() {
         stateManager.pushEqUpdateThrottled()
     }
 
+    /** Cancel any pending throttled update and push the current state immediately. */
     fun flushEqUpdate() {
         stateManager.flushEqUpdate()
     }
 
+    /** Replace the in-memory EQ state from a parsed preset's band specs.
+     *  Handles both shared ("both") and per-channel (CSE) layouts. */
     fun applyPresetEqs(
         cseEnabled: Boolean,
         bothBands: List<EqStateManager.BandSpec>,
@@ -258,10 +274,12 @@ class EqViewModel(application: Application) : AndroidViewModel(application) {
         syncFromStateManager()
     }
 
+    /** Persist all current EQ state (bands, slots, preamp, limiter, etc.) to preferences. */
     fun saveState() {
         stateManager.saveState()
     }
 
+    /** Load a named preset into the current EQ and refresh the graph. */
     fun loadPreset(name: String, graphView: EqGraphView) {
         stateManager.loadPreset(name, graphView)
         syncFromStateManager()
@@ -272,23 +290,30 @@ class EqViewModel(application: Application) : AndroidViewModel(application) {
         _bandSlots.value = stateManager.bandSlots.toList()
     }
 
+    /** Bind the audio service, sync all DSP params, and start DynamicsProcessing. */
     fun doStartEq(animatePower: (Boolean) -> Unit) {
         stateManager.doStartEq(animatePower)
         syncFromStateManager()
     }
 
+    /** Unbind the service and stop DynamicsProcessing. */
     fun stopProcessing(animatePower: (Boolean) -> Unit) {
         stateManager.stopProcessing(animatePower)
         syncFromStateManager()
     }
 
+    /** Return the EQ pair to apply to left/right channels — identical shared EQs
+     *  in BOTH mode, or independent L/R EQs in CSE mode. */
     fun getChannelEqs(): Pair<ParametricEqualizer, ParametricEqualizer> =
         stateManager.getChannelEqs()
 
+    /** Save left/right EQ bands separately when Channel Side EQ is active. */
     fun persistLeftRightIfCse() {
         stateManager.persistLeftRightIfCse()
     }
 
+    /** Initiate EQ processing: check permissions, request notification access,
+     *  start the service, and bind to it. Falls through to [doStartEq] when bound. */
     fun startProcessing(doStartEq: () -> Unit, animatePower: (Boolean) -> Unit) {
         stateManager.startProcessing(doStartEq, animatePower)
     }

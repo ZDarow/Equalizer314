@@ -15,6 +15,10 @@ import org.json.JSONObject
  * band configuration (not the object reference).
  *
  * Thread safety: designed for single-thread (UI thread) access.
+ *
+ * @param eqViewModel Source of the live [ParametricEqualizer] state.
+ * @param eqGraphView The graph view to update when restoring a state.
+ * @param bandToggleManager Manages toggle visibility after state changes.
  */
 class UndoRedoManager(
     private val eqViewModel: EqViewModel,

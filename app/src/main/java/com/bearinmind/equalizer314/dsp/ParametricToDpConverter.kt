@@ -26,6 +26,7 @@ import kotlin.math.sqrt
  */
 object ParametricToDpConverter {
 
+    /** Number of DP bands. Currently fixed at 127 (Wavelet's frequency layout). */
     var numBands: Int = 127
         private set
     private const val MIN_FREQ = 10f
@@ -59,6 +60,7 @@ object ParametricToDpConverter {
     val cutoffFrequencies: FloatArray
         get() = WAVELET_FREQUENCIES.copyOf()
 
+    /** Set the number of DP bands (API compatibility). Currently fixed to 127. */
     fun setNumBands(count: Int) {
         // Currently fixed at Wavelet's 127-band table. The parameter is
         // accepted for API compatibility with DynamicsProcessingManager's
@@ -183,6 +185,17 @@ object ParametricToDpConverter {
      * faithful to the parametric curve. The anchor at fc is added by
      * the caller — this function returns only the *additional* shaping
      * points.
+     */
+    /**
+     * Generate additional sampling points around a band's magnitude shape.
+     *
+     * Returns frequencies (Hz) that bracket the filter's transition region so
+     * DP's piecewise-linear interpolation stays faithful to the parametric
+     * curve. The centre frequency itself is added by the caller as an anchor.
+     *
+     * The number and spread of points varies by [filter type][BiquadFilter.FilterType],
+     * gain magnitude, and Q to ensure narrow peaks and steep shelves are
+     * adequately resolved.
      */
     private fun supportsForBand(band: ParametricEqualizer.EqualizerBand): List<Float> {
         val f = band.frequency

@@ -15,11 +15,20 @@ import kotlin.math.tanh
 // curve computation only.
 class ParametricEqualizer(private val sampleRate: Int = 48000) {
 
+    /**
+     * A single parametric EQ band.
+     *
+     * @property frequency centre frequency in Hz (20–20000)
+     * @property gain gain in dB (-20 to +20)
+     * @property filterType filter topology — see [BiquadFilter.FilterType]
+     * @property q quality factor (0.1–10.0, default 0.707)
+     * @property enabled whether this band participates in processing
+     */
     data class EqualizerBand(
-        var frequency: Float,      // Hz (20-20000)
-        var gain: Float,            // dB (-20 to +20)
+        var frequency: Float,
+        var gain: Float,
         var filterType: BiquadFilter.FilterType,
-        var q: Double = 0.707,      // Q factor (0.1 to 10.0)
+        var q: Double = 0.707,
         var enabled: Boolean = true
     )
 
@@ -56,11 +65,17 @@ class ParametricEqualizer(private val sampleRate: Int = 48000) {
         }
     }
 
+    /** Remove all bands and their corresponding filters. */
     fun clearBands() {
         bands.clear()
         filters.clear()
     }
 
+    /** Append a new band with the given parameters.
+     *  @param frequency centre frequency in Hz
+     *  @param gain gain in dB
+     *  @param filterType filter topology
+     *  @param q quality factor (default 0.707) */
     fun addBand(frequency: Float, gain: Float, filterType: BiquadFilter.FilterType, q: Double = 0.707) {
         val band = EqualizerBand(frequency, gain, filterType, q, true)
         bands.add(band)
@@ -77,6 +92,12 @@ class ParametricEqualizer(private val sampleRate: Int = 48000) {
         filters.add(filter)
     }
 
+    /** Insert a band at [index], shifting subsequent bands down.
+     *  @param index insertion position
+     *  @param frequency centre frequency in Hz
+     *  @param gain gain in dB
+     *  @param filterType filter topology
+     *  @param q quality factor (default 0.707) */
     fun insertBand(index: Int, frequency: Float, gain: Float, filterType: BiquadFilter.FilterType, q: Double = 0.707) {
         val band = EqualizerBand(frequency, gain, filterType, q, true)
         bands.add(index, band)
@@ -93,6 +114,7 @@ class ParametricEqualizer(private val sampleRate: Int = 48000) {
         filters.add(index, filter)
     }
 
+    /** Remove the band at [index]. No-op if [index] is out of range. */
     fun removeBand(index: Int) {
         if (index in bands.indices) {
             bands.removeAt(index)
@@ -100,6 +122,8 @@ class ParametricEqualizer(private val sampleRate: Int = 48000) {
         }
     }
 
+    /** Update an existing band's parameters and recalculate its biquad coefficients.
+     *  No-op if [index] is out of range. Retains the previous Q when not specified. */
     fun updateBand(index: Int, frequency: Float, gain: Float, filterType: BiquadFilter.FilterType, q: Double = bands.getOrNull(index)?.q ?: 0.707) {
         if (index in bands.indices) {
             bands[index].frequency = frequency
@@ -111,16 +135,20 @@ class ParametricEqualizer(private val sampleRate: Int = 48000) {
         }
     }
 
+    /** Enable or disable the band at [index]. Disabled bands are skipped during [process]. */
     fun setBandEnabled(index: Int, enabled: Boolean) {
         if (index in bands.indices) {
             bands[index].enabled = enabled
         }
     }
 
+    /** Return the band at [index], or null if out of range. */
     fun getBand(index: Int): EqualizerBand? = bands.getOrNull(index)
 
+    /** Return the total number of bands. */
     fun getBandCount(): Int = bands.size
 
+    /** Return a snapshot copy of all bands. */
     fun getAllBands(): List<EqualizerBand> = bands.toList()
 
     /**
@@ -145,10 +173,13 @@ class ParametricEqualizer(private val sampleRate: Int = 48000) {
         }
     }
 
+    /** Reset all filter states (history buffers). */
     fun reset() {
         filters.forEach { it.reset() }
     }
 
+    /** Evaluate the composite magnitude response at [frequency] Hz across all enabled bands.
+     *  @return summed response in dB. */
     fun getFrequencyResponse(frequency: Float): Float {
         var totalMagnitude = 1f
 
@@ -193,6 +224,7 @@ class ParametricEqualizer(private val sampleRate: Int = 48000) {
         return 20f * kotlin.math.log10(saturated.coerceAtLeast(0.0001).toFloat())
     }
 
+    /** Apply a built-in preset by name. Presets: Flat, Bass Boost, Treble Boost, Vocal Enhance. */
     fun loadPreset(presetName: String) {
         when (presetName) {
             "Flat" -> {
