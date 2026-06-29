@@ -1,7 +1,7 @@
 # AGENTS.md — Equalizer314 контекст для LLM-агентов
 
 ```
-Версия:    0.1.0-alpha (code 100)
+Версия:    0.1.0-alpha-2 (code 100)
 Форк:      ZDarow/Equalizer314
 Upstream:  bearinmindcat/Equalizer314
 Лицензия:  GPL-3.0
@@ -39,14 +39,25 @@ app/src/main/java/com/bearinmind/equalizer314/
 ├── AutoEqActivity.kt        # AutoEQ — импорт Squiglink/Wavelet/APO
 ├── ... (ещё ~15 Activity)
 │
-├── audio/                   # Аудиообработка (22 файла)
+├── audio/                   # Аудиообработка (18 файлов)
 │   ├── EqService.kt         # Foreground service (~1070 LOC) — ядро
 │   ├── DynamicsProcessingManager.kt  # DSP pipeline + Android API
 │   ├── VisualizerHelper.kt  # FFT-спектр анализатор
 │   ├── ChannelMath.kt       # L/R канальная математика
 │   ├── SessionEffectManager.kt  # AudioSession management
 │   ├── RouteSwitchCoordinator.kt  # Audio routing
-│   └── ...
+│   ├── AudioRoutingMonitor.kt  # Audio routing lifecycle
+│   ├── BootCompletedReceiver.kt  # Автозапуск после перезагрузки
+│   ├── AudioSessionReceiver.kt  # AudioSession broadcast receiver
+│   ├── PlaybackListenerService.kt  # NotificationListenerService
+│   ├── Eq314TileService.kt  # Quick Settings tile
+│   ├── MbcGainComputer.kt  # MBC gain reduction computation
+│   ├── LufsProcessor.kt  # LUFS-измерения для лимитера
+│   ├── DeviceIdentity.kt  # Идентификация аудиоустройств
+│   ├── AudioPolicyDumpParser.kt  # Парсинг dumpsys audio policy
+│   ├── SimpleFFT.kt  # Быстрая FFT (упрощённая)
+│   ├── SpectrumAnalyzerRenderer.kt  # Отрисовка спектра
+│   └── WaveformFftProcessor.kt  # Waveform + FFT процессор
 │
 ├── dsp/                     # Цифровая обработка сигналов (6 файлов)
 │   ├── ParametricEqualizer.kt  # Параметрический эквалайзер (127 полос)
@@ -63,16 +74,32 @@ app/src/main/java/com/bearinmind/equalizer314/
 │   ├── PresetManager.kt    # CRUD пресетов
 │   └── UndoRedoManager.kt  # Undo/Redo для EQ
 │
-├── ui/                      # UI-компоненты (18 файлов)
-│   ├── EqGraphView.kt      # Кастомный View (~1700 LOC) — основная EQ кривая
+├── ui/                      # UI-компоненты (25 файлов)
+│   ├── EqGraphView.kt      # Кастомный View (~1710 LOC) — основная EQ кривая
 │   ├── ReverbVisualizerView.kt  # (~1414 LOC) — визуализатор реверберации
-│   ├── FilterRole.kt       # Enum + 5 filter-type функций (вынесено из MainActivity)
+│   ├── FilterRole.kt       # Enum + 5 filter-type функций
 │   ├── UIExtensions.kt     # hzToSlider, sliderToHz, formatHzValue, blendColor
 │   ├── DialogFactory.kt    # Фабрика диалогов
 │   ├── SimpleEqController.kt  # Simple EQ контроллер (7 полос)
 │   ├── GraphicEqController.kt # Graphic EQ (31 полоса)
 │   ├── TableEqController.kt   # Table EQ
-│   └── ...
+│   ├── SimpleEqBarsView.kt # Simple EQ отображение в виде баров
+│   ├── BandToggleManager.kt  # Управление включением/отключением полос
+│   ├── BottomNavHelper.kt  # Хелпер нижней навигации
+│   ├── GraphOverlayLayoutManager.kt  # Менеджер оверлея графика
+│   ├── PresetCurveView.kt  # Предпросмотр кривой пресета
+│   ├── PresetDropdownAdapter.kt  # Адаптер выпадающего списка пресетов
+│   ├── DropdownAutoCompleteTextView.kt  # AutoComplete для выпадающих списков
+│   ├── NotchedDeviceCardView.kt  # Карточка устройства с notch
+│   ├── GrTraceView.kt  # Визуализация Gain Reduction trail
+│   ├── CompressorCurveView.kt  # Кривая компрессора
+│   ├── GateCurveView.kt  # Кривая noise gate
+│   ├── AttackReleaseView.kt  # Визуализация Attack/Release
+│   ├── DiffusionDensityView.kt  # Визуализация Diffusion/Density
+│   ├── DiffusionDensityColumnsView.kt  # Колонки Diffusion/Density
+│   ├── LimiterWaveformView.kt  # Waveform лимитера
+│   ├── LimiterMeterView.kt  # Meter лимитера
+│   └── LimiterCeilingView.kt  # Визуализация Ceiling лимитера
 │
 ├── data/                    # Слой данных (10 файлов)
 │   ├── EqDatabase.kt       # Room БД (v1)
@@ -80,6 +107,8 @@ app/src/main/java/com/bearinmind/equalizer314/
 │   ├── DeviceBindingDao.kt # Room DAO для привязок устройств
 │   ├── SeenDeviceDao.kt    # Room DAO для виденных устройств
 │   ├── PresetEntity.kt     # Entity пресета
+│   ├── DeviceBindingEntity.kt  # Entity привязки устройства
+│   ├── SeenDeviceEntity.kt     # Entity виденного устройства
 │   ├── PresetConverter.kt  # Legacy SharedPreferences → Room конвертер
 │   ├── EqMigrationHelper.kt # Миграция SP → Room
 │   └── PresetRepository.kt # Репозиторий пресетов
@@ -89,10 +118,9 @@ app/src/main/java/com/bearinmind/equalizer314/
 │   ├── EqFitter.kt         # Подбор EQ-фильтров под target
 │   ├── FreqResponseParser.kt  # Парсинг CSV частотных характеристик
 │   ├── ApoConverter.kt     # EqualizerAPO конвертер
-│   └── AutoEqModels.kt     # Data-классы AutoEQ
+│   ├── AutoEqModels.kt     # Data-классы AutoEQ
+│   └── AutoEqDatabase.kt   # Room БД для AutoEQ
 │
-├── data/                    # Уже описан выше
-├── autoeq/                  # Уже описан выше
 └── ... (остальные файлы в корне: EqualizerApp.kt, BackupManager.kt, EqUiMode.kt)
 ```
 
@@ -375,7 +403,7 @@ git log --oneline upstream/main --not main  # неприменённые upstrea
 ### 5.4 Ключевые метрики для принятия решений
 
 ```yaml
-prod_loc: 32842
+prod_loc: 33032
 test_loc: 1745
 android_test_loc: 78
 unit_tests: 160

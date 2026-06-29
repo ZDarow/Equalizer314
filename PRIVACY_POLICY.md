@@ -1,95 +1,96 @@
 # Privacy Policy — Equalizer314
 
-**Effective date:** 2026-04-19
+**Effective date:** 2026-06-29
 **App:** Equalizer314 (`com.bearinmind.equalizer314`)
-**Developer:** bearinmind
-**Source code:** https://github.com/bearinmindcat/Equalizer314
+**Developer:** ZDarow (форк bearinmindcat/Equalizer314)
+**Source code:** https://github.com/ZDarow/Equalizer314
 **License:** GNU General Public License v3.0
 
 ---
 
 ## Short version
 
-Equalizer314 **does not collect, store, or transmit any personal data**. It has no internet access, no analytics, no advertising, no trackers, no accounts, and no third-party SDKs. All app settings stay on your device.
-
-If a 30-word version is enough for you, the remainder of this document is the detail.
+Equalizer314 **не собирает, не хранит и не передаёт никакие личные данные**. Приложение не имеет доступа к интернету, не содержит аналитики, рекламы, трекеров, аккаунтов или сторонних SDK. Все настройки остаются на вашем устройстве.
 
 ---
 
 ## Detailed version
 
-### 1. What data is collected
+### 1. Какие данные собираются
 
-**None.** Equalizer314 does not:
+**Никакие.** Equalizer314 не:
 
-- Collect personal information of any kind (name, email, phone number, device identifiers, location, etc.).
-- Create, require, or sync to any user account.
-- Send data to any server operated by the developer or any third party.
-- Track usage, interactions, crashes, install sources, or any analytics event.
-- Display or contain advertising of any kind.
-- Bundle any third-party SDK that could collect data on its behalf.
+- Собирает личную информацию любого рода (имя, email, номер телефона, идентификаторы устройства, местоположение и т.д.).
+- Создаёт, требует или синхронизирует пользовательские аккаунты.
+- Отправляет данные на сервер разработчика или третьих лиц.
+- Отслеживает использование, взаимодействия, краши, источники установки или любые аналитические события.
+- Показывает или содержит рекламу любого рода.
+- Встраивает сторонние SDK, способные собирать данные от его имени.
 
-### 2. Network access
+### 2. Сетевой доступ
 
-**The app has no internet access.** The `INTERNET` permission is **not declared** in the app's Android manifest. Android will refuse any network request the app might attempt, because the permission was never requested. You can verify this yourself by examining the installed APK's manifest, or by inspecting [AndroidManifest.xml](https://github.com/bearinmindcat/Equalizer314/blob/main/app/src/main/AndroidManifest.xml) in the open-source repository.
+**Приложение не имеет доступа к интернету.** Разрешение `INTERNET` **не объявлено** в манифесте приложения. Android отклонит любой сетевой запрос, который приложение могло бы попытаться выполнить. Вы можете проверить это самостоятельно, изучив манифест установленного APK или файл [AndroidManifest.xml](https://github.com/ZDarow/Equalizer314/blob/main/app/src/main/AndroidManifest.xml) в открытом репозитории.
 
-### 3. Permissions used and why
+### 3. Используемые разрешения и их назначение
 
-The app declares only the following Android permissions. Each is used exclusively for core audio functionality.
+Приложение объявляет только следующие разрешения Android. Каждое используется исключительно для основной аудиофункциональности.
 
-| Permission | Why it's needed |
+| Разрешение | Зачем нужно |
 |---|---|
-| `android.permission.MODIFY_AUDIO_SETTINGS` | Required to register the `DynamicsProcessing` audio effect on global audio session 0, which is the mechanism by which the app provides system-wide equalization. |
-| `android.permission.RECORD_AUDIO` | Used **only** to feed Android's `Visualizer` API, which drives the on-screen real-time spectrum analyzer and the multiband compressor / limiter gain-reduction visualizations. Audio samples are processed frame-by-frame in memory and discarded. **Samples are never saved to disk, never copied off the device, and never transmitted anywhere.** The app cannot transmit them because it has no `INTERNET` permission. |
-| `android.permission.FOREGROUND_SERVICE` | Required to run the equalizer engine as a foreground service so Android does not terminate it while other apps play audio. |
-| `android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK` | Android 14+ service-type declaration matching the foreground service's audio-processing role. |
-| `android.permission.POST_NOTIFICATIONS` | Required on Android 13+ to show the foreground service's ongoing notification (which lets you turn the EQ off from the notification shade). |
+| `android.permission.MODIFY_AUDIO_SETTINGS` | Необходимо для регистрации аудиоэффекта `DynamicsProcessing` на глобальной аудиосессии 0 — механизма, которым приложение обеспечивает системный эквалайзер. |
+| `android.permission.RECORD_AUDIO` | Используется **только** для питания `Visualizer` API, который управляет визуализацией спектра в реальном времени и отображением gain reduction в мультибенд-компрессоре и лимитере. Аудиосэмплы обрабатываются покадрово в памяти и удаляются. **Сэмплы никогда не сохраняются на диск, не копируются с устройства и никуда не передаются.** Приложение не может их передать — у него нет разрешения `INTERNET`. |
+| `android.permission.FOREGROUND_SERVICE` | Необходимо для работы движка эквалайзера как foreground-сервиса, чтобы Android не завершал его, пока другие приложения воспроизводят аудио. |
+| `android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK` | Объявление типа сервиса для Android 14+, соответствующее роли сервиса аудиообработки. |
+| `android.permission.POST_NOTIFICATIONS` | Требуется на Android 13+ для отображения постоянного уведомления foreground-сервиса (позволяет выключить EQ из шторки уведомлений). |
+| `android.permission.RECEIVE_BOOT_COMPLETED` | Для автоматического запуска EQ после перезагрузки устройства. |
+| `android.permission.BLUETOOTH_CONNECT` | Для идентификации Bluetooth-устройств при привязке пресетов. |
+| `android.permission.QUERY_ALL_PACKAGES` | Для обнаружения приложений, воспроизводящих аудио, в Channel Input. |
 
-The app does **not** request:
-- `INTERNET` — so no network calls are possible.
-- `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` — so no location data is possible.
-- `READ_CONTACTS`, `READ_SMS`, `CAMERA`, `READ_EXTERNAL_STORAGE`, `READ_MEDIA_*`, or any other sensitive permission beyond those listed above.
+Приложение **не** запрашивает:
+- `INTERNET` — сетевые вызовы невозможны.
+- `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` — данные местоположения недоступны.
+- `READ_CONTACTS`, `READ_SMS`, `CAMERA`, `READ_EXTERNAL_STORAGE`, `READ_MEDIA_*` или любые другие чувствительные разрешения сверх перечисленных.
 
-### 4. What is stored on your device
+### 4. Что хранится на устройстве
 
-Your EQ settings, custom presets, UI preferences, and AutoEQ / Target Curve selections are saved locally using Android's `SharedPreferences` mechanism. These files are private to the app's sandbox, sit under `/data/data/com.bearinmind.equalizer314/`, are not accessible to other apps, and are removed when you uninstall the app.
+Настройки EQ, пользовательские пресеты, UI-предпочтения и файлы AutoEQ/Target Curve сохраняются локально с помощью Room (SQLite) и SharedPreferences. Эти файлы находятся в песочнице приложения (`/data/data/com.bearinmind.equalizer314/`), недоступны другим приложениям и удаляются при деинсталляции.
 
-Imported APO presets and measurement files are stored in the same app-private area. They are never transmitted.
+Импортированные APO-пресеты и файлы измерений хранятся в той же приватной области приложения. Они никогда не передаются.
 
-### 5. Audio processing scope
+### 5. Область аудиообработки
 
-Equalizer314 applies system-wide audio equalization via Android's `DynamicsProcessing` API on session 0. This means the app **observes** and **shapes** the audio mix produced by other apps on the device. It does **not** record that audio to any persistent storage, and it does not send it anywhere.
+Equalizer314 применяет системный эквалайзер через Android `DynamicsProcessing` API на сессии 0. Приложение **наблюдает** и **изменяет** аудиомикс, создаваемый другими приложениями на устройстве. Оно **не записывает** это аудио в постоянное хранилище и **не отправляет** его куда-либо.
 
-The one exception where the audio enters Java/Kotlin memory rather than just the native DSP pipeline is the `Visualizer` API feed for the spectrum analyzer and multiband compression / limiter graphs (see the `RECORD_AUDIO` row above). Even there, samples live only long enough to compute a single FFT frame or RMS measurement, then are overwritten by the next frame.
+Единственное исключение, когда аудио попадает в Java/Kotlin-память (а не только в нативный DSP-конвейер) — это поток `Visualizer` API для спектроанализатора и графиков компрессора/лимитера (см. строку `RECORD_AUDIO` выше). Даже в этом случае сэмплы живут ровно столько, сколько нужно для вычисления одного FFT-фрейма или RMS-измерения, после чего перезаписываются следующим фреймом.
 
-### 6. Children's privacy
+### 6. Конфиденциальность детей
 
-The app does not knowingly collect data from anyone, including children. Because it collects nothing at all, it has no data to protect, delete, or respond to requests about.
+Приложение не собирает данные от кого-либо, включая детей. Поскольку оно не собирает ничего, ему нечего защищать, удалять или отвечать на запросы.
 
-### 7. Third-party services
+### 7. Сторонние сервисы
 
-The app uses only:
-- Android's built-in `AudioEffect` / `DynamicsProcessing` / `Visualizer` APIs (Android OS).
-- Open-source libraries listed in the project's `app/build.gradle.kts` (AndroidX, Material Components for Android, Kotlin, kotlinx.coroutines, AndroidX Media3). None of these libraries make network calls in the way Equalizer314 uses them. See the project's [README Acknowledgments](https://github.com/bearinmindcat/Equalizer314#acknowledgments) and [fdroidreproduceablebuilds.md](https://github.com/bearinmindcat/Equalizer314/blob/main/fdroidreproduceablebuilds.md) for full dependency list.
+Приложение использует только:
+- Встроенные Android `AudioEffect` / `DynamicsProcessing` / `Visualizer` API (Android OS).
+- Библиотеки с открытым исходным кодом, перечисленные в `gradle/libs.versions.toml` (AndroidX, Material Components, Kotlin, kotlinx.coroutines, Room, LeakCanary). Ни одна из этих библиотек не совершает сетевых вызовов в том виде, в каком их использует Equalizer314.
 
-No third-party analytics, crash reporting, advertising, or tracking SDK is integrated.
+Никакие сторонние SDK для аналитики, отслеживания крашей, рекламы или трекинга не интегрированы.
 
-### 8. Data sharing
+### 8. Передача данных
 
-Because no data is collected, no data is shared. Neither the developer nor any third party has access to anything the app does on your device.
+Поскольку данные не собираются, они не передаются. Ни разработчик, ни третьи лица не имеют доступа к тому, что приложение делает на вашем устройстве.
 
-### 9. Your rights
+### 9. Ваши права
 
-Because the app collects no personal data, there is nothing to access, delete, export, or port. You can uninstall the app at any time; all saved presets and settings are removed with the app.
+Поскольку приложение не собирает личные данные, нечего просматривать, удалять, экспортировать или переносить. Вы можете деинсталлировать приложение в любой момент; все сохранённые пресеты и настройки будут удалены вместе с приложением.
 
-If you believe this policy is inaccurate or misses something, please open an issue at https://github.com/bearinmindcat/Equalizer314/issues — the source code is public and auditable.
+Если вы считаете, что эта политика неточна или что-то упускает, пожалуйста, откройте issue на https://github.com/ZDarow/Equalizer314/issues — исходный код публичен и проверяем.
 
-### 10. Changes to this policy
+### 10. Изменения этой политики
 
-If the data practices of the app ever change (they are not expected to), this document will be updated and a new effective date set at the top. The full history of changes is visible in the repository's git log for this file.
+Если практика обработки данных когда-либо изменится (это не ожидается), этот документ будет обновлён, и будет установлена новая дата вступления в силу. Полная история изменений видна в git-логе репозитория для этого файла.
 
-### 11. Contact
+### 11. Контакты
 
-- **Issue tracker:** https://github.com/bearinmindcat/Equalizer314/issues
-- **Source code:** https://github.com/bearinmindcat/Equalizer314
-- **Author:** bearinmind (GitHub: [@bearinmindcat](https://github.com/bearinmindcat))
+- **Issue tracker:** https://github.com/ZDarow/Equalizer314/issues
+- **Source code:** https://github.com/ZDarow/Equalizer314
+- **Разработчик:** ZDarow (форк [bearinmindcat/Equalizer314](https://github.com/bearinmindcat/Equalizer314))

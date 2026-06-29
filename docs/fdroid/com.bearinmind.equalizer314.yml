@@ -1,21 +1,21 @@
 Categories:
   - Multimedia
 License: GPL-3.0-only
-AuthorName: bearinmind
-SourceCode: https://github.com/bearinmindcat/Equalizer314
-IssueTracker: https://github.com/bearinmindcat/Equalizer314/issues
+AuthorName: ZDarow
+SourceCode: https://github.com/ZDarow/Equalizer314
+IssueTracker: https://github.com/ZDarow/Equalizer314/issues
 
 AutoName: Equalizer314
 
 RepoType: git
-Repo: https://github.com/bearinmindcat/Equalizer314.git
+Repo: https://github.com/ZDarow/Equalizer314.git
 Binaries:
-  https://github.com/bearinmindcat/Equalizer314/releases/download/Equalizer314-v%v/Equalizer314-v%v.apk
+  https://github.com/ZDarow/Equalizer314/releases/download/Equalizer314-v%v/Equalizer314-v%v.apk
 
 Builds:
-  - versionName: 0.0.4-beta
-    versionCode: 4
-    commit: dfd1510a8f2115c156c76b2e0d7df6ba93da745e
+  - versionName: 0.1.0-alpha-2
+    versionCode: 100
+    commit: a580c4e0cacf46e9f31d4c1f37e8b0cf1623b474
     subdir: app
     gradle:
       - yes
@@ -24,5 +24,5 @@ AllowedAPKSigningKeys: 7a8368d18ad64294f9aadf4b736adcd15cb0cb88c6b9dc2e0bd5f1e46
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.0.4-beta
-CurrentVersionCode: 4
+CurrentVersion: 0.1.0-alpha-2
+CurrentVersionCode: 100

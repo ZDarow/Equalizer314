@@ -2,6 +2,10 @@
 
 Everything learned shipping Equalizer314 to F-Droid for the first time. Read this before submitting any Android app to fdroiddata, especially one that needs reproducible builds (`Binaries:` + `AllowedAPKSigningKeys:`).
 
+> **Примечание:** Этот документ описывает опыт публикации upstream-версии (`bearinmindcat/Equalizer314`).
+> Форк [ZDarow/Equalizer314](https://github.com/ZDarow/Equalizer314) использует собственную подпись
+> и требует нового MR в fdroiddata. Инструкции ниже применимы и к форку с поправкой на свои URL и ключи.
+
 The canonical outcome: **MR [!36655](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/36655) passing all 9 CI jobs on v0.0.4-beta** after 8 pipeline runs.
 
 ## TL;DR
@@ -96,6 +100,9 @@ tasks.whenTaskAdded {
 ### The fdroiddata recipe (`metadata/<applicationId>.yml`)
 
 ```yaml
+# ⚠️ Ниже — рецепт для upstream (bearinmindcat). Для форка ZDarow используйте
+# docs/fdroid/com.bearinmind.equalizer314.yml с обновлёнными URL и ключами.
+
 Categories:
   - Multimedia
 License: GPL-3.0-only
@@ -124,7 +131,6 @@ AutoUpdateMode: Version
 UpdateCheckMode: Tags
 CurrentVersion: 0.0.4-beta
 CurrentVersionCode: 4
-```
 
 Gotchas embedded in that file:
 - **`Binaries:` has a literal trailing space after the colon** (before the newline). `rewritemeta` refuses to accept it without that space.

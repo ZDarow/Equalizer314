@@ -66,7 +66,7 @@ cd Equalizer314
 | UI | Android Views + кастомные Canvas View (`EqGraphView`, `ReverbVisualizerView`) |
 | Аудиоядро | `DynamicsProcessing` + `EnvironmentalReverb` (API 28+) |
 | Состояние | `EqViewModel` (StateFlow) + `EqStateManager` |
-| Хранилище | Room (KSP) + SharedPreferences (миграция в процессе) |
+| Хранилище | Room (KSP) — SharedPreferences мигрированы |
 | Сборка | Gradle 8.x + Kotlin DSL + Version Catalog |
 | DI | Ручной (singleton через companion object) |
 | Стат. анализ | Detekt + baseline |
@@ -82,6 +82,7 @@ cd Equalizer314
 - **Ограничение 127 полос**: DynamicsProcessing API не позволяет больше. Текущая реализация использует максимум.
 - **Hidden API (EnvironmentalReverb)**: для расширенных функций реверберации используется рефлексия — может не работать на Android 14+.
 - **Spotify/Chrome**: приложения, блокирующие внутренний захват аудио, не обрабатываются (аналогично Wavelet).
+- **PlaybackListenerService**: для определения сессий приложений, не транслирующих broadcast-интенты, требуется ручное разрешение `NotificationListenerService`.
 
 ## Лицензия
 

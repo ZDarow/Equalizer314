@@ -2,27 +2,27 @@
 
 Field-by-field breakdown of what lives in `metadata/com.bearinmind.equalizer314.yml` on fdroiddata. Canonical source: the [F-Droid Build Metadata Reference](https://f-droid.org/docs/Build_Metadata_Reference/). This doc summarizes the fields we actually use and the specific values that are correct for this app.
 
-## Current recipe
+## Current recipe (форк ZDarow)
 
 ```yaml
 Categories:
   - Multimedia
 License: GPL-3.0-only
-AuthorName: bearinmind
-SourceCode: https://github.com/bearinmindcat/Equalizer314
-IssueTracker: https://github.com/bearinmindcat/Equalizer314/issues
+AuthorName: ZDarow
+SourceCode: https://github.com/ZDarow/Equalizer314
+IssueTracker: https://github.com/ZDarow/Equalizer314/issues
 
 AutoName: Equalizer314
 
 RepoType: git
-Repo: https://github.com/bearinmindcat/Equalizer314.git
+Repo: https://github.com/ZDarow/Equalizer314.git
 Binaries:
-  https://github.com/bearinmindcat/Equalizer314/releases/download/Equalizer314-v%v/Equalizer314-v%v.apk
+  https://github.com/ZDarow/Equalizer314/releases/download/Equalizer314-v%v/Equalizer314-v%v.apk
 
 Builds:
-  - versionName: 0.0.3-beta
-    versionCode: 3
-    commit: 43caa38b1fb6307c05a5d983a3aafb58387d77cf
+  - versionName: 0.1.0-alpha-2
+    versionCode: 100
+    commit: a580c4e0cacf46e9f31d4c1f37e8b0cf1623b474
     subdir: app
     gradle:
       - yes
@@ -31,11 +31,11 @@ AllowedAPKSigningKeys: 7a8368d18ad64294f9aadf4b736adcd15cb0cb88c6b9dc2e0bd5f1e46
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.0.3-beta
-CurrentVersionCode: 3
+CurrentVersion: 0.1.0-alpha-2
+CurrentVersionCode: 100
 ```
 
-## Field-by-field
+## Field-by-field (для любого форка)
 
 ### `Categories`
 
@@ -47,11 +47,11 @@ SPDX identifier. `GPL-3.0-only` matches our `LICENSE` file.
 
 ### `AuthorName`
 
-String. Displayed on the F-Droid listing page.
+String. Displayed on the F-Droid listing page. Для форка ZDarow — `ZDarow`.
 
 ### `SourceCode` / `IssueTracker`
 
-URLs. Both point at your GitHub repo. The `IssueTracker` field is what makes the "Required" checkbox *"There is an issue tracker and contact info of the author"* on the MR template pass.
+URLs. Both point at your GitHub repo. The `IssueTracker` field is what makes the "Required" checkbox pass on the MR template.
 
 ### `AutoName`
 
@@ -69,7 +69,7 @@ URL template pointing at the signed APK you published to GitHub Releases. Uses `
 
 ```
 Binaries: <TRAILING SPACE HERE>
-  https://github.com/bearinmindcat/Equalizer314/releases/download/Equalizer314-v%v/Equalizer314-v%v.apk
+  https://github.com/ZDarow/Equalizer314/releases/download/Equalizer314-v%v/Equalizer314-v%v.apk
 ```
 
 If rewritemeta rejects the recipe with a diff showing this exact structure, you've lost the trailing space (editors strip it by default). Re-add with `sed -i 's/^Binaries:$/Binaries: /' metadata/com.bearinmind.equalizer314.yml`.
@@ -79,12 +79,12 @@ If rewritemeta rejects the recipe with a diff showing this exact structure, you'
 List of dicts. Each entry describes **one** `versionCode` and how to build it.
 
 ```yaml
-- versionName: 0.0.3-beta   # String — matches %v in Binaries
-  versionCode: 3            # Integer — matches %c in Binaries; must match what app/build.gradle.kts has at `commit`
-  commit: 43caa38b…         # Full SHA of the commit to build from. NEVER a tag name; reviewers reject tag names.
-  subdir: app               # Gradle module directory (your app module lives at <repo>/app/)
+- versionName: 0.1.0-alpha-2   # String — matches %v in Binaries
+  versionCode: 100             # Integer — matches %c in Binaries; must match app/build.gradle.kts at `commit`
+  commit: a580c4e0c…           # Full SHA of the commit to build from. NEVER a tag name; reviewers reject tag names.
+  subdir: app                  # Gradle module directory (<repo>/app/)
   gradle:
-    - yes                   # Special value: "just run ./gradlew assembleRelease"
+    - yes                      # Special value: "just run ./gradlew assembleRelease"
 ```
 
 For future versions, append new entries below existing ones. Don't delete old entries — they're the build history.
@@ -96,11 +96,11 @@ Single string. Lowercase hex of the SHA-256 fingerprint of the APK's signing cer
 **Extraction:**
 
 ```bash
-apksigner verify --print-certs Equalizer314-v0.0.3-beta.apk | grep SHA-256
+apksigner verify --print-certs Equalizer314-v0.1.0-alpha-2.apk | grep SHA-256
 # Signer #1 certificate SHA-256 digest: 7a8368d18ad64294f9aadf4b736adcd15cb0cb88c6b9dc2e0bd5f1e461b83e52
 ```
 
-Since this is tied to the keystore (not the release), it stays constant across all versions you sign with the same `my-key.jks` + `key0` alias combination.
+Since this is tied to the keystore (not the release), it stays constant across all versions you sign with the same key.
 
 **Placement convention:** top-level, after `Builds:`. Docs allow it anywhere at top level, but every accepted recipe in fdroiddata puts it here.
 

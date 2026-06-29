@@ -1,16 +1,24 @@
 # F-Droid submission materials for Equalizer314
 
-This folder contains everything related to the F-Droid submission.
+Этот каталог содержит материалы, связанные с публикацией Equalizer314 через F-Droid.
 
-- **`com.bearinmind.equalizer314.yml`** — the recipe draft, always kept in sync with what's live on `fdroiddata`.
-- **`SUBMISSION_JOURNAL.md`** — detailed blow-by-blow of how the initial submission went, every pipeline failure we hit, and exactly how each one was fixed. Read this first if you're coming back to this in six months.
-- **`RELEASE_PROCESS.md`** — step-by-step "cut a new version" playbook. Use this for every future `0.0.N-beta` release.
-- **`RECIPE_FIELD_REFERENCE.md`** — what every YAML field means, the placement convention used in accepted recipes, and the exact formatting quirks that `fdroid rewritemeta` enforces.
-- **`REPRODUCIBLE_BUILDS.md`** — why `Binaries` + `AllowedAPKSigningKeys` matter, the CRLF/LF gotcha that cost us three failed pipelines, and how `.gitattributes` fixes it permanently.
+**Примечание:** Форк [ZDarow/Equalizer314](https://github.com/ZDarow/Equalizer314) использует собственную подпись APK (ключ форка). Для публикации на F-Droid требуется **новый MR** в `fdroiddata` с обновлёнными ключами. Нижеперечисленные документы наследуют опыт первоначальной публикации от upstream-проекта.
 
-## Current state
+- **`com.bearinmind.equalizer314.yml`** — черновик рецепта для fork-версии (ZDarow).
+- **`SUBMISSION_JOURNAL.md`** — хронология первоначальной отправки от upstream `bearinmindcat`. Полезна для понимания типичных проблем F-Droid CI.
+- **`RELEASE_PROCESS.md`** — пошаговый план вырезания нового релиза (адаптирован от upstream).
+- **`RECIPE_FIELD_REFERENCE.md`** — что означает каждое поле YAML, соглашения о расположении, форматирование `fdroid rewritemeta`.
+- **`REPRODUCIBLE_BUILDS.md`** — почему важны воспроизводимые сборки, проблема CRLF/LF и как `.gitattributes` её решает.
 
-- **Active MR:** https://gitlab.com/fdroid/fdroiddata/-/merge_requests/36655
+## Текущее состояние форка
+
+- **Upstream MR:** https://gitlab.com/fdroid/fdroiddata/-/merge_requests/36655 (от bearinmindcat)
+- **Форк — требуется новый MR** с ключом ZDarow
+- **Версия:** 0.1.0-alpha-2 (`versionCode 100`)
+- **Подпись:** ключи форка (см. `com.bearinmind.equalizer314.yml`)
+
+## Историческое состояние (upstream)
+
 - **Tracked version:** 0.0.3-beta (`versionCode 3`)
 - **Source commit pinned:** `43caa38b1fb6307c05a5d983a3aafb58387d77cf`
 - **Signing cert SHA-256:** `7a8368d18ad64294f9aadf4b736adcd15cb0cb88c6b9dc2e0bd5f1e461b83e52`
