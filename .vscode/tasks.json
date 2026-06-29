@@ -1,0 +1,432 @@
+{
+  // Задачи автоматизации для Equalizer314
+  // Группы:
+  //   build  — сборка проекта
+  //   test   — запуск тестов
+  //   lint   — статический анализ
+  //   clean  — очистка
+  //   android — работа с эмулятором, установка, logcat
+  "version": "2.0.0",
+  "tasks": [
+    // ======================================================
+    // ANDROID: ЭМУЛЯТОР И УСТРОЙСТВО
+    // ======================================================
+    {
+      "label": "Android: Запустить AVD (PrologyEmulator, cold boot)",
+      "type": "shell",
+      "command": "emulator -avd PrologyEmulator -no-snapshot -wipe-data",
+      "options": {
+        "env": {
+          "ANDROID_SDK_ROOT": "/home/mi/Android/Sdk",
+          "ANDROID_HOME": "/home/mi/Android/Sdk"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true,
+        "group": "android"
+      },
+      "group": "none",
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "owner": "android",
+          "pattern": [
+            {
+              "regexp": ".",
+              "file": 1
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "^emulator:",
+            "endsPattern": "^emulator: .*x86_64.*is running"
+          }
+        }
+      ]
+    },
+    {
+      "label": "Android: Запустить AVD (PrologyEmulator, quick boot)",
+      "type": "shell",
+      "command": "emulator -avd PrologyEmulator -no-snapshot-load",
+      "options": {
+        "env": {
+          "ANDROID_SDK_ROOT": "/home/mi/Android/Sdk",
+          "ANDROID_HOME": "/home/mi/Android/Sdk"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true,
+        "group": "android"
+      },
+      "group": "none",
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "owner": "android",
+          "pattern": [
+            {
+              "regexp": ".",
+              "file": 1
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "^emulator:",
+            "endsPattern": ".*is running"
+          }
+        }
+      ]
+    },
+    {
+      "label": "Android: Остановить AVD",
+      "type": "shell",
+      "command": "adb emu kill",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Список устройств ADB",
+      "type": "shell",
+      "command": "adb devices -l",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Ожидать загрузки устройства",
+      "type": "shell",
+      "command": "adb wait-for-device && adb shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done;' && echo \"Устройство готово\"",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Logcat (Equalizer314)",
+      "type": "shell",
+      "command": "adb logcat -v threadtime com.bearinmind.equalizer314:D *:S",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "owner": "android",
+          "pattern": [
+            {
+              "regexp": ".",
+              "file": 1
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "^- waiting",
+            "endsPattern": "^- waiting"
+          }
+        }
+      ]
+    },
+    {
+      "label": "Android: Logcat (все, verbose)",
+      "type": "shell",
+      "command": "adb logcat -v threadtime *:V",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "owner": "android",
+          "pattern": [
+            {
+              "regexp": ".",
+              "file": 1
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "^- waiting",
+            "endsPattern": "^- waiting"
+          }
+        }
+      ]
+    },
+    {
+      "label": "Android: Установить APK и запустить",
+      "type": "shell",
+      "command": "./gradlew installDebug && adb shell monkey -p com.bearinmind.equalizer314 1",
+      "dependsOn": ["Android: Ожидать загрузки устройства"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Переустановить APK (clean install)",
+      "type": "shell",
+      "command": "./gradlew uninstallDebug installDebug",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Очистить данные приложения",
+      "type": "shell",
+      "command": "adb shell pm clear com.bearinmind.equalizer314",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Снять скриншот",
+      "type": "shell",
+      "command": "adb shell screencap -p /sdcard/screenshot.png && adb pull /sdcard/screenshot.png && echo \"Скриншот сохранён: screenshot.png\"",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android"
+      },
+      "problemMatcher": []
+    },
+    // ======================================================
+    // СБОРКА
+    // ======================================================
+    {
+      "label": "Android: Собрать Debug APK",
+      "type": "shell",
+      "command": "./gradlew assembleDebug",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": ["$gradle", "$java"]
+    },
+    {
+      "label": "Gradle: Собрать Release APK",
+      "type": "shell",
+      "command": "./gradlew assembleRelease",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": ["$gradle", "$java"]
+    },
+    // ======================================================
+    // ТЕСТЫ
+    // ======================================================
+    {
+      "label": "Gradle: Unit-тесты",
+      "type": "shell",
+      "command": "./gradlew testDebugUnitTest",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": ["$gradle", "$java"]
+    },
+    {
+      "label": "Gradle: Unit-тесты (выборочно)",
+      "type": "shell",
+      "command": "./gradlew testDebugUnitTest --tests \"${input:testFilter}\"",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": ["$gradle", "$java"]
+    },
+    // ======================================================
+    // СТАТИЧЕСКИЙ АНАЛИЗ
+    // ======================================================
+    {
+      "label": "Gradle: Detekt",
+      "type": "shell",
+      "command": "./gradlew detekt",
+      "group": "lint",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": ["$detekt"]
+    },
+    {
+      "label": "Gradle: Lint (Android Lint)",
+      "type": "shell",
+      "command": "./gradlew lint",
+      "group": "lint",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": ["$androidLint"]
+    },
+    // ======================================================
+    // ПОКРЫТИЕ И ДОКУМЕНТАЦИЯ
+    // ======================================================
+    {
+      "label": "Gradle: Kover отчёт (HTML)",
+      "type": "shell",
+      "command": "./gradlew koverHtmlReport",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: Kover отчёт (XML)",
+      "type": "shell",
+      "command": "./gradlew koverXmlReport",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: Dokka документация",
+      "type": "shell",
+      "command": "./gradlew :app:dokkaHtml",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    // ======================================================
+    // ОЧИСТКА И ПЕРЕСБОРКА
+    // ======================================================
+    {
+      "label": "Gradle: Clean",
+      "type": "shell",
+      "command": "./gradlew clean",
+      "group": "clean",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: Полная пересборка (clean + assembleDebug)",
+      "type": "shell",
+      "command": "./gradlew clean assembleDebug",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": ["$gradle", "$java"]
+    },
+    // ======================================================
+    // ПОЛНАЯ ВЕРИФИКАЦИЯ
+    // ======================================================
+    {
+      "label": "Gradle: Полная верификация (CI pipeline)",
+      "type": "shell",
+      "command": "./gradlew lint detekt testDebugUnitTest assembleDebug assembleRelease",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": ["$gradle", "$java", "$detekt", "$androidLint"]
+    },
+    // ======================================================
+    // КОМПОЗИТНЫЕ: ЗАПУСК AVD + ОЖИДАНИЕ + СБОРКА
+    // ======================================================
+    {
+      "label": "Android: Полный запуск (AVD + ожидание + сборка)",
+      "dependsOn": [
+        "Android: Запустить AVD (PrologyEmulator, quick boot)",
+        "Android: Собрать Debug APK"
+      ],
+      "dependsOrder": "sequence",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "testFilter",
+      "type": "promptString",
+      "description": "Фильтр тестов (например, *FFTTest* или com.bearinmind.equalizer314.dsp.FFTTest)",
+      "default": "*Test*"
+    }
+  ]
+}

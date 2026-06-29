@@ -1,0 +1,161 @@
+{
+  // Конфигурации отладки для Equalizer314
+  // Версия: 0.2.0
+  // Поддерживаемые сценарии:
+  //   1. Android: Запуск и отладка — сборка APK + установка + запуск + отладка
+  //   2. Android: Attach к процессу — подключение к уже запущенному приложению
+  //   3. Gradle: сборка, тесты, детект, покрытие
+  // Расширения: adelphes.android-dev-ext (type: android), vscjava.vscode-gradle, 343max.android-emulator-launcher
+  "version": "0.2.0",
+  "configurations": [
+    // === ANDROID: ЗАПУСК И ОТЛАДКА ===
+    {
+      "name": "Android: Запуск и отладка",
+      "type": "android",
+      "request": "launch",
+      "appSrcRoot": "${workspaceFolder}/app/src/main",
+      "apkFile": "${workspaceFolder}/app/build/outputs/apk/debug/app-debug.apk",
+      "manifestFile": "${workspaceFolder}/app/src/main/AndroidManifest.xml",
+      "adbSocket": "localhost:5037",
+      "autoStartADB": true,
+      "targetDevice": "",
+      "launchActivity": ".MainActivity",
+      "pmInstallArgs": ["-r"],
+      "amStartArgs": [
+        "-D",
+        "-a android.intent.action.MAIN",
+        "-c android.intent.category.LAUNCHER",
+        "-n com.bearinmind.equalizer314/.MainActivity"
+      ],
+      "staleBuild": "warn",
+      "postLaunchPause": 1000,
+      "trace": false,
+      "preLaunchTask": "Android: Собрать Debug APK",
+      "presentation": {
+        "group": "2_android"
+      }
+    },
+    {
+      "name": "Android: Attach к процессу",
+      "type": "android",
+      "request": "attach",
+      "appSrcRoot": "${workspaceFolder}/app/src/main",
+      "adbSocket": "localhost:5037",
+      "autoStartADB": true,
+      "targetDevice": "",
+      "processName": "com.bearinmind.equalizer314",
+      "presentation": {
+        "group": "2_android"
+      }
+    },
+    // === GRADLE: СБОРКА ===
+    {
+      "name": "Gradle: Собрать Debug APK",
+      "type": "java",
+      "request": "launch",
+      "mainClass": "org.gradle.wrapper.GradleWrapperMain",
+      "projectName": "Equalizer314",
+      "args": ["assembleDebug"],
+      "cwd": "${workspaceFolder}",
+      "vmArgs": ["-Xmx4096m", "-Dfile.encoding=UTF-8"],
+      "env": { "ANDROID_HOME": "/home/mi/Android/Sdk" },
+      "console": "integratedTerminal",
+      "presentation": {
+        "group": "1_build"
+      }
+    },
+    // === GRADLE: ТЕСТЫ ===
+    {
+      "name": "Gradle: Unit-тесты (все)",
+      "type": "java",
+      "request": "launch",
+      "mainClass": "org.gradle.wrapper.GradleWrapperMain",
+      "projectName": "Equalizer314",
+      "args": ["testDebugUnitTest"],
+      "cwd": "${workspaceFolder}",
+      "vmArgs": ["-Xmx4096m", "-Dfile.encoding=UTF-8"],
+      "console": "integratedTerminal",
+      "presentation": {
+        "group": "3_test"
+      }
+    },
+    {
+      "name": "Gradle: Unit-тесты (текущий файл)",
+      "type": "java",
+      "request": "launch",
+      "mainClass": "org.gradle.wrapper.GradleWrapperMain",
+      "projectName": "Equalizer314",
+      "args": [
+        "testDebugUnitTest",
+        "--tests",
+        "*${fileBasenameNoExtension}*"
+      ],
+      "cwd": "${workspaceFolder}",
+      "vmArgs": ["-Xmx4096m", "-Dfile.encoding=UTF-8"],
+      "console": "integratedTerminal",
+      "presentation": {
+        "group": "3_test"
+      }
+    },
+    // === GRADLE: СТАТИЧЕСКИЙ АНАЛИЗ ===
+    {
+      "name": "Gradle: Detekt",
+      "type": "java",
+      "request": "launch",
+      "mainClass": "org.gradle.wrapper.GradleWrapperMain",
+      "projectName": "Equalizer314",
+      "args": ["detekt"],
+      "cwd": "${workspaceFolder}",
+      "vmArgs": ["-Xmx4096m", "-Dfile.encoding=UTF-8"],
+      "console": "integratedTerminal",
+      "presentation": {
+        "group": "4_lint"
+      }
+    },
+    {
+      "name": "Gradle: Kover отчёт",
+      "type": "java",
+      "request": "launch",
+      "mainClass": "org.gradle.wrapper.GradleWrapperMain",
+      "projectName": "Equalizer314",
+      "args": ["koverHtmlReport"],
+      "cwd": "${workspaceFolder}",
+      "vmArgs": ["-Xmx4096m", "-Dfile.encoding=UTF-8"],
+      "console": "integratedTerminal",
+      "presentation": {
+        "group": "4_lint"
+      }
+    },
+    // === GRADLE: ПОЛНАЯ ВЕРИФИКАЦИЯ ===
+    {
+      "name": "Gradle: Полная верификация",
+      "type": "java",
+      "request": "launch",
+      "mainClass": "org.gradle.wrapper.GradleWrapperMain",
+      "projectName": "Equalizer314",
+      "args": [
+        "assembleDebug",
+        "testDebugUnitTest",
+        "compileDebugAndroidTestSources",
+        "detekt"
+      ],
+      "cwd": "${workspaceFolder}",
+      "vmArgs": ["-Xmx4096m", "-Dfile.encoding=UTF-8"],
+      "console": "integratedTerminal",
+      "presentation": {
+        "group": "5_verify"
+      }
+    }
+  ],
+  // Составные конфигурации для отладки нескольких компонентов
+  "compounds": [
+    {
+      "name": "Android: Полный цикл (сборка + установка + отладка)",
+      "configurations": [
+        "Gradle: Собрать Debug APK",
+        "Android: Запуск и отладка"
+      ],
+      "stopAll": true
+    }
+  ]
+}

@@ -19,3 +19,6 @@ Equalizer314/
 CLAUDE.md
 ClaudeWebHelp/
 .vscode/
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/*.md
