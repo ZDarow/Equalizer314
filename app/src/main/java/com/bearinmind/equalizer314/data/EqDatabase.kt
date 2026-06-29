@@ -1,17 +1,18 @@
-@file:Suppress("ForbiddenComment")
-
 package com.bearinmind.equalizer314.data
 
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
  * Room database for the Equalizer314 app.
  *
  * Schema version history:
  * - v1: initial release — `presets`, `device_bindings`, `seen_devices`
+ * - v2: add `created_at` to `device_bindings` for tracking creation time
  */
 @Database(
     entities = [
@@ -19,7 +20,7 @@ import androidx.room.RoomDatabase
         DeviceBindingEntity::class,
         SeenDeviceEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class EqDatabase : RoomDatabase() {
@@ -39,10 +40,23 @@ abstract class EqDatabase : RoomDatabase() {
         @Volatile
         private var instance: EqDatabase? = null
 
-        // NOTE: replace .fallbackToDestructiveMigration() with proper
-        // Migration(1, 2) before shipping to production. Schema exports
-        // to app/schemas/ via room.schemaLocation — use the v1.json as
-        // the reference for writing MIGRATION_1_2.
+        /**
+         * Migration from v1 to v2.
+         *
+         * Changes:
+         * - `device_bindings`: add `created_at INTEGER NOT NULL DEFAULT 0`
+         */
+        @JvmField
+        val MIGRATION_1_2: Migration = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    ALTER TABLE device_bindings
+                    ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0
+                    """.trimIndent()
+                )
+            }
+        }
 
         /**
          * Thread-safe singleton accessor for the Room database.
@@ -55,7 +69,7 @@ abstract class EqDatabase : RoomDatabase() {
                     EqDatabase::class.java,
                     DB_NAME,
                 )
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(MIGRATION_1_2)
                     .build()
                     .also { instance = it }
             }

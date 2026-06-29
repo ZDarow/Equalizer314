@@ -23,7 +23,6 @@
     <ID>CyclomaticComplexMethod:BiquadFilter.kt$BiquadFilter$private fun calculateCoefficients()</ID>
     <ID>CyclomaticComplexMethod:CompressorCurveView.kt$CompressorCurveView$override fun onDraw(canvas: Canvas)</ID>
     <ID>CyclomaticComplexMethod:CompressorCurveView.kt$CompressorCurveView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
-    <ID>CyclomaticComplexMethod:DynamicsProcessingManager.kt$DynamicsProcessingManager$private fun applyParametricResponse( dp: DynamicsProcessing, leftEq: ParametricEqualizer, rightEq: ParametricEqualizer, )</ID>
     <ID>CyclomaticComplexMethod:EqFitter.kt$EqFitter$private fun autoeq(fr: Array&lt;FloatArray>, frTarget: Array&lt;FloatArray>, maxFilters: Int): List&lt;Filter></ID>
     <ID>CyclomaticComplexMethod:EqFitter.kt$EqFitter$private fun optimizeFilter( fr: Array&lt;FloatArray>, frTarget: Array&lt;FloatArray>, filter: Filter, otherFilters: List&lt;Filter> ): Filter</ID>
     <ID>CyclomaticComplexMethod:EqGraphView.kt$EqGraphView$override fun onDraw(canvas: Canvas)</ID>
@@ -45,15 +44,14 @@
     <ID>CyclomaticComplexMethod:LimiterCeilingView.kt$LimiterCeilingView$override fun onDraw(canvas: Canvas)</ID>
     <ID>CyclomaticComplexMethod:LimiterWaveformView.kt$LimiterWaveformView$override fun onDraw(canvas: Canvas)</ID>
     <ID>CyclomaticComplexMethod:MainActivity.kt$MainActivity$override fun onResume()</ID>
+    <ID>CyclomaticComplexMethod:MainActivity.kt$MainActivity$override fun switchEqUiMode(mode: EqUiMode)</ID>
     <ID>CyclomaticComplexMethod:MainActivity.kt$MainActivity$private fun reorderToggleRows(animate: Boolean = true)</ID>
     <ID>CyclomaticComplexMethod:MainActivity.kt$MainActivity$private fun setupListeners()</ID>
-    <ID>CyclomaticComplexMethod:MainActivity.kt$MainActivity$private fun switchEqUiMode(mode: EqUiMode)</ID>
-    <ID>CyclomaticComplexMethod:MainActivity.kt$MainActivity$private fun updateBandInputs(bandIndex: Int?)</ID>
-    <ID>CyclomaticComplexMethod:MainActivity.kt$MainActivity$private fun updateFilterTypeButtons(bandIndex: Int?)</ID>
     <ID>CyclomaticComplexMethod:MbcActivity.kt$MbcActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
     <ID>CyclomaticComplexMethod:MbcActivity.kt$MbcActivity$private fun addBand()</ID>
     <ID>CyclomaticComplexMethod:MbcActivity.kt$MbcActivity$private fun removeBand(index: Int)</ID>
     <ID>CyclomaticComplexMethod:MbcActivity.kt$MbcActivity$private fun setupListeners()</ID>
+    <ID>CyclomaticComplexMethod:MbcActivity.kt$MbcActivity$private fun startGrTraceUpdates()</ID>
     <ID>CyclomaticComplexMethod:MbcActivity.kt$MbcActivity$private fun startVisualizer()</ID>
     <ID>CyclomaticComplexMethod:ParametricToDpConverter.kt$ParametricToDpConverter$fun convertFeatureAware(eq: ParametricEqualizer): ConvertedBands</ID>
     <ID>CyclomaticComplexMethod:ParametricToDpConverter.kt$ParametricToDpConverter$private fun supportsForBand(band: ParametricEqualizer.EqualizerBand): List&lt;Float></ID>
@@ -79,7 +77,7 @@
     <ID>EmptyFunctionBlock:SpectrumControlActivity.kt$SpectrumControlActivity.&lt;no name provided>${}</ID>
     <ID>EmptyFunctionBlock:TargetSelectActivity.kt$TargetSelectActivity.&lt;no name provided>${}</ID>
     <ID>EmptyFunctionBlock:VisualizerHelper.kt$VisualizerHelper.&lt;no name provided>${ }</ID>
-    <ID>LargeClass:MainActivity.kt$MainActivity : AppCompatActivity</ID>
+    <ID>LargeClass:MainActivity.kt$MainActivity : AppCompatActivityMainActivityContract</ID>
     <ID>LongMethod:AttackReleaseView.kt$AttackReleaseView$override fun onDraw(canvas: Canvas)</ID>
     <ID>LongMethod:AttackReleaseView.kt$AttackReleaseView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>LongMethod:AudioEffectsPipelineActivity.kt$AudioEffectsPipelineActivity.PipelineAdapter$override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder</ID>
@@ -96,7 +94,6 @@
     <ID>LongMethod:CompressorCurveView.kt$CompressorCurveView$override fun onDraw(canvas: Canvas)</ID>
     <ID>LongMethod:CompressorCurveView.kt$CompressorCurveView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>LongMethod:DynamicsProcessingManager.kt$DynamicsProcessingManager$override fun start(eq: ParametricEqualizer)</ID>
-    <ID>LongMethod:DynamicsProcessingManager.kt$DynamicsProcessingManager$private fun applyParametricResponse( dp: DynamicsProcessing, leftEq: ParametricEqualizer, rightEq: ParametricEqualizer, )</ID>
     <ID>LongMethod:EnvironmentalReverbActivity.kt$EnvironmentalReverbActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
     <ID>LongMethod:EqGraphView.kt$EqGraphView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>LongMethod:EqGraphView.kt$EqGraphView$private fun drawCurve(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
@@ -116,17 +113,16 @@
     <ID>LongMethod:LimiterWaveformView.kt$LimiterWaveformView$override fun onDraw(canvas: Canvas)</ID>
     <ID>LongMethod:MainActivity.kt$MainActivity$fun populatePresetPicker()</ID>
     <ID>LongMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
+    <ID>LongMethod:MainActivity.kt$MainActivity$override fun switchEqUiMode(mode: EqUiMode)</ID>
+    <ID>LongMethod:MainActivity.kt$MainActivity$private fun initControllers()</ID>
     <ID>LongMethod:MainActivity.kt$MainActivity$private fun initViews()</ID>
     <ID>LongMethod:MainActivity.kt$MainActivity$private fun setupListeners()</ID>
-    <ID>LongMethod:MainActivity.kt$MainActivity$private fun setupSettingsListeners()</ID>
-    <ID>LongMethod:MainActivity.kt$MainActivity$private fun switchEqUiMode(mode: EqUiMode)</ID>
-    <ID>LongMethod:MainActivity.kt$MainActivity$private fun updateFilterTypeButtons(bandIndex: Int?)</ID>
     <ID>LongMethod:MbcActivity.kt$MbcActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
     <ID>LongMethod:MbcActivity.kt$MbcActivity$private fun addBand()</ID>
     <ID>LongMethod:MbcActivity.kt$MbcActivity$private fun setupListeners()</ID>
     <ID>LongMethod:MbcActivity.kt$MbcActivity$private fun showMbcColorPicker()</ID>
+    <ID>LongMethod:MbcActivity.kt$MbcActivity$private fun startGrTraceUpdates()</ID>
     <ID>LongMethod:MbcActivity.kt$MbcActivity$private fun startVisualizer()</ID>
-    <ID>LongMethod:MbcActivity.kt$MbcActivity.&lt;no name provided>$override fun run()</ID>
     <ID>LongMethod:MeasurementSelectActivity.kt$MeasurementSelectActivity.MeasAdapter$override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder</ID>
     <ID>LongMethod:ParametricToDpConverter.kt$ParametricToDpConverter$fun convertFeatureAware(eq: ParametricEqualizer): ConvertedBands</ID>
     <ID>LongMethod:ParametricToDpConverter.kt$ParametricToDpConverter$private fun supportsForBand(band: ParametricEqualizer.EqualizerBand): List&lt;Float></ID>
@@ -164,7 +160,6 @@
     <ID>LoopWithTooManyJumpStatements:EqPreferencesManager.kt$EqPreferencesManager$for</ID>
     <ID>LoopWithTooManyJumpStatements:EqService.kt$EqService$for</ID>
     <ID>LoopWithTooManyJumpStatements:FreqResponseParser.kt$FreqResponseParser$for</ID>
-    <ID>LoopWithTooManyJumpStatements:MainActivity.kt$MainActivity$for</ID>
     <ID>LoopWithTooManyJumpStatements:MbcActivity.kt$MbcActivity$for</ID>
     <ID>LoopWithTooManyJumpStatements:ParametricToDpConverter.kt$ParametricToDpConverter$for</ID>
     <ID>LoopWithTooManyJumpStatements:ReverbVisualizerView.kt$ReverbVisualizerView$for</ID>
@@ -187,9 +182,7 @@
     <ID>NestedBlockDepth:EqService.kt$EqService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
     <ID>NestedBlockDepth:GrTraceView.kt$GrTraceView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>NestedBlockDepth:GraphicEqController.kt$GraphicEqController$private fun showColorPickerSheet(bandIndex: Int, colorBtn: MaterialButton)</ID>
-    <ID>NestedBlockDepth:MainActivity.kt$MainActivity$private fun setupColorSwatches()</ID>
     <ID>NestedBlockDepth:MainActivity.kt$MainActivity$private fun setupListeners()</ID>
-    <ID>NestedBlockDepth:MainActivity.kt$MainActivity$private fun updateFilterTypeButtons(bandIndex: Int?)</ID>
     <ID>NestedBlockDepth:MbcActivity.kt$MbcActivity$private fun showMbcColorPicker()</ID>
     <ID>NestedBlockDepth:SpectrumAnalyzerRenderer.kt$SpectrumAnalyzerRenderer$fun draw( canvas: Canvas, left: Float, top: Float, right: Float, bottom: Float, dbMin: Float, dbMax: Float, eqResponseDb: FloatArray? = null )</ID>
     <ID>NestedBlockDepth:SpectrumControlActivity.kt$SpectrumControlActivity$private fun setupColor()</ID>
@@ -231,7 +224,6 @@
     <ID>ReturnCount:GrTraceView.kt$GrTraceView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>ReturnCount:LimiterCeilingView.kt$LimiterCeilingView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>ReturnCount:LimiterWaveformView.kt$LimiterWaveformView$override fun onTouchEvent(event: android.view.MotionEvent): Boolean</ID>
-    <ID>ReturnCount:MainActivity.kt$MainActivity$private fun applyBandQFromInput()</ID>
     <ID>ReturnCount:MainActivity.kt$MainActivity$private fun paintChannelButtonStyles()</ID>
     <ID>ReturnCount:MbcActivity.kt$MbcActivity$private fun pushMbcToService()</ID>
     <ID>ReturnCount:MbcActivity.kt$MbcActivity$private fun removeBand(index: Int)</ID>
@@ -263,7 +255,7 @@
     <ID>TooManyFunctions:EqFitter.kt$EqFitter</ID>
     <ID>TooManyFunctions:EqGraphView.kt$EqGraphView : View</ID>
     <ID>TooManyFunctions:EqPreferencesManager.kt$EqPreferencesManager</ID>
-    <ID>TooManyFunctions:MainActivity.kt$MainActivity : AppCompatActivity</ID>
+    <ID>TooManyFunctions:MainActivity.kt$MainActivity : AppCompatActivityMainActivityContract</ID>
     <ID>TooManyFunctions:ReverbVisualizerView.kt$ReverbVisualizerView : View</ID>
     <ID>UnusedParameter:BiquadFilter.kt$BiquadFilter$cosOmega: Double</ID>
     <ID>UnusedParameter:BiquadFilter.kt$BiquadFilter$sinOmega: Double</ID>
@@ -290,7 +282,6 @@
     <ID>UnusedPrivateProperty:MainActivity.kt$MainActivity$private val targetCurveLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result -> if (result.resultCode == RESULT_OK) handlePresetReturn() }</ID>
     <ID>UnusedPrivateProperty:MainActivity.kt$MainActivity$private var powerAnimator: android.animation.ValueAnimator? = null</ID>
     <ID>UnusedPrivateProperty:MainActivity.kt$MainActivity.Companion$private const val TAG = "Equalizer314"</ID>
-    <ID>UnusedPrivateProperty:MbcActivity.kt$MbcActivity.&lt;no name provided>$val overallLevel = if (count > 0 &amp;&amp; sumPower > 0) (10.0 * Math.log10(sumPower / count)).toFloat() else -96f</ID>
     <ID>UnusedPrivateProperty:ReverbVisualizerView.kt$ReverbVisualizerView$// Dashed variant used when the cluster has collapsed (Early Refl // slider at its minimum). The dashes communicate "this region // exists but has no width yet." private val earlyBarDashedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE strokeCap = Paint.Cap.BUTT strokeWidth = 2.0f * density color = earlyBarColor pathEffect = android.graphics.DashPathEffect( floatArrayOf(3f * density, 3f * density), 0f ) }</ID>
     <ID>UnusedPrivateProperty:ReverbVisualizerView.kt$ReverbVisualizerView$private val arrowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFAAAAAA.toInt() strokeWidth = 1.2f * density style = Paint.Style.STROKE }</ID>
     <ID>UnusedPrivateProperty:ReverbVisualizerView.kt$ReverbVisualizerView$private val directBarPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE strokeCap = Paint.Cap.ROUND strokeWidth = 4f * density color = directBarColor }</ID>

@@ -24,4 +24,8 @@ data class DeviceBindingEntity(
     /** Name of the preset to auto-load — matches [PresetEntity.name]. */
     @ColumnInfo(name = "preset_name")
     val presetName: String,
+
+    /** Timestamp when this binding was first created (epoch millis). */
+    @ColumnInfo(name = "created_at")
+    val createdAt: Long = 0,
 )

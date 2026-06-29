@@ -33,25 +33,16 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.bearinmind.equalizer314.audio.EqService
 import com.bearinmind.equalizer314.audio.RouteSwitchCoordinator
-import com.bearinmind.equalizer314.dsp.BiquadFilter
+import com.bearinmind.equalizer314.controller.MainActivityContract
 import com.bearinmind.equalizer314.dsp.ParametricToDpConverter
 import com.bearinmind.equalizer314.state.EqStateManager
 import com.bearinmind.equalizer314.state.EqViewModel
 import com.bearinmind.equalizer314.ui.BandToggleManager
 import com.bearinmind.equalizer314.ui.EqGraphView
-import com.bearinmind.equalizer314.ui.FilterRole
 import com.bearinmind.equalizer314.ui.GraphicEqController
 import com.bearinmind.equalizer314.ui.GraphOverlayLayoutManager
 import com.bearinmind.equalizer314.ui.SimpleEqController
 import com.bearinmind.equalizer314.ui.TableEqController
-import com.bearinmind.equalizer314.ui.buildFilterButtonText
-import com.bearinmind.equalizer314.ui.filterTypeFamily
-import com.bearinmind.equalizer314.ui.formatHzValue
-import com.bearinmind.equalizer314.ui.hzToSlider
-import com.bearinmind.equalizer314.ui.isPeakFamily
-import com.bearinmind.equalizer314.ui.oneOrderVariant
-import com.bearinmind.equalizer314.ui.peakButtonLabel
-import com.bearinmind.equalizer314.ui.sliderToHz
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
@@ -60,16 +51,19 @@ import java.util.Locale
 import kotlin.math.pow
 import kotlinx.coroutines.launch
 
-class  MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), MainActivityContract {
 
     companion object {
         private const val TAG = "Equalizer314"
     }
 
     // ViewModel — lifecycle-aware wrapper around EqStateManager
-    private val eqViewModel: EqViewModel by lazy {
+    override val eqViewModel: EqViewModel by lazy {
         androidx.lifecycle.ViewModelProvider(this)[EqViewModel::class.java]
     }
+
+    override val context: android.content.Context get() = this
+    override fun isPresetManagerInitialized(): Boolean = ::presetManager.isInitialized
 
     private var pendingExportText: String? = null
     // Once-per-process gate so we don't fire the POST_NOTIFICATIONS
@@ -81,26 +75,17 @@ class  MainActivity : AppCompatActivity() {
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
-            val uri = result.data?.data ?: return@registerForActivityResult
-            val text = pendingExportText ?: return@registerForActivityResult
-            try {
-                contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(text) }
-                android.widget.Toast.makeText(this, getString(R.string.msg_exported_success), android.widget.Toast.LENGTH_SHORT).show()
-            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-                android.widget.Toast.makeText(this, getString(R.string.msg_export_failed, e.message), android.widget.Toast.LENGTH_SHORT).show()
+            val uri = result.data?.data
+            if (::presetIoController.isInitialized) {
+                presetIoController.handlePresetExportResult(uri)
             }
-            pendingExportText = null
         }
     }
 
     internal fun launchPresetExport(text: String, fileName: String) {
-        pendingExportText = text
-        val intent = android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT).apply {
-            addCategory(android.content.Intent.CATEGORY_OPENABLE)
-            type = "text/plain"
-            putExtra(android.content.Intent.EXTRA_TITLE, fileName)
+        if (::presetIoController.isInitialized) {
+            presetIoController.launchPresetExport(text, fileName)
         }
-        presetExportLauncher.launch(intent)
     }
 
     // ---- Whole-app backup / restore ----
@@ -108,13 +93,8 @@ class  MainActivity : AppCompatActivity() {
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
-            val uri = result.data?.data ?: return@registerForActivityResult
-            try {
-                val json = BackupManager.exportAll(this)
-                contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(json) }
-                android.widget.Toast.makeText(this, "Backup saved", android.widget.Toast.LENGTH_SHORT).show()
-            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-                android.widget.Toast.makeText(this, "Backup failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+            if (::presetIoController.isInitialized) {
+                presetIoController.handleBackupExportResult(result.data?.data)
             }
         }
     }
@@ -122,24 +102,8 @@ class  MainActivity : AppCompatActivity() {
     private val backupImportLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
-        if (uri == null) return@registerForActivityResult
-        try {
-            val text = contentResolver.openInputStream(uri)?.bufferedReader()?.readText()
-            if (text != null && BackupManager.importAll(this, text)) {
-                android.widget.Toast.makeText(this, "Backup restored", android.widget.Toast.LENGTH_SHORT).show()
-                // Re-apply the restored theme choice, then recreate so all
-                // screens, presets, and bindings reload from the new prefs.
-                val light = getSharedPreferences("eq_settings", MODE_PRIVATE).getBoolean("lightTheme", false)
-                androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
-                    if (light) androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
-                    else androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
-                )
-                recreate()
-            } else {
-                android.widget.Toast.makeText(this, "Not a valid Equalizer314 backup", android.widget.Toast.LENGTH_SHORT).show()
-            }
-        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            android.widget.Toast.makeText(this, "Restore failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+        if (::presetIoController.isInitialized) {
+            presetIoController.handleBackupImportResult(uri)
         }
     }
 
@@ -213,14 +177,14 @@ class  MainActivity : AppCompatActivity() {
     private lateinit var graphicController: GraphicEqController
     private lateinit var tableController: TableEqController
     private lateinit var simpleEqController: SimpleEqController
-    private lateinit var bandToggleManager: BandToggleManager
-    private lateinit var undoRedoManager: com.bearinmind.equalizer314.state.UndoRedoManager
-    private lateinit var presetManager: com.bearinmind.equalizer314.state.PresetManager
+    override lateinit var bandToggleManager: BandToggleManager
+    override lateinit var undoRedoManager: com.bearinmind.equalizer314.state.UndoRedoManager
+    override lateinit var presetManager: com.bearinmind.equalizer314.state.PresetManager
     private val graphOverlayLayoutManager = GraphOverlayLayoutManager()
-    private val visualizerHelper = com.bearinmind.equalizer314.audio.VisualizerHelper()
+    override val visualizerHelper = com.bearinmind.equalizer314.audio.VisualizerHelper()
     // Property aliases for upstream-style code references
-    private val stateManager get() = eqViewModel.stateManager
-    private val eqPrefs get() = eqViewModel.eqPrefs
+    override val stateManager get() = eqViewModel.stateManager
+    override val eqPrefs get() = eqViewModel.eqPrefs
 
     private fun reloadEqFromPrefs() {
         eqViewModel.syncAll()
@@ -278,102 +242,13 @@ class  MainActivity : AppCompatActivity() {
 
     @Suppress("UnusedPrivateProperty") // Reserved for future APO import button
     private val apoImportLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri == null) return@registerForActivityResult
-        try {
-            val text = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return@registerForActivityResult
-            val profile = com.bearinmind.equalizer314.autoeq.AutoEqParser.parse(text)
-            if (profile == null || profile.filters.isEmpty()) {
-                android.widget.Toast.makeText(this, getString(R.string.msg_parse_apo_failed), android.widget.Toast.LENGTH_LONG).show()
-                return@registerForActivityResult
-            }
-            fun toBandSpecs(filters: List<com.bearinmind.equalizer314.autoeq.AutoEqFilter>):
-                    List<com.bearinmind.equalizer314.state.EqStateManager.BandSpec> =
-                filters.map {
-                    com.bearinmind.equalizer314.state.EqStateManager.BandSpec(
-                        frequency = it.frequency,
-                        gain = it.gain,
-                        q = it.q.toDouble(),
-                        filterType = com.bearinmind.equalizer314.autoeq.apoTokenToFilterType(it.filterType),
-                    )
-                }
-
-            eqViewModel.eqPrefs.savePreampGain(profile.preampDb)
-            eqViewModel.eqPrefs.savePresetName(getString(R.string.msg_apo_import))
-            eqViewModel.eqPrefs.saveAutoEqName("")
-            eqViewModel.eqPrefs.saveAutoEqSource("")
-
-            if (profile.perChannel) {
-                // Fork into L/R editors and flip Channel Side EQ on.
-                val leftSpecs = toBandSpecs(profile.leftFilters)
-                val rightSpecs = toBandSpecs(profile.rightFilters)
-                // bothBands falls back to the combined flat list in case the
-                // user later turns CSE off.
-                val bothSpecs = toBandSpecs(profile.filters)
-                eqViewModel.applyPresetEqs(
-                    cseEnabled = true,
-                    bothBands = bothSpecs,
-                    leftBands = leftSpecs,
-                    rightBands = rightSpecs,
-                )
-                // Persist L's bands as the main "bands" state + both L and R
-                // under their own prefs keys so the divergence survives a
-                // process restart.
-                eqViewModel.eqPrefs.saveState(eqViewModel.parametricEq.value, (0 until eqViewModel.parametricEq.value.getBandCount()).toList())
-                eqViewModel.persistLeftRightIfCse()
-                if (eqViewModel.isProcessing.value) {
-                    val (lEq, rEq) = eqViewModel.getChannelEqs()
-                    eqViewModel.eqService.value?.let { svc ->
-                        svc.dynamicsManager.stop()
-                        svc.dynamicsManager.run { requestedBandCount = eqViewModel.eqPrefs.getDpBandCount(); start(eqViewModel.parametricEq.value) }
-                        svc.updateEqPerChannel(lEq, rEq)
-                    }
-                }
-                reloadEqFromPrefs()
-                refreshChannelPopoutDim()
-                android.widget.Toast.makeText(
-                    this,
-                    "Applied L:${profile.leftFilters.size} R:${profile.rightFilters.size} filters",
-                    android.widget.Toast.LENGTH_SHORT
-                ).show()
-            } else {
-                // Flat single-channel preset — CSE off, single EQ.
-                // Reset stale band selection — CSE-on may have left
-                // selectedBandIndex pointing past the end of the new bothEq.
-                eqViewModel.selectBand(0)
-                val specs = toBandSpecs(profile.filters)
-                eqViewModel.applyPresetEqs(
-                    cseEnabled = false,
-                    bothBands = specs,
-                    leftBands = specs,
-                    rightBands = specs,
-                )
-                eqViewModel.eqPrefs.saveState(eqViewModel.parametricEq.value, (0 until eqViewModel.parametricEq.value.getBandCount()).toList())
-                reloadEqFromPrefs()
-                // Force a full active-EQ rebind so the graph / band toggles /
-                // input widgets retarget bothEq when CSE was previously on.
-                // Without this the UI keeps pointing at the old leftEq until
-                // the user manually flips the CSE switch.
-                rebindActiveEq()
-                // If DP is running, it was bound to leftEq/rightEq — push the
-                // new bothEq to both channels so audio matches the displayed
-                // EQ immediately instead of after the next interaction.
-                if (eqViewModel.isProcessing.value) {
-                    val (lEq, rEq) = eqViewModel.getChannelEqs()
-                    eqViewModel.eqService.value?.let { svc ->
-                        svc.dynamicsManager.stop()
-                        svc.dynamicsManager.run { requestedBandCount = eqViewModel.eqPrefs.getDpBandCount(); start(eqViewModel.parametricEq.value) }
-                        svc.updateEqPerChannel(lEq, rEq)
-                    }
-                }
-                android.widget.Toast.makeText(this, getString(R.string.msg_applied_filters, profile.filters.size), android.widget.Toast.LENGTH_SHORT).show()
-            }
-        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            android.widget.Toast.makeText(this, getString(R.string.msg_error, e.message), android.widget.Toast.LENGTH_SHORT).show()
+        if (::presetIoController.isInitialized) {
+            presetIoController.handleApoImportResult(uri)
         }
     }
 
     // Views
-    private lateinit var eqGraphView: EqGraphView
+    override lateinit var eqGraphView: EqGraphView
     private lateinit var eqToggleButton: MaterialButton
     private lateinit var eqPowerToggle: MaterialButton
     private lateinit var presetDropdown: MaterialAutoCompleteTextView
@@ -398,7 +273,7 @@ class  MainActivity : AppCompatActivity() {
     // The light values mirror the dark ones at the same luminance
     // distance from their background, so both themes keep the same
     // contrast relationships (see themes.xml for the same convention).
-    private val isLightUi: Boolean
+    override val isLightUi: Boolean
         get() = (resources.configuration.uiMode and
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) !=
             android.content.res.Configuration.UI_MODE_NIGHT_YES
@@ -419,8 +294,6 @@ class  MainActivity : AppCompatActivity() {
     private lateinit var bandDbInput: com.google.android.material.textfield.TextInputEditText
     private lateinit var bandQInput: com.google.android.material.textfield.TextInputEditText
     private lateinit var bandQInputLayout: com.google.android.material.textfield.TextInputLayout
-    private var isUpdatingInputs = false
-
     // Settings views
     private lateinit var preampSlider: Slider
     private lateinit var preampText: EditText
@@ -735,6 +608,12 @@ class  MainActivity : AppCompatActivity() {
         updateAutoGainOffsetText()
     }
 
+    // ---- Вынесенные контроллеры ----
+    private lateinit var graphController: com.bearinmind.equalizer314.controller.GraphController
+    private lateinit var navigationController: com.bearinmind.equalizer314.controller.NavigationController
+    private lateinit var presetIoController: com.bearinmind.equalizer314.controller.PresetIoController
+    private lateinit var sheetController: com.bearinmind.equalizer314.controller.SheetController
+
     private fun initControllers() {
         val onEqChanged = {
             eqViewModel.pushEqUpdate()
@@ -743,16 +622,15 @@ class  MainActivity : AppCompatActivity() {
         val onBandCountChanged = {
             onEqChanged()
             bandToggleManager.updateIcons()
-            setupFilterTypeButtons()
-            eqViewModel.selectedBandIndex.value?.let { updateFilterTypeButtons(it) }
+            eqViewModel.selectedBandIndex.value?.let { graphController.updateFilterTypeButtons(it) }
             if (eqViewModel.currentEqUiMode.value == EqUiMode.TABLE) tableController.buildTable()
             if (eqViewModel.currentEqUiMode.value == EqUiMode.GRAPHIC) graphicController.buildSliders(graphicController.targetCardHeight)
             reorderToggleRows()
         }
 
         val onBandSelected = { bandIndex: Int? ->
-            updateFilterTypeButtons(bandIndex)
-            updateBandInputs(bandIndex)
+            graphController.updateFilterTypeButtons(bandIndex)
+            graphController.updateBandInputs(bandIndex)
             // In graphic mode, rebuild sliders if we switched to a different page
             if (eqViewModel.currentEqUiMode.value == EqUiMode.GRAPHIC && graphicController.updatePageForBand(bandIndex)) {
                 graphicController.buildSliders(graphicController.targetCardHeight)
@@ -781,6 +659,66 @@ class  MainActivity : AppCompatActivity() {
             onEqChanged, onBandCountChanged, onBandSelected
         )
 
+        // ---- Инициализация вынесенных контроллеров ----
+        graphController = com.bearinmind.equalizer314.controller.GraphController(
+            contract = this,
+            filterTypeGroup = filterTypeGroup,
+            colorSwatchRow = colorSwatchRow,
+            bandInputGroup = bandInputGroup,
+            bandHzSlider = bandHzSlider,
+            bandDbSlider = bandDbSlider,
+            qSlider = qSlider,
+            bandHzInput = bandHzInput,
+            bandDbInput = bandDbInput,
+            bandQInput = bandQInput,
+            bandQInputLayout = bandQInputLayout,
+            graphicController = graphicController,
+            tableController = tableController,
+            bandToggleManager = bandToggleManager,
+        )
+
+        navigationController = com.bearinmind.equalizer314.controller.NavigationController(
+            contract = this,
+            pageEq = pageEq,
+            pageSettings = pageSettings,
+            navSettingsButton = navSettingsButton,
+            navPresetsButton = navPresetsButton,
+            modeParametricBtn = modeParametricBtn,
+            modeGraphicBtn = modeGraphicBtn,
+            modeTableBtn = modeTableBtn,
+            modeSimpleBtn = modeSimpleBtn,
+        )
+        navigationController.onOpenPresetsConversions = {
+            presetsConversionsLauncher.launch(Intent(this, PresetsConversionsActivity::class.java))
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+        }
+        navigationController.onUpdateAutoEqStatus = { updateAutoEqStatus() }
+        navigationController.onUpdateTargetStatus = { updateTargetStatus() }
+        navigationController.onShowBackupRestore = { showBackupRestoreDialog() }
+
+        presetIoController = com.bearinmind.equalizer314.controller.PresetIoController(
+            contract = this,
+            presetManager = presetManager,
+            onExportPreset = { text, fileName ->
+                // The launcher is created via registerForActivityResult in the
+                // activity constructor. Delegate the actual intent creation here.
+                pendingExportText = text
+                val intent = android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT).apply {
+                    addCategory(android.content.Intent.CATEGORY_OPENABLE)
+                    type = "text/plain"
+                    putExtra(android.content.Intent.EXTRA_TITLE, fileName)
+                }
+                presetExportLauncher.launch(intent)
+            },
+            onExportBackup = { launchBackupExport() },
+            onImportBackup = { mimeType -> backupImportLauncher.launch(mimeType) },
+            onImportApo = { apoImportLauncher.launch("text/plain") },
+        )
+
+        sheetController = com.bearinmind.equalizer314.controller.SheetController(
+            contract = this,
+        )
+
         // Wire state manager callbacks
         eqViewModel.stateManager.onProcessingChanged = { active ->
             animatePowerFab(active)
@@ -805,8 +743,8 @@ class  MainActivity : AppCompatActivity() {
             val defaultBand = eqViewModel.selectedBandIndex.value ?: 0
             eqViewModel.selectBand(defaultBand)
             eqGraphView.setActiveBand(defaultBand)
-            updateFilterTypeButtons(defaultBand)
-            updateBandInputs(defaultBand)
+            graphController.updateFilterTypeButtons(defaultBand)
+            graphController.updateBandInputs(defaultBand)
         }
     }
 
@@ -1508,7 +1446,7 @@ class  MainActivity : AppCompatActivity() {
                         // Write the current EQ under the (possibly renamed)
                         // preset. Same name → in-place overwrite; renamed →
                         // saved under the new name too (added to the set).
-                        presetManager.save(newName, buildCurrentPresetJson())
+                        presetManager.save(newName, presetIoController.buildCurrentPresetJson())
                         populatePresetPicker()
                         android.widget.Toast.makeText(this, "Updated \"$newName\"", android.widget.Toast.LENGTH_SHORT).show()
                         dlg.dismiss()
@@ -1891,8 +1829,8 @@ class  MainActivity : AppCompatActivity() {
         // Graph callbacks
         eqGraphView.onBandSelectedListener = { bandIndex ->
             bandToggleManager.updateSelection(bandIndex)
-            updateFilterTypeButtons(bandIndex)
-            updateBandInputs(bandIndex)
+            graphController.updateFilterTypeButtons(bandIndex)
+            graphController.updateBandInputs(bandIndex)
             if (eqViewModel.currentEqUiMode.value == EqUiMode.GRAPHIC && graphicController.updatePageForBand(bandIndex)) {
                 graphicController.buildSliders(graphicController.targetCardHeight)
             }
@@ -1904,19 +1842,16 @@ class  MainActivity : AppCompatActivity() {
             // trigger a full Pre-EQ rewrite on the audio thread. The drag-end
             // listener flushes the final value.
             eqViewModel.pushEqUpdateThrottled()
-            updateBandInputs(bandIndex)
+            graphController.updateBandInputs(bandIndex)
             if (eqViewModel.currentEqUiMode.value == EqUiMode.TABLE) tableController.buildTable()
             if (eqViewModel.currentEqUiMode.value == EqUiMode.GRAPHIC) graphicController.updateSliderValues()
         }
 
         eqGraphView.onBandDragEndListener = { eqViewModel.flushEqUpdate() }
 
-        eqGraphView.onLongPressListener = { showPresetsBottomSheet() }
+        eqGraphView.onLongPressListener = { sheetController.showPresetsBottomSheet() }
 
-        // Band parameter sliders + text inputs
-        setupBandSliderListeners()
-        setupBandInputListeners()
-
+        // Band parameter sliders + text inputs — handled by graphController.setup()
         // DP band count slider
         dpBandCountSlider.addOnChangeListener { _, value, fromUser ->
             if (!fromUser) return@addOnChangeListener
@@ -1940,62 +1875,14 @@ class  MainActivity : AppCompatActivity() {
             true
         }
 
-        // Filter type buttons
-        setupFilterTypeButtons()
-        // Color swatches
-        setupColorSwatches()
-
-        // EQ mode selector
-        // The three "advanced" modes clear the Simple flag; the Simple
-        // card sets it. Persisting here mirrors the experimental
-        // settings switch so the choice survives a restart and the two
-        // entry points stay consistent.
-        modeParametricBtn.setOnClickListener { eqPrefs.saveSimpleEqEnabled(false); switchEqUiMode(EqUiMode.PARAMETRIC) }
-        modeGraphicBtn.setOnClickListener { eqPrefs.saveSimpleEqEnabled(false); switchEqUiMode(EqUiMode.GRAPHIC) }
-        modeTableBtn.setOnClickListener { eqPrefs.saveSimpleEqEnabled(false); switchEqUiMode(EqUiMode.TABLE) }
-        modeSimpleBtn.setOnClickListener { eqPrefs.saveSimpleEqEnabled(true); switchEqUiMode(EqUiMode.SIMPLE) }
-
-        // Settings controls
-        setupSettingsListeners()
+        // Инициализация вынесенных контроллеров
+        graphController.setup()
+        navigationController.setup()
     }
 
     // ---- Settings ----
 
-    /** Serializes the current EQ state (bands + preamp + Channel-Side-EQ)
-     *  to a preset JSON string. Shared by the "+" save-new flow and the
-     *  per-row overwrite, so a saved and an overwritten preset are byte-for
-     *  byte the same format. */
-    private fun buildCurrentPresetJson(): String {
-        stateManager.eqPrefs.saveState(stateManager.parametricEq)
-        stateManager.persistLeftRightIfCse()
-        fun serialize(eq: com.bearinmind.equalizer314.dsp.ParametricEqualizer): org.json.JSONArray {
-            val arr = org.json.JSONArray()
-            for (b in eq.getAllBands()) {
-                arr.put(org.json.JSONObject().apply {
-                    put("frequency", b.frequency)
-                    put("gain", b.gain)
-                    put("q", b.q)
-                    put("filterType", b.filterType.name)
-                    put("enabled", b.enabled)
-                })
-            }
-            return arr
-        }
-        val json = org.json.JSONObject()
-        json.put("preamp", stateManager.preampGainDb)
-        val cseOn = eqPrefs.getChannelSideEqEnabled()
-        json.put("channelSideEqEnabled", cseOn)
-        if (cseOn) {
-            val (lEq, rEq) = eqViewModel.stateManager.getChannelEqs()
-            json.put("leftBands", serialize(lEq))
-            json.put("rightBands", serialize(rEq))
-            // Back-compat: also write the active EQ under the legacy "bands".
-            json.put("bands", serialize(eqViewModel.stateManager.parametricEq))
-        } else {
-            json.put("bands", serialize(eqViewModel.stateManager.parametricEq))
-        }
-        return json.toString()
-    }
+    /** Serializes the current EQ state to preset JSON — делегировано в PresetIoController. */
 
     private fun updateAutoEqStatus() {
         // The AutoEQ status card moved to PresetsConversionsActivity, so on
@@ -2048,79 +1935,14 @@ class  MainActivity : AppCompatActivity() {
         renderer.releaseAlpha = eqViewModel.eqPrefs.getSpectrumRelease()
     }
 
-    private fun setupSettingsListeners() {
-        // Light/dark theme toggle (settings page). Switch ON = light.
-        // setDefaultNightMode recreates all live activities, which
-        // re-inflates everything in the new palette; EqApp re-applies
-        // the saved choice on the next cold start.
-        val themeSwitch = findViewById<com.google.android.material.materialswitch.MaterialSwitch>(R.id.themeSwitch)
-        themeSwitch.isChecked = eqViewModel.eqPrefs.getLightTheme()
-        themeSwitch.setOnCheckedChangeListener { _, isChecked ->
-            eqViewModel.eqPrefs.saveLightTheme(isChecked)
-            androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
-                if (isChecked) androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
-                else androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
-            )
-        }
-
-        // Channel Side EQ card (settings page) — opens the per-channel editor
-        findViewById<View>(R.id.channelSideEqCard).setOnClickListener {
-            startActivity(Intent(this, ChannelSideEqActivity::class.java))
-            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-        }
-
-        // Presets & Conversions — opens the sub-screen grouping AutoEQ &
-        // Presets, Generate Custom EQ, and Convert to APO. RESULT_OK comes
-        // back when an AutoEQ/Target preset was applied there, so reload
-        // the EQ from prefs (same flow the loose cards used).
-        findViewById<View>(R.id.presetsConversionsCard).setOnClickListener {
-            presetsConversionsLauncher.launch(Intent(this, PresetsConversionsActivity::class.java))
-            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-        }
-
-        // Backup & Restore — whole-app export/import.
-        findViewById<View>(R.id.backupRestoreCard).setOnClickListener {
-            showBackupRestoreDialog()
-        }
-
-        // Audio Effects Pipeline — placeholder screen for chaining/reordering
-        // session-0 audio effects.
-        findViewById<View>(R.id.audioEffectsPipelineCard).setOnClickListener {
-            startActivity(Intent(this, AudioEffectsPipelineActivity::class.java))
-            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-        }
-
-        // Experimental lock button — toggles locked/unlocked state
-        val experimentalLockButton = findViewById<ImageButton>(R.id.experimentalLockButton)
-        val experimentalCard = findViewById<View>(R.id.experimentalCard)
-        fun applyExperimentalLockState() {
-            val unlocked = eqViewModel.eqPrefs.getExperimentalUnlocked()
-            experimentalLockButton.setImageResource(
-                if (unlocked) R.drawable.ic_lock_open else R.drawable.ic_lock
-            )
-            experimentalCard.isClickable = unlocked
-            experimentalCard.alpha = if (unlocked) 1f else 0.6f
-        }
-        applyExperimentalLockState()
-        experimentalLockButton.setOnClickListener {
-            val newState = !eqViewModel.eqPrefs.getExperimentalUnlocked()
-            eqViewModel.eqPrefs.saveExperimentalUnlocked(newState)
-            applyExperimentalLockState()
-        }
-        experimentalCard.setOnClickListener {
-            if (!eqViewModel.eqPrefs.getExperimentalUnlocked()) return@setOnClickListener
-            startActivity(Intent(this, ExperimentalActivity::class.java))
-            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-        }
-
-        // Spectrum Control
-        setupSpectrumControl()
-
+    /** Настройки preamp и auto-gain (остальные карточки настроек
+     *  обрабатываются в NavigationController). */
+    private fun setupPreampListeners() {
         // Preamp slider
         preampSlider.addOnChangeListener { _, value, fromUser ->
             if (!fromUser) return@addOnChangeListener
             preampText.setText(String.format(Locale.US, "%.1f", value))
-            eqViewModel.setPreampGain( value)
+            eqViewModel.setPreampGain(value)
             eqViewModel.eqPrefs.savePreampGain(value)
             eqViewModel.pushEqUpdate()
             updateAutoGainOffsetText()
@@ -2131,7 +1953,7 @@ class  MainActivity : AppCompatActivity() {
                 val gain = preampText.text.toString().toFloatOrNull()?.coerceIn(-12f, 12f) ?: 0f
                 preampText.setText(String.format(Locale.US, "%.1f", gain))
                 preampSlider.value = gain
-                eqViewModel.setPreampGain( gain)
+                eqViewModel.setPreampGain(gain)
                 eqViewModel.eqPrefs.savePreampGain(gain)
                 eqViewModel.pushEqUpdate()
                 updateAutoGainOffsetText()
@@ -2142,13 +1964,11 @@ class  MainActivity : AppCompatActivity() {
 
         // Auto-gain switch
         autoGainSwitch.setOnCheckedChangeListener { _, isChecked ->
-            eqViewModel.setAutoGainEnabled( isChecked)
+            eqViewModel.setAutoGainEnabled(isChecked)
             eqViewModel.eqPrefs.saveAutoGainEnabled(isChecked)
             eqViewModel.pushEqUpdate()
             updateAutoGainOffsetText()
         }
-
-        // Old inline limiter controls removed — now in LimiterActivity
     }
 
     private fun updateAutoGainOffsetText() {
@@ -2228,7 +2048,7 @@ class  MainActivity : AppCompatActivity() {
         graphOverlayLayoutManager.repositionChannelBadge(badge, altRouteLeftPx)
     }
 
-    private fun switchEqUiMode(mode: EqUiMode) {
+    override fun switchEqUiMode(mode: EqUiMode) {
         // Clean up table mode bands when leaving
         if (eqViewModel.currentEqUiMode.value == EqUiMode.TABLE && mode != EqUiMode.TABLE) {
             tableController.cleanup()
@@ -2341,8 +2161,8 @@ class  MainActivity : AppCompatActivity() {
                     val band = eqViewModel.selectedBandIndex.value ?: 0
                     eqViewModel.selectBand(band)
                     eqGraphView.setActiveBand(band)
-                    updateFilterTypeButtons(band)
-                    updateBandInputs(band)
+                    graphController.updateFilterTypeButtons(band)
+                    graphController.updateBandInputs(band)
                 }
                 reorderToggleRows(animate = false)
             }
@@ -2590,339 +2410,6 @@ class  MainActivity : AppCompatActivity() {
         }
     }
 
-    // ---- Band Parameter Sliders + Text Inputs ----
-
-    @SuppressLint("ClickableViewAccessibility")
-    private fun setupBandSliderListeners() {
-        bandHzSlider.addOnChangeListener { _, value, fromUser ->
-            if (!fromUser || isUpdatingInputs) return@addOnChangeListener
-            val hz = sliderToHz(value)
-            isUpdatingInputs = true
-            bandHzInput.setText(formatHzValue(hz))
-            isUpdatingInputs = false
-            applyBandHz(hz)
-        }
-
-        bandDbSlider.addOnChangeListener { _, value, fromUser ->
-            if (!fromUser || isUpdatingInputs) return@addOnChangeListener
-            isUpdatingInputs = true
-            bandDbInput.setText(String.format(Locale.US, "%.1f", value))
-            isUpdatingInputs = false
-            applyBandDb(value)
-        }
-
-        qSlider.addOnChangeListener { _, value, fromUser ->
-            if (!fromUser || isUpdatingInputs) return@addOnChangeListener
-            isUpdatingInputs = true
-            bandQInput.setText(String.format(Locale.US, "%.2f", value))
-            isUpdatingInputs = false
-            val bandIndex = eqGraphView.getActiveBandIndex() ?: return@addOnChangeListener
-            eqGraphView.setQ(bandIndex, value.toDouble())
-            eqViewModel.pushEqUpdate()
-        }
-
-        // Double-tap to reset sliders to default values
-        addDoubleTapReset(bandHzSlider) {
-            val bandIndex = eqGraphView.getActiveBandIndex() ?: return@addDoubleTapReset
-            val defaults = eqViewModel.stateManager.allDefaultFrequencies
-            val slot = eqViewModel.bandSlots.value.getOrElse(bandIndex) { bandIndex }
-            val defaultHz = if (slot < defaults.size) defaults[slot] else 1000f
-            bandHzSlider.value = hzToSlider(defaultHz)
-            bandHzInput.setText(formatHzValue(defaultHz))
-            applyBandHz(defaultHz)
-        }
-
-        addDoubleTapReset(bandDbSlider) {
-            bandDbSlider.value = 0f
-            bandDbInput.setText("0.0")
-            applyBandDb(0f)
-        }
-
-        addDoubleTapReset(qSlider) {
-            val defaultQ = 0.71f
-            qSlider.value = defaultQ
-            bandQInput.setText(String.format(Locale.US, "%.2f", defaultQ))
-            val bandIndex = eqGraphView.getActiveBandIndex() ?: return@addDoubleTapReset
-            eqGraphView.setQ(bandIndex, defaultQ.toDouble())
-            eqViewModel.pushEqUpdate()
-        }
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private fun addDoubleTapReset(slider: Slider, onReset: () -> Unit) {
-        var lastTapTime = 0L
-        var consumeUntilUp = false
-        slider.setOnTouchListener { v, event ->
-            if (consumeUntilUp) {
-                if (event.action == android.view.MotionEvent.ACTION_UP || event.action == android.view.MotionEvent.ACTION_CANCEL) {
-                    consumeUntilUp = false
-                }
-                return@setOnTouchListener true
-            }
-            if (event.action == android.view.MotionEvent.ACTION_DOWN) {
-                val now = android.os.SystemClock.elapsedRealtime()
-                if (now - lastTapTime < 300) {
-                    isUpdatingInputs = true
-                    onReset()
-                    isUpdatingInputs = false
-                    eqGraphView.invalidate()
-                    lastTapTime = 0L
-                    consumeUntilUp = true
-                    return@setOnTouchListener true
-                }
-                lastTapTime = now
-            }
-            false
-        }
-    }
-
-    private fun setupBandInputListeners() {
-        val applyOnAction = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
-
-        bandHzInput.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == applyOnAction) { applyBandHzFromInput(); true } else false
-        }
-        bandHzInput.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) applyBandHzFromInput()
-        }
-
-        bandDbInput.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == applyOnAction) { applyBandDbFromInput(); true } else false
-        }
-        bandDbInput.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) applyBandDbFromInput()
-        }
-
-        bandQInput.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == applyOnAction) { applyBandQFromInput(); true } else false
-        }
-        bandQInput.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) applyBandQFromInput()
-        }
-    }
-
-    private fun applyBandHzFromInput() {
-        if (isUpdatingInputs) return
-        val hz = bandHzInput.text.toString().toFloatOrNull() ?: return
-        val clamped = hz.coerceIn(10f, 20000f)
-        isUpdatingInputs = true
-        bandHzSlider.value = hzToSlider(clamped)
-        isUpdatingInputs = false
-        applyBandHz(clamped)
-    }
-
-    private fun applyBandDbFromInput() {
-        if (isUpdatingInputs) return
-        val db = bandDbInput.text.toString().toFloatOrNull() ?: return
-        val clamped = db.coerceIn(-20f, 20f)
-        isUpdatingInputs = true
-        bandDbSlider.value = clamped
-        isUpdatingInputs = false
-        applyBandDb(clamped)
-    }
-
-    private fun applyBandQFromInput() {
-        if (isUpdatingInputs) return
-        val q = bandQInput.text.toString().toDoubleOrNull() ?: return
-        val clamped = q.coerceIn(0.1, 12.0)
-        isUpdatingInputs = true
-        qSlider.value = clamped.toFloat()
-        isUpdatingInputs = false
-        val bandIndex = eqGraphView.getActiveBandIndex() ?: return
-        eqGraphView.setQ(bandIndex, clamped)
-        eqViewModel.pushEqUpdate()
-    }
-
-    private fun applyBandHz(hz: Float) {
-        val bandIndex = eqGraphView.getActiveBandIndex() ?: return
-        val band = eqViewModel.parametricEq.value.getBand(bandIndex) ?: return
-        eqViewModel.parametricEq.value.updateBand(bandIndex, hz, band.gain, band.filterType, band.q)
-        eqGraphView.updateBandLevels()
-        eqViewModel.pushEqUpdate()
-    }
-
-    private fun applyBandDb(db: Float) {
-        val bandIndex = eqGraphView.getActiveBandIndex() ?: return
-        val band = eqViewModel.parametricEq.value.getBand(bandIndex) ?: return
-        val ftNow = band.filterType
-        val gainless = ftNow == BiquadFilter.FilterType.LOW_PASS ||
-                       ftNow == BiquadFilter.FilterType.HIGH_PASS ||
-                       ftNow == BiquadFilter.FilterType.LOW_PASS_1 ||
-                       ftNow == BiquadFilter.FilterType.HIGH_PASS_1 ||
-                       ftNow == BiquadFilter.FilterType.BAND_PASS ||
-                       ftNow == BiquadFilter.FilterType.NOTCH ||
-                       ftNow == BiquadFilter.FilterType.ALL_PASS
-        val effectiveDb = if (gainless) 0f else db
-        eqViewModel.parametricEq.value.updateBand(bandIndex, band.frequency, effectiveDb, band.filterType, band.q)
-        eqGraphView.updateBandLevels()
-        eqViewModel.pushEqUpdate()
-    }
-
-    private fun showPresetsBottomSheet() {
-        val density = resources.displayMetrics.density
-        val presets = arrayOf("Flat", "Bass Boost", "Treble Boost", "Vocal Enhance")
-        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
-        val sheetLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding((16 * density).toInt(), (16 * density).toInt(), (16 * density).toInt(), (24 * density).toInt())
-        }
-        for (presetName in presets) {
-            val item = TextView(this).apply {
-                text = presetName
-                textSize = 16f
-                setTextColor(0xFFE2E2E2.toInt())
-                setPadding((16 * density).toInt(), (14 * density).toInt(), (16 * density).toInt(), (14 * density).toInt())
-                setOnClickListener {
-                    eqViewModel.loadPreset(presetName, eqGraphView)
-                    presetDropdown.setText(presetName, false)
-                    bandToggleManager.updateIcons()
-                    if (eqViewModel.currentEqUiMode.value == EqUiMode.TABLE) tableController.buildTable()
-                    if (eqViewModel.currentEqUiMode.value == EqUiMode.GRAPHIC) graphicController.buildSliders(graphicController.targetCardHeight)
-                    bottomSheet.dismiss()
-                }
-            }
-            sheetLayout.addView(item)
-        }
-        bottomSheet.setContentView(sheetLayout)
-        bottomSheet.show()
-    }
-
-    private fun updateBandInputs(bandIndex: Int?) {
-        isUpdatingInputs = true
-        val idx = bandIndex ?: eqViewModel.selectedBandIndex.value ?: 0
-        val band = eqViewModel.parametricEq.value.getBand(idx)
-        if (band != null) {
-            bandHzInput.setText(formatHzValue(band.frequency))
-            bandDbInput.setText(String.format(Locale.US, "%.1f", band.gain))
-            bandQInput.setText(String.format(Locale.US, "%.2f", band.q))
-            bandHzSlider.value = hzToSlider(band.frequency)
-            bandDbSlider.value = band.gain.coerceIn(-20f, 20f)
-            qSlider.value = band.q.toFloat().coerceIn(0.1f, 12f)
-
-            // dB slider / input are disabled for every gainless filter type:
-            // low / high pass at either order, plus BP / NO / AP.
-            val ft = band.filterType
-            val gainless = ft == BiquadFilter.FilterType.LOW_PASS ||
-                           ft == BiquadFilter.FilterType.HIGH_PASS ||
-                           ft == BiquadFilter.FilterType.LOW_PASS_1 ||
-                           ft == BiquadFilter.FilterType.HIGH_PASS_1 ||
-                           ft == BiquadFilter.FilterType.BAND_PASS ||
-                           ft == BiquadFilter.FilterType.NOTCH ||
-                           ft == BiquadFilter.FilterType.ALL_PASS
-            bandDbSlider.isEnabled = !gainless
-            bandDbInput.isEnabled = !gainless
-            bandDbSlider.alpha = if (gainless) 0.3f else 1f
-            bandDbInput.alpha = if (gainless) 0.3f else 1f
-
-            // Q slider / input don't apply to 1st-order variants — they
-            // collapse to a 6 dB/oct slope with no Q term.
-            val is1st = ft == BiquadFilter.FilterType.LOW_SHELF_1 ||
-                        ft == BiquadFilter.FilterType.HIGH_SHELF_1 ||
-                        ft == BiquadFilter.FilterType.LOW_PASS_1 ||
-                        ft == BiquadFilter.FilterType.HIGH_PASS_1
-            qSlider.isEnabled = !is1st
-            bandQInput.isEnabled = !is1st
-            qSlider.alpha = if (is1st) 0.3f else 1f
-            bandQInput.alpha = if (is1st) 0.3f else 1f
-        } else {
-            bandHzInput.setText("1000")
-            bandDbInput.setText("0.0")
-            bandQInput.setText("0.71")
-            bandHzSlider.value = 500f
-            bandDbSlider.value = 0f
-            qSlider.value = 0.71f
-            bandDbSlider.isEnabled = true
-            bandDbInput.isEnabled = true
-            bandDbSlider.alpha = 1f
-            bandDbInput.alpha = 1f
-            qSlider.isEnabled = true
-            bandQInput.isEnabled = true
-            qSlider.alpha = 1f
-            bandQInput.alpha = 1f
-        }
-        updateColorSwatches(bandIndex)
-        isUpdatingInputs = false
-    }
-
-    private fun setupColorSwatches() {
-        colorSwatchRow.removeAllViews()
-        val density = resources.displayMetrics.density
-        val size = (22 * density).toInt()
-
-        for (color in TableEqController.BAND_COLORS) {
-            val isNone = color == 0xFF333333.toInt()
-            val wrapper = FrameLayout(this).apply {
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            }
-            val swatch: View = if (isNone) {
-                TextView(this).apply {
-                    text = "\u2014"
-                    textSize = 12f
-                    setTextColor(0xFFAAAAAA.toInt())
-                    gravity = android.view.Gravity.CENTER
-                    layoutParams = FrameLayout.LayoutParams(size, size).apply {
-                        gravity = android.view.Gravity.CENTER
-                    }
-                    background = android.graphics.drawable.GradientDrawable().apply {
-                        setColor(0xFF404040.toInt())
-                        cornerRadius = 6 * density
-                        setStroke((1 * density).toInt(), 0xFF666666.toInt())
-                    }
-                }
-            } else {
-                View(this).apply {
-                    layoutParams = FrameLayout.LayoutParams(size, size).apply {
-                        gravity = android.view.Gravity.CENTER
-                    }
-                    background = android.graphics.drawable.GradientDrawable().apply {
-                        setColor(color)
-                        cornerRadius = 6 * density
-                        setStroke((1 * density).toInt(), 0xFF666666.toInt())
-                    }
-                }
-            }
-            swatch.setOnClickListener {
-                val bandIndex = eqViewModel.selectedBandIndex.value ?: return@setOnClickListener
-                val slotIdx = if (bandIndex < eqViewModel.bandSlots.value.size) eqViewModel.bandSlots.value[bandIndex] else return@setOnClickListener
-                if (isNone) {
-                    eqViewModel.bandColorsMap.remove(slotIdx)
-                } else {
-                    eqViewModel.bandColorsMap[slotIdx] = color
-                }
-                eqViewModel.saveState()
-                eqGraphView.setBandColors(eqViewModel.bandColors.value)
-                eqGraphView.invalidate()
-                bandToggleManager.updateSelection(eqViewModel.selectedBandIndex.value)
-                updateColorSwatches(bandIndex)
-            }
-            wrapper.addView(swatch)
-            colorSwatchRow.addView(wrapper)
-        }
-    }
-
-    private fun updateColorSwatches(bandIndex: Int?) {
-        val idx = bandIndex ?: eqViewModel.selectedBandIndex.value ?: return
-        val slotIdx = if (idx < eqViewModel.bandSlots.value.size) eqViewModel.bandSlots.value[idx] else -1
-        val currentColor = if (slotIdx >= 0) eqViewModel.bandColors.value[slotIdx] else null
-        val density = resources.displayMetrics.density
-
-        for (i in 0 until colorSwatchRow.childCount) {
-            val wrapper = colorSwatchRow.getChildAt(i) as? FrameLayout ?: continue
-            val swatch = wrapper.getChildAt(0) ?: continue
-            val bg = swatch.background as? android.graphics.drawable.GradientDrawable ?: continue
-
-            val swatchColor = TableEqController.BAND_COLORS[i]
-            val isNone = swatchColor == 0xFF333333.toInt()
-            val isSelected = if (isNone) currentColor == null else currentColor == swatchColor
-
-            if (isSelected) {
-                bg.setStroke((2 * density).toInt(), 0xFFFFFFFF.toInt())
-            } else {
-                bg.setStroke((1 * density).toInt(), 0xFF666666.toInt())
-            }
-        }
-    }
-
     // ---- Processing Control ----
 
     private fun startProcessing() {
@@ -2987,7 +2474,7 @@ class  MainActivity : AppCompatActivity() {
 
     private var powerAnimator: android.animation.ValueAnimator? = null
 
-    private fun animatePowerFab(on: Boolean) {
+    override fun animatePowerFab(on: Boolean) {
         // Don't duplicate — BottomNavHelper.updatePowerFab handles the full animation
         // Just update the text label
         powerButton.text = if (on) "ON" else "OFF"
@@ -2997,7 +2484,7 @@ class  MainActivity : AppCompatActivity() {
         powerButton.text = if (eqViewModel.isProcessing.value) "ON" else "OFF"
     }
 
-    private fun updateBottomBarHighlight(isEqPage: Boolean) {
+    override fun updateBottomBarHighlight(isEqPage: Boolean) {
         val screen = if (isEqPage) com.bearinmind.equalizer314.ui.NavScreen.EQ else com.bearinmind.equalizer314.ui.NavScreen.SETTINGS
         com.bearinmind.equalizer314.ui.BottomNavHelper.updateHighlight(this, screen)
         com.bearinmind.equalizer314.ui.BottomNavHelper.updateStatus(this, eqViewModel.eqPrefs)
@@ -3044,379 +2531,6 @@ class  MainActivity : AppCompatActivity() {
             eqPowerToggle.strokeWidth = (1 * d).toInt()
             eqPowerToggle.setTextColor(if (isLightUi) 0xFF8B8B8B.toInt() else 0xFF777777.toInt())
         }
-    }
-
-    // ---- Filter Type Buttons ----
-
-    private fun setupFilterTypeButtons() {
-        filterTypeGroup.removeAllViews()
-
-        // PEAK — first tap applies BELL (the default "Peak" / PK). When the
-        // band is already in the peak family (PK / BP / NO / AP), a second
-        // tap opens a dropdown to pick between those four sub-types.
-        val peakBtn = buildFilterTypeButton(
-            label = getString(R.string.filter_peak),
-            defaultSubtitle = "",
-            weightedWidth = true,
-        )
-        peakBtn.setOnClickListener { anchor ->
-            val bandIndex = eqGraphView.getActiveBandIndex() ?: return@setOnClickListener
-            val band = eqViewModel.parametricEq.value.getBand(bandIndex)
-            val inFamily = band != null && band.enabled && isPeakFamily(band.filterType)
-            if (inFamily) {
-                showPeakPopup(anchor, bandIndex)
-            } else {
-                applyFilterTypeToBand(bandIndex, BiquadFilter.FilterType.BELL)
-            }
-        }
-        filterTypeGroup.addView(peakBtn)
-
-        // Shelves & passes — each has a 2-tap 12 dB / 6 dB slope popup.
-        val shelfPassTypes = listOf(
-            getString(R.string.filter_low_shelf) to BiquadFilter.FilterType.LOW_SHELF,
-            getString(R.string.filter_high_shelf) to BiquadFilter.FilterType.HIGH_SHELF,
-            getString(R.string.filter_low_pass) to BiquadFilter.FilterType.LOW_PASS,
-            getString(R.string.filter_high_pass) to BiquadFilter.FilterType.HIGH_PASS,
-        )
-        for ((label, type) in shelfPassTypes) {
-            val btn = buildFilterTypeButton(
-                label = label,
-                defaultSubtitle = getString(R.string.msg_12db),
-                weightedWidth = true,
-            )
-            btn.setOnClickListener { anchor ->
-                val bandIndex = eqGraphView.getActiveBandIndex() ?: return@setOnClickListener
-                val band = eqViewModel.parametricEq.value.getBand(bandIndex)
-                val alreadyActive = band != null &&
-                    band.enabled &&
-                    filterTypeFamily(band.filterType) == type
-                if (alreadyActive) {
-                    showSlopePopup(anchor, bandIndex, type)
-                } else {
-                    applyFilterTypeToBand(bandIndex, type)
-                }
-            }
-            filterTypeGroup.addView(btn)
-        }
-
-        // BYPASS — tied 1:1 with the APO `AP` (all-pass) token. Tapping
-        // BYPASS sets the band to ALL_PASS (flat magnitude on-device, exports
-        // as `Filter N: ON AP ...`). No dropdown, single tap applies.
-        val bypassBtn = buildFilterTypeButton(
-            label = getString(R.string.filter_bypass),
-            defaultSubtitle = "",
-            weightedWidth = true,
-        )
-        bypassBtn.setOnClickListener {
-            val bandIndex = eqGraphView.getActiveBandIndex() ?: return@setOnClickListener
-            applyFilterTypeToBand(bandIndex, BiquadFilter.FilterType.ALL_PASS)
-        }
-        filterTypeGroup.addView(bypassBtn)
-    }
-
-    private fun updateFilterTypeButtons(bandIndex: Int?) {
-        if (bandIndex == null) return
-        val band = eqViewModel.parametricEq.value.getBand(bandIndex) ?: return
-        val currentType = band.filterType
-        val currentFamily = filterTypeFamily(currentType)
-        val currentIs1st = currentType == BiquadFilter.FilterType.LOW_SHELF_1 ||
-                           currentType == BiquadFilter.FilterType.HIGH_SHELF_1 ||
-                           currentType == BiquadFilter.FilterType.LOW_PASS_1 ||
-                           currentType == BiquadFilter.FilterType.HIGH_PASS_1
-        val bandEnabled = band.enabled
-
-        // Single row: order matches how buttons are added in
-        // setupFilterTypeButtons: PEAK, LSHELF, HSHELF, LPF, HPF, BYPASS.
-        data class Entry(val btn: MaterialButton, val label: String, val role: FilterRole)
-        val roles = listOf(FilterRole.PEAK, FilterRole.SHELF_PASS, FilterRole.SHELF_PASS, FilterRole.SHELF_PASS, FilterRole.SHELF_PASS, FilterRole.BYPASS)
-        val labels = listOf(getString(R.string.filter_peak), getString(R.string.filter_low_shelf), getString(R.string.filter_high_shelf), getString(R.string.filter_low_pass), getString(R.string.filter_high_pass), getString(R.string.filter_bypass))
-        val typesForHighlight = listOf(
-            BiquadFilter.FilterType.BELL,
-            BiquadFilter.FilterType.LOW_SHELF,
-            BiquadFilter.FilterType.HIGH_SHELF,
-            BiquadFilter.FilterType.LOW_PASS,
-            BiquadFilter.FilterType.HIGH_PASS,
-            BiquadFilter.FilterType.BELL,        // unused for BYPASS
-        )
-        val entries = mutableListOf<Entry>()
-        for (i in 0 until filterTypeGroup.childCount) {
-            val btn = filterTypeGroup.getChildAt(i) as? MaterialButton ?: continue
-            if (i >= roles.size) break
-            entries += Entry(btn, labels[i], roles[i])
-        }
-
-        val inPeakFam = isPeakFamily(currentType)
-        val isAllPass = currentType == BiquadFilter.FilterType.ALL_PASS
-
-        for ((i, e) in entries.withIndex()) {
-            val buttonType = typesForHighlight[i]
-            val sameFamily = filterTypeFamily(buttonType) == currentFamily
-            val isActive = when (e.role) {
-                FilterRole.PEAK -> bandEnabled && inPeakFam
-                FilterRole.SHELF_PASS -> bandEnabled && sameFamily
-                // BYPASS is tied to AP: highlighted when band is ALL_PASS
-                // OR when band is disabled (legacy presets).
-                FilterRole.BYPASS -> !bandEnabled || isAllPass
-            }
-
-            if (isActive) {
-                e.btn.setBackgroundColor(getColor(R.color.filter_active))
-                e.btn.setTextColor(getColor(R.color.filter_active_text))
-            } else {
-                e.btn.setBackgroundColor(0x00000000)
-                e.btn.setTextColor(getColor(R.color.filter_inactive_text))
-                e.btn.strokeColor = android.content.res.ColorStateList.valueOf(getColor(R.color.filter_outline))
-            }
-
-            // Subtitle policy:
-            //   • PEAK: blank. Sub-type is shown by replacing the primary
-            //     label with "BAND PASS" / "NOTCH" instead of a subtitle.
-            //   • Shelves / passes: current slope if active, else default "12 dB".
-            //   • BYPASS: blank. Bypass↔AP mapping is implicit in APO export.
-            val primary: String = when (e.role) {
-                FilterRole.PEAK -> peakButtonLabel(currentType, bandEnabled, this@MainActivity)
-                else -> e.label
-            }
-            val subtitle: String = when (e.role) {
-                FilterRole.PEAK -> ""
-                FilterRole.SHELF_PASS -> when {
-                    sameFamily -> if (currentIs1st) "6 dB" else getString(R.string.msg_12db)
-                    else -> getString(R.string.msg_12db)
-                }
-                FilterRole.BYPASS -> ""
-            }
-            e.btn.text = buildFilterButtonText(primary, subtitle)
-        }
-    }
-
-    /** Apply a chosen filter type to a band and refresh every dependent UI
-     *  surface (graph, toggles, inputs, DP pipeline, saved state). Used by
-     *  both the direct PEAK tap and the slope-popup selection path. */
-    private fun applyFilterTypeToBand(bandIndex: Int, newType: BiquadFilter.FilterType) {
-        eqViewModel.parametricEq.value.setBandEnabled(bandIndex, true)
-        eqGraphView.setFilterType(bandIndex, newType)
-        updateFilterTypeButtons(bandIndex)
-        updateBandInputs(bandIndex)
-        bandToggleManager.updateIcons()
-        bandToggleManager.updateSelection(bandIndex)
-        eqViewModel.pushEqUpdate()
-        eqViewModel.eqPrefs.saveState(eqViewModel.parametricEq.value, eqViewModel.bandSlots.value)
-        eqViewModel.persistLeftRightIfCse()
-    }
-
-    /** Shared factory for the filter-type buttons in both rows. `weightedWidth`
-     *  gives the button `layout_weight=1` with width=0 (for the shelves row);
-     *  passing a `fixedWidthPx` gives it that exact width (for the centered
-     *  PEAK / BYPASS row). */
-    private fun buildFilterTypeButton(
-        label: String,
-        defaultSubtitle: String,
-        weightedWidth: Boolean,
-        fixedWidthPx: Int = 0,
-    ): MaterialButton {
-        val density = resources.displayMetrics.density
-        return MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            icon = null
-            text = buildFilterButtonText(label, defaultSubtitle)
-            textSize = 11f
-            cornerRadius = resources.getDimensionPixelSize(R.dimen.filter_btn_radius)
-            isSingleLine = false
-            maxLines = 2
-            // Explicit centering on both axes so primary + subtitle stay
-            // centered regardless of label length or subtitle state.
-            gravity = android.view.Gravity.CENTER
-            textAlignment = View.TEXT_ALIGNMENT_CENTER
-            // Drop the font's ascender/descender padding so the two-line
-            // text block measures exactly 2x its line height and centers
-            // cleanly inside the button's vertical space.
-            includeFontPadding = false
-            layoutParams = if (weightedWidth) {
-                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            } else {
-                LinearLayout.LayoutParams(fixedWidthPx, LinearLayout.LayoutParams.WRAP_CONTENT)
-            }.apply { setMargins(3, 0, 3, 0) }
-            val vertPad = (6 * density).toInt()
-            setPadding(0, vertPad, 0, vertPad)
-            insetTop = 0
-            insetBottom = 0
-            // Common minimum height so every button in the row is the
-            // same size, regardless of primary-label shrink factor.
-            minimumHeight = (42 * density).toInt()
-            minHeight = (42 * density).toInt()
-        }
-    }
-
-    /** Drop the PEAK button's PK / BP / NO / AP dropdown directly below the
-     *  button, styled to match `showSlopePopup`. Tapping any item applies
-     *  that filter type to the active band. */
-    private fun showPeakPopup(anchor: View, bandIndex: Int) {
-        val band = eqViewModel.parametricEq.value.getBand(bandIndex) ?: return
-        val current = band.filterType
-        val density = resources.displayMetrics.density
-        val cornerRadius = resources.getDimensionPixelSize(R.dimen.filter_btn_radius).toFloat()
-        val outlineColor = getColor(R.color.filter_outline)
-        val activeBg = getColor(R.color.filter_active)
-        val activeTx = getColor(R.color.filter_active_text)
-        val inactiveTx = getColor(R.color.filter_inactive_text)
-        val bgColor = com.google.android.material.color.MaterialColors.getColor(
-            this,
-            com.google.android.material.R.attr.colorSurfaceContainerHigh,
-            0xFF2A2930.toInt()
-        )
-
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = android.graphics.drawable.GradientDrawable().apply {
-                setColor(bgColor)
-                setStroke((1 * density).toInt(), outlineColor)
-                setCornerRadius(cornerRadius)
-            }
-            clipToOutline = true
-        }
-
-        val popup = android.widget.PopupWindow(
-            container,
-            anchor.width,
-            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
-            true,
-        ).apply {
-            elevation = 8f * density
-            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(0x00000000))
-        }
-
-        fun addItem(label: String, type: BiquadFilter.FilterType) {
-            val isActive = current == type
-            val item = android.widget.TextView(this).apply {
-                text = label
-                textSize = 11f
-                gravity = android.view.Gravity.CENTER
-                isSingleLine = true
-                setTextColor(if (isActive) activeTx else inactiveTx)
-                if (isActive) setBackgroundColor(activeBg)
-                val vertPad = (8 * density).toInt()
-                setPadding(0, vertPad, 0, vertPad)
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                )
-                setOnClickListener {
-                    applyFilterTypeToBand(bandIndex, type)
-                    popup.dismiss()
-                }
-                isClickable = true
-                isFocusable = true
-            }
-            container.addView(item)
-        }
-
-        fun addDivider() {
-            val divider = View(this).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    (1 * density).toInt(),
-                )
-                setBackgroundColor(outlineColor)
-            }
-            container.addView(divider)
-        }
-
-        // PK (plain bell) lives at the top so the user can return from
-        // BP / NO to a classic peaking bell without round-tripping through a
-        // different filter family. AP is owned by BYPASS, not listed here.
-        addItem("PK", BiquadFilter.FilterType.BELL)
-        addDivider()
-        addItem("BP", BiquadFilter.FilterType.BAND_PASS)
-        addDivider()
-        addItem("NO", BiquadFilter.FilterType.NOTCH)
-
-        popup.showAsDropDown(anchor, 0, (2 * density).toInt())
-    }
-
-    /** Drop a small outlined popup directly below the tapped filter button,
-     *  styled to match the button itself (same width, same outline colour,
-     *  same card background). Two items — "12 dB" and "6 dB" — apply the
-     *  corresponding 2nd- or 1st-order variant of the tapped filter family. */
-    private fun showSlopePopup(
-        anchor: View,
-        bandIndex: Int,
-        family2nd: BiquadFilter.FilterType,
-    ) {
-        val family1st = oneOrderVariant(family2nd) ?: return
-        val band = eqViewModel.parametricEq.value.getBand(bandIndex) ?: return
-        val currentIs1st = band.filterType == family1st
-        val density = resources.displayMetrics.density
-        val cornerRadius = resources.getDimensionPixelSize(R.dimen.filter_btn_radius).toFloat()
-        val outlineColor = getColor(R.color.filter_outline)
-        val activeBg = getColor(R.color.filter_active)
-        val activeTx = getColor(R.color.filter_active_text)
-        val inactiveTx = getColor(R.color.filter_inactive_text)
-        // Match the parametric controls card's fill so the popup reads as an
-        // extension of the same surface.
-        val bgColor = com.google.android.material.color.MaterialColors.getColor(
-            this,
-            com.google.android.material.R.attr.colorSurfaceContainerHigh,
-            0xFF2A2930.toInt()
-        )
-
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = android.graphics.drawable.GradientDrawable().apply {
-                setColor(bgColor)
-                setStroke((1 * density).toInt(), outlineColor)
-                setCornerRadius(cornerRadius)
-            }
-            clipToOutline = true
-        }
-
-        val popup = android.widget.PopupWindow(
-            container,
-            anchor.width,
-            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
-            true,
-        ).apply {
-            elevation = 8f * density
-            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(0x00000000))
-        }
-
-        fun addItem(label: String, isActive: Boolean, onTap: () -> Unit) {
-            val item = android.widget.TextView(this).apply {
-                text = label
-                textSize = 11f
-                gravity = android.view.Gravity.CENTER
-                isSingleLine = true
-                setTextColor(if (isActive) activeTx else inactiveTx)
-                if (isActive) setBackgroundColor(activeBg)
-                val vertPad = (8 * density).toInt()
-                setPadding(0, vertPad, 0, vertPad)
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                )
-                setOnClickListener {
-                    onTap()
-                    popup.dismiss()
-                }
-                isClickable = true
-                isFocusable = true
-                setBackgroundResource(0)
-                if (isActive) setBackgroundColor(activeBg)
-            }
-            container.addView(item)
-        }
-
-        addItem(getString(R.string.msg_12db), !currentIs1st) { applyFilterTypeToBand(bandIndex, family2nd) }
-        val divider = View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                (1 * density).toInt(),
-            )
-            setBackgroundColor(outlineColor)
-        }
-        container.addView(divider)
-        addItem("6 dB", currentIs1st) { applyFilterTypeToBand(bandIndex, family1st) }
-
-        // Drop it directly under the button with a tiny gap.
-        popup.showAsDropDown(anchor, 0, (2 * density).toInt())
     }
 
     // ---- Lifecycle ----
@@ -3501,7 +2615,7 @@ class  MainActivity : AppCompatActivity() {
      *  - CSE on: both buttons at full alpha; active uses filled "pressed"
      *    style (like the active Spectrum / Band-points buttons), the other
      *    uses the outlined style. */
-    private fun refreshChannelPopoutDim() {
+    override fun refreshChannelPopoutDim() {
         paintChannelButtonStyles()
         val enabled = eqViewModel.eqPrefs.getChannelSideEqEnabled()
         val lBtn = findViewById<View>(R.id.channelLButton) ?: return
@@ -3527,8 +2641,8 @@ class  MainActivity : AppCompatActivity() {
             val idx = (eqViewModel.selectedBandIndex.value ?: 0).coerceIn(0, count - 1)
             eqViewModel.selectBand(idx)
             eqGraphView.setActiveBand(idx)
-            updateFilterTypeButtons(idx)
-            updateBandInputs(idx)
+            graphController.updateFilterTypeButtons(idx)
+            graphController.updateBandInputs(idx)
         }
         bandToggleManager.setupToggles()
         refreshChannelPopoutDim()

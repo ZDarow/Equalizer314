@@ -6,6 +6,12 @@ import android.util.Log
 import com.bearinmind.equalizer314.BuildConfig
 import com.bearinmind.equalizer314.dsp.ParametricEqualizer
 import com.bearinmind.equalizer314.dsp.ParametricToDpConverter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * System-wide EQ using Android's DynamicsProcessing API. Configuration
@@ -95,6 +101,28 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
     @Volatile private var pendingLimiter: Runnable? = null
 
     /**
+     * Coroutine scope for CPU-bound DSP computation (convertFeatureAware,
+     * auto-gain, channel offsets). SupervisorJob so a failure in one
+     * computation doesn't cancel subsequent updates. Runs on
+     * [Dispatchers.Default] — the computation is pure math without
+     * Android-binder or UI dependencies.
+     */
+    private var dspScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /**
+     * Результат CPU-bound вычислений EQ, возвращаемый [computeEqData].
+     * Содержит все данные, необходимые для binder-транзакций:
+     * частоты среза, усиления каналов, смещения входного усиления.
+     */
+    private data class ComputedEqData(
+        val cutoffs: FloatArray,
+        val leftGains: FloatArray,
+        val rightGains: FloatArray,
+        val leftInputGainDb: Float,
+        val rightInputGainDb: Float,
+    )
+
+    /**
      * Создаёт [DynamicsProcessing] с перебором приоритетов от higher к lower.
      * Некоторые OEM (Xiaomi, OPPO) не могут создать эффект с Int.MAX_VALUE.
      * Возвращает null, если ни один приоритет не сработал.
@@ -124,6 +152,9 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
         }
 
         stop() // Clean up any existing instance
+
+        // Пересоздаём coroutine scope (предыдущий был отменён в stop())
+        dspScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
         // (Re-)create the worker thread
         android.os.HandlerThread("EqDpWorker").apply {
@@ -329,26 +360,29 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
         try {
             lastEq = leftEq
             lastRightEq = if (leftEq !== rightEq) rightEq else null
-            applyParametricResponse(dp, leftEq, rightEq)
+            // Вычисляем CPU-bound DSP на фоновом потоке, а binder-работу
+            // отправляем в worker-поток через Handler.
+            dspScope.launch {
+                val data = withContext(Dispatchers.Default) { computeEqData(leftEq, rightEq) }
+                val handler = workerHandler ?: return@launch
+                handler.post { submitBinderWork(dp, data) }
+            }
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Log.e(TAG, "Failed to update DynamicsProcessing", e)
         }
     }
 
-    private fun applyParametricResponse(dp: DynamicsProcessing, eq: ParametricEqualizer) {
-        applyParametricResponse(dp, eq, eq)
-    }
-
-    private fun applyParametricResponse(
-        dp: DynamicsProcessing,
+    /**
+     * CPU-bound вычисление данных EQ: вызов convertFeatureAware, авто-гейн,
+     * канальные смещения. Может безопасно выполняться на [Dispatchers.Default],
+     * так как не содержит Android-binder или UI-зависимостей.
+     *
+     * Побочный эффект: записывает [lastAutoGainOffset].
+     */
+    private fun computeEqData(
         leftEq: ParametricEqualizer,
         rightEq: ParametricEqualizer,
-    ) {
-        // Cheap math (response sampling) on the caller's thread since it
-        // touches the live ParametricEqualizer owned by the UI thread.
-        // The expensive part — binder transactions into AudioFlinger —
-        // is dispatched to the worker thread.
-        //
+    ): ComputedEqData {
         // Single conversion path for every UI mode: feature-aware
         // sampling places anchor cutoffs at every filter's centre
         // frequency + per-filter-type support points around each, then
@@ -405,13 +439,27 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
             }
         }
 
-        val n = ParametricToDpConverter.numBands
-        val cutoffsSnap = cutoffs
         // Input gain composition: preamp + per-channel offset.
         // Auto-gain is already baked into band gains above (it's a
         // shape-preserving shift), so don't double-add it here.
         val leftInputGainDb = preampGainDb + leftOffsetDb
         val rightInputGainDb = preampGainDb + rightOffsetDb
+
+        return ComputedEqData(cutoffs, leftGains, rightGains, leftInputGainDb, rightInputGainDb)
+    }
+
+    /**
+     * Отправляет binder-работу (Eq-объекты → DynamicsProcessing) в worker-поток.
+     * Создаёт [Runnable], который выполняет все транзакции AudioFlinger,
+     * и постит его через [workerHandler]. Предыдущий отложенный Apply отменяется.
+     */
+    private fun submitBinderWork(dp: DynamicsProcessing, data: ComputedEqData) {
+        val n = ParametricToDpConverter.numBands
+        val cutoffsSnap = data.cutoffs
+        val leftGains = data.leftGains
+        val rightGains = data.rightGains
+        val leftInputGainDb = data.leftInputGainDb
+        val rightInputGainDb = data.rightInputGainDb
         val job = Runnable {
             try {
                 // Wavelet calls dp.hasControl() before applying any
@@ -461,12 +509,34 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
         handler.post(job)
     }
 
+    private fun applyParametricResponse(dp: DynamicsProcessing, eq: ParametricEqualizer) {
+        applyParametricResponse(dp, eq, eq)
+    }
+
+    /** Синхронная версия: вычисляет EQ-данные на вызывающем треде и отправляет
+     *  binder-работу в worker-поток. Используется из [start], где требуется
+     *  гарантия доставки до [drainPendingApply]. Для асинхронных путей
+     *  ([updateFromEqualizers], [updateChannelSettings]) используйте корутины. */
+    private fun applyParametricResponse(
+        dp: DynamicsProcessing,
+        leftEq: ParametricEqualizer,
+        rightEq: ParametricEqualizer,
+    ) {
+        val data = computeEqData(leftEq, rightEq)
+        submitBinderWork(dp, data)
+    }
+
     /** Re-apply the current EQ with fresh channel settings (balance, preamp). */
     override fun updateChannelSettings() {
         val dp = dynamicsProcessing ?: return
         val eq = lastEq ?: return
+        val rightEq = lastRightEq ?: eq
         try {
-            applyParametricResponse(dp, eq, lastRightEq ?: eq)
+            dspScope.launch {
+                val data = withContext(Dispatchers.Default) { computeEqData(eq, rightEq) }
+                val handler = workerHandler ?: return@launch
+                handler.post { submitBinderWork(dp, data) }
+            }
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Log.e(TAG, "Failed to update channel settings", e)
         }
@@ -586,6 +656,8 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
         }
         pendingApply = null
         pendingLimiter = null
+        // Отменяем все запущенные DSP-вычисления на фоновом треде.
+        dspScope.cancel()
         try {
             dynamicsProcessing?.enabled = false
             dynamicsProcessing?.release()

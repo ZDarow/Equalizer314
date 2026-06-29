@@ -21,6 +21,15 @@ import com.bearinmind.equalizer314.ui.EqGraphView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MbcActivity : AppCompatActivity() {
 
@@ -74,6 +83,13 @@ class MbcActivity : AppCompatActivity() {
 
     // Visualizer
     private val visualizerHelper = com.bearinmind.equalizer314.audio.VisualizerHelper()
+
+    /**
+     * Coroutine scope для GR trace loop. SupervisorJob — сбой в одной
+     * итерации не отменяет последующие. Отменяется в [onDestroy].
+     */
+    private val grTraceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var grTraceJob: Job? = null
 
     // Views
     private lateinit var graphView: EqGraphView
@@ -305,101 +321,105 @@ class MbcActivity : AppCompatActivity() {
     }
 
     // Feed GR values to the trace view from MbcGainComputer
-    private var grTraceRunnable: Runnable? = null
-    private val grTraceHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /**
+     * Результат одной итерации GR trace loop.
+     * Содержит спектр в dB, значения GR и уровни полос.
+     */
+    private data class GrTraceResult(
+        val specDb: FloatArray?,
+        val grValues: FloatArray,
+        val gateGrValues: FloatArray,
+        val bandLevels: FloatArray,
+    )
 
     private fun startGrTraceUpdates() {
-        grTraceRunnable?.let { grTraceHandler.removeCallbacks(it) }
+        grTraceJob?.cancel()
+        grTraceJob = grTraceScope.launch {
+            val traceComputer = com.bearinmind.equalizer314.audio.MbcGainComputer(bandCount)
 
-        val traceComputer = com.bearinmind.equalizer314.audio.MbcGainComputer(bandCount)
-
-        val runnable = object : Runnable {
-            override fun run() {
-                if (!isGrTraceMode) return
+            while (isActive) {
+                if (!isGrTraceMode) break
 
                 val renderer = visualizerHelper.renderer
                 val specLinear = renderer.getSmoothedLinear()
-                // Use AudioPlaybackCallback-driven flag for silence detection
                 val isSilent = !visualizerHelper.isMusicPlaying
 
-                grTraceView.selectedBand = selectedBand
+                // CPU-bound DSP: конвертация спектра, RMS, GR вычисления
+                val result = withContext(Dispatchers.Default) {
+                    if (!isSilent && specLinear != null && specLinear.isNotEmpty()) {
+                        // Convert linear to dB
+                        val specDb = FloatArray(specLinear.size) { i ->
+                            if (specLinear[i] > 1e-10f) 20f * kotlin.math.log10(specLinear[i])
+                            else -96f
+                        }
 
-                if (!isSilent && specLinear != null && specLinear.isNotEmpty()) {
-                    // Convert linear to dB
-                    val specDb = FloatArray(specLinear.size) { i ->
-                        if (specLinear[i] > 1e-10f) 20f * kotlin.math.log10(specLinear[i])
-                        else -96f
-                    }
+                        // Build band settings
+                        val settings = Array(bandCount) { i ->
+                            val b = bands[i]
+                            com.bearinmind.equalizer314.audio.MbcGainComputer.BandSettings(
+                                preGain = b.preGain, postGain = b.postGain,
+                                threshold = b.threshold, ratio = b.ratio, kneeWidth = b.kneeWidth,
+                                noiseGateThreshold = b.noiseGateThreshold, expanderRatio = b.expanderRatio,
+                                attackMs = b.attack, releaseMs = b.release,
+                                lowCutoff = if (i == 0) 20f else crossoverFreqs[i - 1],
+                                highCutoff = if (i >= crossoverFreqs.size) 20000f else crossoverFreqs[i]
+                            )
+                        }
 
-                    // Compute overall input level (RMS of all bins)
-                    var sumPower = 0.0
-                    var count = 0
-                    for (i in 1 until specDb.size) {
-                        sumPower += Math.pow(10.0, specDb[i].toDouble() / 10.0)
-                        count++
-                    }
-                    val overallLevel = if (count > 0 && sumPower > 0)
-                        (10.0 * Math.log10(sumPower / count)).toFloat() else -96f
+                        // Compute per-band RMS levels from the NORMALIZED spectrum (for display)
+                        val bandLevelsNormalized = FloatArray(bandCount) { b ->
+                            val lowFreq = if (b == 0) 20f else crossoverFreqs[b - 1]
+                            val highFreq = if (b >= crossoverFreqs.size) 20000f else crossoverFreqs[b]
+                            val binW = renderer.getBinWidthHz()
+                            val lowBin = (lowFreq / binW).toInt().coerceIn(1, specDb.size - 1)
+                            val highBin = (highFreq / binW).toInt().coerceIn(lowBin, specDb.size - 1)
+                            var sumPow = 0.0; var cnt = 0
+                            for (k in lowBin..highBin) {
+                                sumPow += Math.pow(10.0, specDb[k].toDouble() / 10.0); cnt++
+                            }
+                            if (cnt > 0 && sumPow > 0) (10.0 * Math.log10(sumPow / cnt)).toFloat().coerceAtLeast(-80f) else -80f
+                        }
 
-                    // Build band settings
-                    val settings = Array(bandCount) { i ->
-                        val b = bands[i]
-                        com.bearinmind.equalizer314.audio.MbcGainComputer.BandSettings(
-                            preGain = b.preGain, postGain = b.postGain,
-                            threshold = b.threshold, ratio = b.ratio, kneeWidth = b.kneeWidth,
-                            noiseGateThreshold = b.noiseGateThreshold, expanderRatio = b.expanderRatio,
-                            attackMs = b.attack, releaseMs = b.release,
-                            lowCutoff = if (i == 0) 20f else crossoverFreqs[i - 1],
-                            highCutoff = if (i >= crossoverFreqs.size) 20000f else crossoverFreqs[i]
+                        // Calibrate to absolute dBFS for the compressor math
+                        val calibrationOffset = visualizerHelper.normToAbsoluteOffset
+                        val calibratedSpecDb = FloatArray(specDb.size) { specDb[it] + calibrationOffset }
+
+                        // Recompute GR using CALIBRATED (absolute dBFS) spectrum
+                        traceComputer.computeAllBandGains(calibratedSpecDb, 48000, 4096, settings)
+                        val gr = FloatArray(bandCount) { traceComputer.getSmoothedCompressorGR(it) }
+                        val gateGr = FloatArray(bandCount) { traceComputer.getSmoothedExpanderGR(it) }
+
+                        // Display uses CALIBRATED levels + pre-gain
+                        val bandLevelsAbs = FloatArray(bandCount) {
+                            (bandLevelsNormalized[it] + calibrationOffset + bands[it].preGain).coerceIn(-80f, 20f)
+                        }
+
+                        GrTraceResult(specDb, gr, gateGr, bandLevelsAbs)
+                    } else {
+                        // Silence — GR at 0, levels at -80, dB spectrum = null
+                        GrTraceResult(
+                            specDb = null,
+                            grValues = FloatArray(bandCount) { 0f },
+                            gateGrValues = FloatArray(bandCount) { 0f },
+                            bandLevels = FloatArray(bandCount) { -80f }
                         )
                     }
+                }
 
-                    grTraceView.spectrumDb = specDb
+                // UI-обновление на главном треде
+                withContext(Dispatchers.Main) {
+                    grTraceView.spectrumDb = result.specDb
                     grTraceView.spectrumBinWidth = renderer.getBinWidthHz()
                     grTraceView.crossoverFreqs = crossoverFreqs.copyOf()
                     grTraceView.selectedBand = selectedBand
-
-                    // Compute per-band RMS levels from the NORMALIZED spectrum (for display)
-                    val bandLevelsNormalized = FloatArray(bandCount) { b ->
-                        val lowFreq = if (b == 0) 20f else crossoverFreqs[b - 1]
-                        val highFreq = if (b >= crossoverFreqs.size) 20000f else crossoverFreqs[b]
-                        val binW = renderer.getBinWidthHz()
-                        val lowBin = (lowFreq / binW).toInt().coerceIn(1, specDb.size - 1)
-                        val highBin = (highFreq / binW).toInt().coerceIn(lowBin, specDb.size - 1)
-                        var sumPow = 0.0; var cnt = 0
-                        for (k in lowBin..highBin) {
-                            sumPow += Math.pow(10.0, specDb[k].toDouble() / 10.0); cnt++
-                        }
-                        if (cnt > 0 && sumPow > 0) (10.0 * Math.log10(sumPow / cnt)).toFloat().coerceAtLeast(-80f) else -80f
-                    }
-
-                    // Calibrate to absolute dBFS for the compressor math
-                    // This makes the GR computation match the threshold values
-                    val calibrationOffset = visualizerHelper.normToAbsoluteOffset
-                    val calibratedSpecDb = FloatArray(specDb.size) { specDb[it] + calibrationOffset }
-
-                    // Recompute GR using CALIBRATED (absolute dBFS) spectrum
-                    traceComputer.computeAllBandGains(calibratedSpecDb, 48000, 4096, settings)
-                    val grValues = FloatArray(bandCount) { traceComputer.getSmoothedCompressorGR(it) }
-                    val gateGrValues = FloatArray(bandCount) { traceComputer.getSmoothedExpanderGR(it) }
-
-                    // Display uses CALIBRATED levels + pre-gain (shows what the compressor sees)
-                    val bandLevelsAbsolute = FloatArray(bandCount) {
-                        (bandLevelsNormalized[it] + calibrationOffset + bands[it].preGain).coerceIn(-80f, 20f)
-                    }
-
-                    grTraceView.pushFrame(grValues, bandLevelsAbsolute, gateGrValues)
-                } else {
-                    // Silence — GR at 0 (no compression), levels at -80 (bottom)
-                    grTraceView.pushFrame(FloatArray(bandCount) { 0f }, FloatArray(bandCount) { -80f })
+                    grTraceView.pushFrame(result.grValues, result.bandLevels, result.gateGrValues)
+                    grTraceView.invalidate()
                 }
 
-                grTraceView.invalidate()
-                grTraceHandler.postDelayed(this, 33)
+                delay(33)
             }
         }
-        grTraceRunnable = runnable
-        grTraceHandler.post(runnable)
     }
 
     private fun startVisualizer() {
@@ -1445,7 +1465,8 @@ class MbcActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        grTraceRunnable?.let { grTraceHandler.removeCallbacks(it) }
+        grTraceJob?.cancel()
+        grTraceScope.cancel()
         grTraceView.release()
         visualizerHelper.stop()
         graphView.spectrumRenderer = null
