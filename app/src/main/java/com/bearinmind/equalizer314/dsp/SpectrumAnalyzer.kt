@@ -138,7 +138,7 @@ class SpectrumAnalyzer(
         latestSpectrumDB = smoothedSpectrum!!.clone()
         latestBandSpectrum = computeBandSpectrum(latestSpectrumDB!!)
 
-        val now = System.currentTimeMillis()
+        val now = android.os.SystemClock.elapsedRealtime()
         if (now - lastUpdateTime >= minUpdateIntervalMs) {
             lastUpdateTime = now
             latestSpectrumDB?.let { fullSpectrum ->

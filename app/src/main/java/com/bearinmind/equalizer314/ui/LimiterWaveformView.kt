@@ -214,7 +214,7 @@ class LimiterWaveformView @JvmOverloads constructor(
             android.view.MotionEvent.ACTION_DOWN -> {
                 val ceilY = dbToY(ceilingDb, h)
                 if (kotlin.math.abs(event.y - ceilY) < 40f) {
-                    val now = System.currentTimeMillis()
+                    val now = android.os.SystemClock.elapsedRealtime()
                     if (now - lastCeilingTapTime < 300L) {
                         ceilingDb = 0f
                         onCeilingChanged?.invoke(ceilingDb)

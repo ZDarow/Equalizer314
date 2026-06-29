@@ -273,6 +273,7 @@ class EqPreferencesManager(context: Context) {
     // Imported presets (stored as JSON array of names + raw text stored per preset)
     /** Import a text-based preset (e.g. APO format) and store it. Replaces any
      *  existing preset with the same [name]. */
+    @Synchronized
     fun addImportedPreset(name: String, rawText: String) {
         val safeName = validatePresetName(name)
         val list = getImportedPresets().toMutableList()
@@ -284,6 +285,7 @@ class EqPreferencesManager(context: Context) {
             .apply()
     }
     /** Remove an imported preset by name. */
+    @Synchronized
     fun removeImportedPreset(name: String) {
         val list = getImportedPresets().toMutableList()
         list.remove(name)
@@ -378,6 +380,7 @@ class EqPreferencesManager(context: Context) {
 
     // Imported targets (stored as JSON array of names)
     /** Import a target-curve file and store it. */
+    @Synchronized
     fun addImportedTarget(name: String, rawText: String = "") {
         val list = getImportedTargets().toMutableList()
         list.removeAll { it == name }
@@ -388,6 +391,7 @@ class EqPreferencesManager(context: Context) {
     }
     fun getImportedTargetText(name: String): String? = prefs.getString("importedTarget_$name", null)
     /** Remove an imported target by name. */
+    @Synchronized
     fun removeImportedTarget(name: String) {
         val list = getImportedTargets().toMutableList()
         list.remove(name)
@@ -404,6 +408,7 @@ class EqPreferencesManager(context: Context) {
 
     // Imported measurements
     /** Import a measurement file (e.g. FR from a sweep) and store it. */
+    @Synchronized
     fun addImportedMeasurement(name: String, rawText: String) {
         val list = getImportedMeasurements().toMutableList()
         list.removeAll { it == name }
@@ -414,6 +419,7 @@ class EqPreferencesManager(context: Context) {
             .apply()
     }
     /** Remove an imported measurement by name. */
+    @Synchronized
     fun removeImportedMeasurement(name: String) {
         val list = getImportedMeasurements().toMutableList()
         list.remove(name)
@@ -585,6 +591,7 @@ class EqPreferencesManager(context: Context) {
 
     /** Convert 10-band Simple-mode [gains] into a full JSON preset and save it to
      *  the shared custom-preset pool. */
+    @Synchronized
     fun saveSimpleEqPreset(name: String, gains: FloatArray, preamp: Float = 0f) {
         val safeName = validatePresetName(name)
         val bands = JSONArray()
@@ -655,6 +662,7 @@ class EqPreferencesManager(context: Context) {
     }
 
     /** Delete a preset from the shared pool. */
+    @Synchronized
     fun deleteSimpleEqPreset(name: String) {
         val names = (customPresetsPrefs.getStringSet("preset_names", emptySet()) ?: emptySet()).toMutableSet() - name
         customPresetsPrefs.edit()

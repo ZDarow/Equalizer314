@@ -52,7 +52,9 @@ class MbcActivity : AppCompatActivity() {
     private lateinit var eqPrefs: EqPreferencesManager
 
     // Service binding
+    @Volatile
     private var eqService: com.bearinmind.equalizer314.audio.EqService? = null
+    @Volatile
     private var serviceBound = false
     private val serviceConnection = object : android.content.ServiceConnection {
         override fun onServiceConnected(name: android.content.ComponentName?, binder: android.os.IBinder?) {
@@ -114,6 +116,7 @@ class MbcActivity : AppCompatActivity() {
     private val mbcBandColors = mutableMapOf<Int, Int>() // band index → color
     private var selectedBand = 0
     private var bandCount = DEFAULT_BAND_COUNT
+    @Volatile
     private var isUpdating = false
     private var mbcNavIconRef: android.widget.ImageButton? = null
 
@@ -1243,7 +1246,10 @@ class MbcActivity : AppCompatActivity() {
                 return@setOnTouchListener true
             }
             if (event.action == android.view.MotionEvent.ACTION_DOWN) {
-                val now = System.currentTimeMillis()
+                // SystemClock.elapsedRealtime() монотонно — в отличие от
+                // System.currentTimeMillis() — не ломается при ручной смене
+                // часового пояса или NTP-синхронизации.
+                val now = android.os.SystemClock.elapsedRealtime()
                 if (now - lastTapTime < 300) {
                     isUpdating = true
                     onReset()

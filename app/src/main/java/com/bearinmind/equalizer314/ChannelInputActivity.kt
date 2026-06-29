@@ -95,6 +95,7 @@ class ChannelInputActivity : AppCompatActivity() {
     // (SessionEffectManager.getActiveSessions). Null when the service
     // isn't running — Session-based mode shows the empty card in that
     // case, which is the right thing because no sessions are attached.
+    @Volatile
     private var eqService: EqService? = null
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -727,9 +728,9 @@ class ChannelInputActivity : AppCompatActivity() {
         )
         dropdown.setAdapter(PresetDropdownAdapter(this, entries))
 
-        dropdown.setOnDismissListener { setLastDismiss(System.currentTimeMillis()) }
+        dropdown.setOnDismissListener { setLastDismiss(android.os.SystemClock.elapsedRealtime()) }
         presetLayout.setOnClickListener {
-            if (System.currentTimeMillis() - getLastDismiss() < 300) {
+            if (android.os.SystemClock.elapsedRealtime() - getLastDismiss() < 300) {
                 setLastDismiss(0L)
                 return@setOnClickListener
             }

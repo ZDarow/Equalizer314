@@ -113,8 +113,11 @@ class EqStateManager(
     var leftChannelGainDb: Float = 0f
     var rightChannelGainDb: Float = 0f
 
-    // Service binding
+    // Service binding — @Volatile обязательно: eqService пишется из ServiceConnection
+    // (binder thread) и читается из main thread.
+    @Volatile
     var eqService: EqService? = null
+    @Volatile
     var serviceBound = false
     var pendingStartEq = false
 

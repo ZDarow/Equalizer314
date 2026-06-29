@@ -64,7 +64,7 @@ class EqViewModelTest {
         )
         assertEquals(
             com.bearinmind.equalizer314.EqUiMode.GRAPHIC,
-            viewModel.eqUiMode.value,
+            viewModel.currentEqUiMode.value,
         )
     }
 

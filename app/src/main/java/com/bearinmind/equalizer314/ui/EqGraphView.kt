@@ -1448,7 +1448,7 @@ class EqGraphView @JvmOverloads constructor(
 
                 if (bestBand >= 0 && bestType > 0) {
                     // Double-tap detection — reset gain to 0 dB
-                    val now = System.currentTimeMillis()
+                    val now = android.os.SystemClock.elapsedRealtime()
                     if (bestType == 1 && bestBand == lastMbcTapBand && now - lastMbcTapTime < 300L) {
                         // Double-tap on postGain triangle — reset to 0
                         gains[bestBand] = 0f
@@ -1575,7 +1575,7 @@ class EqGraphView @JvmOverloads constructor(
                 val tapped = findClosestPoint(event.x, event.y)
                 if (tapped != null) activeBandIndex = tapped
                 if (tapped != null) {
-                    val currentTime = System.currentTimeMillis()
+                    val currentTime = android.os.SystemClock.elapsedRealtime()
                     if (activeBandIndex == lastTapBandIndex && currentTime - lastTapTime < doubleTapTimeout) {
                         cancelLongPressTimer()
                         resetBandToZero(activeBandIndex!!)

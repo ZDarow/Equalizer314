@@ -221,7 +221,7 @@ class SimpleEqBarsView @JvmOverloads constructor(
                     // Double-tap detection — second tap on the same band
                     // within 300 ms still resets that bar to 0 dB. Single
                     // tap (no swipe) leaves the bar where it is.
-                    val now = System.currentTimeMillis()
+                    val now = android.os.SystemClock.elapsedRealtime()
                     if (now - lastTapTime < 300 && band == lastTapBand) {
                         gains[band] = 0f
                         onGainChanged?.invoke(band, 0f)

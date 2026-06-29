@@ -19,6 +19,7 @@ import com.google.android.material.textfield.TextInputEditText
 class ChannelSideEqActivity : AppCompatActivity() {
 
     private lateinit var eqPrefs: EqPreferencesManager
+    @Volatile
     private var eqService: EqService? = null
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {

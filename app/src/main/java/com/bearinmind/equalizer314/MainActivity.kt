@@ -453,61 +453,43 @@ class  MainActivity : AppCompatActivity() {
      *  the same "DynamicsProcessing Start" toast a FAB tap would —
      *  the stop receiver already does the symmetric "Stop" toast, so
      *  this completes the pair. */
-    private val eqStartedReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            stateManager.isProcessing = true
-            animatePowerFab(true)
-            com.bearinmind.equalizer314.ui.BottomNavHelper.updatePowerFab(this@MainActivity, true)
-            // Toast is fired by EqService directly so it surfaces even
-            // when MainActivity isn't alive (QS tile path). Don't
-            // double up here.
-            // Bind so the activity can read DP state going forward.
-            if (!stateManager.serviceBound) {
-                try {
-                    bindService(
-                        Intent(this@MainActivity, EqService::class.java),
-                        stateManager.serviceConnection,
-                        BIND_AUTO_CREATE,
-                    )
-                } catch (_: Throwable) {}
-            }
-            updateDevicePresetStatus()
-        }
-    }
-
-    private val eqStoppedReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            eqViewModel.stateManager.isProcessing = false
-            eqViewModel.stateManager.eqService = null
-            if (eqViewModel.serviceBound.value) {
-                runCatching { unbindService(eqViewModel.stateManager.serviceConnection) }
-                eqViewModel.stateManager.serviceBound = false
-            }
-            animatePowerFab(false)
-            // State commit only — toast is now fired by EqService
-            // (so it surfaces with the app closed too). EXTRA_SILENT_STOP
-            // used to gate the toast here; now that the toast lives on
-            // the service side, both branches do the same thing.
-            eqPrefs.savePowerState(false)
-            com.bearinmind.equalizer314.ui.BottomNavHelper.updatePowerFab(this@MainActivity, false)
-            updateDevicePresetStatus()
-        }
-    }
-
-    /** Refreshes the device/preset status line above the graph in
-     *  response to route changes and preset-name updates. Listens for:
-     *   - ACTION_ROUTE_PRESET_APPLIED (RouteSwitchCoordinator) when a
-     *     device-bound preset auto-applies.
-     *   - ACTION_NOTIFICATION_REFRESH (sent by MainActivity itself
-     *     after the user taps a preset row, but the foreground service
-     *     also re-broadcasts so other listeners stay in sync).
-     *   - ACTION_EQ_STARTED / ACTION_EQ_STOPPED — already handled by
-     *     their dedicated receivers which also call us.
+    /**
+     * Вынесенный BroadcastReceiver для событий EQ. Вместо 3 анонимных классов
+     * использует коллбэки, что упрощает тестирование и читаемость.
      */
-    private val statusRefreshReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            updateDevicePresetStatus()
-        }
+    private val eqBroadcastReceiver: com.bearinmind.equalizer314.audio.EqualizerBroadcastReceiver by lazy {
+        com.bearinmind.equalizer314.audio.EqualizerBroadcastReceiver(
+            onEqStarted = {
+                stateManager.isProcessing = true
+                animatePowerFab(true)
+                com.bearinmind.equalizer314.ui.BottomNavHelper.updatePowerFab(this@MainActivity, true)
+                if (!stateManager.serviceBound) {
+                    try {
+                        bindService(
+                            Intent(this@MainActivity, EqService::class.java),
+                            stateManager.serviceConnection,
+                            BIND_AUTO_CREATE,
+                        )
+                    } catch (_: Throwable) {}
+                }
+                updateDevicePresetStatus()
+            },
+            onEqStopped = {
+                eqViewModel.stateManager.isProcessing = false
+                eqViewModel.stateManager.eqService = null
+                if (eqViewModel.serviceBound.value) {
+                    runCatching { unbindService(eqViewModel.stateManager.serviceConnection) }
+                    eqViewModel.stateManager.serviceBound = false
+                }
+                animatePowerFab(false)
+                eqPrefs.savePowerState(false)
+                com.bearinmind.equalizer314.ui.BottomNavHelper.updatePowerFab(this@MainActivity, false)
+                updateDevicePresetStatus()
+            },
+            onRefresh = {
+                updateDevicePresetStatus()
+            },
+        )
     }
 
     /** Refresh the small device/preset status line above the EQ graph.
@@ -619,44 +601,7 @@ class  MainActivity : AppCompatActivity() {
         syncPreampUI()
         setupListeners()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(
-                eqStoppedReceiver,
-                IntentFilter(EqService.ACTION_EQ_STOPPED),
-                RECEIVER_NOT_EXPORTED
-            )
-            registerReceiver(
-                eqStartedReceiver,
-                IntentFilter(EqService.ACTION_EQ_STARTED),
-                RECEIVER_NOT_EXPORTED
-            )
-            registerReceiver(
-                statusRefreshReceiver,
-                IntentFilter().apply {
-                    addAction(RouteSwitchCoordinator.ACTION_ROUTE_PRESET_APPLIED)
-                    addAction(EqService.ACTION_NOTIFICATION_REFRESH)
-                },
-                RECEIVER_NOT_EXPORTED
-            )
-        } else {
-            registerReceiver(
-                eqStoppedReceiver,
-                IntentFilter(EqService.ACTION_EQ_STOPPED)
-            )
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            registerReceiver(
-                eqStartedReceiver,
-                IntentFilter(EqService.ACTION_EQ_STARTED)
-            )
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            registerReceiver(
-                statusRefreshReceiver,
-                IntentFilter().apply {
-                    addAction(RouteSwitchCoordinator.ACTION_ROUTE_PRESET_APPLIED)
-                    addAction(EqService.ACTION_NOTIFICATION_REFRESH)
-                }
-            )
-        }
+        eqBroadcastReceiver.register(this)
 
         val savedMode = runCatching { EqUiMode.valueOf(eqViewModel.eqPrefs.getEqUiMode()) }.getOrDefault(EqUiMode.PARAMETRIC)
         val effectiveMode = if (eqViewModel.eqPrefs.getSimpleEqEnabled()) EqUiMode.SIMPLE else savedMode
@@ -2715,7 +2660,7 @@ class  MainActivity : AppCompatActivity() {
                 return@setOnTouchListener true
             }
             if (event.action == android.view.MotionEvent.ACTION_DOWN) {
-                val now = System.currentTimeMillis()
+                val now = android.os.SystemClock.elapsedRealtime()
                 if (now - lastTapTime < 300) {
                     isUpdatingInputs = true
                     onReset()
@@ -3480,7 +3425,7 @@ class  MainActivity : AppCompatActivity() {
         super.onStart()
         if (!eqViewModel.serviceBound.value) {
             val intent = Intent(this, EqService::class.java)
-            bindService(intent, eqViewModel.stateManager.serviceConnection, 0)
+            bindService(intent, eqViewModel.stateManager.serviceConnection, BIND_AUTO_CREATE)
         }
     }
 
@@ -3620,7 +3565,7 @@ class  MainActivity : AppCompatActivity() {
         val savedPower = eqViewModel.eqPrefs.getPowerState()
         com.bearinmind.equalizer314.ui.BottomNavHelper.setPowerFabInstant(this, savedPower)
         if (eqViewModel.stateManager.serviceBound && eqViewModel.eqService.value != null) {
-            eqViewModel.stateManager.isProcessing = eqViewModel.eqService.value!!.dynamicsManager.isActive
+            eqViewModel.stateManager.isProcessing = eqViewModel.eqService.value?.dynamicsManager?.isActive ?: false
             // Safety net: returning to the app after an app-switch dropout
             // should restore the EQ even if the service watchdog hasn't
             // ticked yet (e.g. the OEM never fired a playback callback).
@@ -3681,17 +3626,17 @@ class  MainActivity : AppCompatActivity() {
             simpleEqController.saveGains()
         }
         eqViewModel.saveState()
-        if (eqViewModel.serviceBound.value) {
-            try { unbindService(eqViewModel.stateManager.serviceConnection) } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
+        // Не отвязываемся при смене конфигурации (поворот экрана, смена темы):
+        // это убивает ServiceConnection, который не восстанавливается автоматически.
+        if (eqViewModel.serviceBound.value && !isChangingConfigurations) {
+            try { unbindService(eqViewModel.stateManager.serviceConnection) } catch (_: Exception) {}
             eqViewModel.stateManager.serviceBound = false
         }
     }
 
     override fun onDestroy() {
         visualizerHelper.stop()
-        try { unregisterReceiver(eqStoppedReceiver) } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
-        try { unregisterReceiver(eqStartedReceiver) } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
-        try { unregisterReceiver(statusRefreshReceiver) } catch (_: Exception) {} // lifecycle cleanup, safe to ignore
+        eqBroadcastReceiver.unregister(this)
         super.onDestroy()
     }
 
@@ -3753,7 +3698,7 @@ class  MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         if (eqViewModel.serviceBound.value && eqViewModel.eqService.value != null) {
-            eqViewModel.stateManager.isProcessing = eqViewModel.eqService.value!!.dynamicsManager.isActive
+            eqViewModel.stateManager.isProcessing = eqViewModel.eqService.value?.dynamicsManager?.isActive ?: false
         } else {
             eqViewModel.stateManager.isProcessing = false
         }

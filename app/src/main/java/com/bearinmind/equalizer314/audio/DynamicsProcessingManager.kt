@@ -28,7 +28,7 @@ import com.bearinmind.equalizer314.dsp.ParametricToDpConverter
  *
  * Requires API 28+.
  */
-class DynamicsProcessingManager {
+class DynamicsProcessingManager : IDynamicsProcessingManager {
 
     companion object {
         private const val TAG = "DynamicsProcessingMgr"
@@ -52,38 +52,38 @@ class DynamicsProcessingManager {
     // @Volatile: read off the main thread by EqService's watchdog and by
     // EqService.isDpRunning mirrors, written from start()/stop().
     @Volatile
-    var isActive = false
+    override var isActive = false
         private set
 
     // Preamp
-    var preampGainDb: Float = 0f
+    override var preampGainDb: Float = 0f
 
     // Auto-gain
-    var autoGainEnabled: Boolean = false
+    override var autoGainEnabled: Boolean = false
     var lastAutoGainOffset: Float = 0f
         private set
 
     // MBC
-    var mbcEnabled: Boolean = false
-    var mbcBandCount: Int = 3
+    override var mbcEnabled: Boolean = false
+    override var mbcBandCount: Int = 3
 
     // Limiter — defaults match Wavelet's `a6/z.java:105` baseline
     // (1 ms attack, 60 ms release, 10:1 ratio, −2 dB threshold, 0 dB
     // post-gain). EqStateManager will overwrite these from user prefs
     // before start(); these values are the in-class fallback for the
     // very-first call before sync.
-    var limiterEnabled: Boolean = true
-    var limiterAttackMs: Float = 1f
-    var limiterReleaseMs: Float = 60f
-    var limiterRatio: Float = 10f
-    var limiterThresholdDb: Float = -2f
-    var limiterPostGainDb: Float = 0f
+    override var limiterEnabled: Boolean = true
+    override var limiterAttackMs: Float = 1f
+    override var limiterReleaseMs: Float = 60f
+    override var limiterRatio: Float = 10f
+    override var limiterThresholdDb: Float = -2f
+    override var limiterPostGainDb: Float = 0f
 
     // Channel Side Options — balance + per-channel preamp.
     // Routed through DP's input-gain stage, NOT baked into band gains.
-    var channelBalancePercent: Int = 0     // -100..100, 0 = center
-    var leftChannelGainDb: Float = 0f      // -12..12
-    var rightChannelGainDb: Float = 0f     // -12..12
+    override var channelBalancePercent: Int = 0     // -100..100, 0 = center
+    override var leftChannelGainDb: Float = 0f      // -12..12
+    override var rightChannelGainDb: Float = 0f     // -12..12
 
     // Background thread for the binder calls. Each EQ update issues one
     // setPreEqByChannelIndex transaction per channel; running them on the
@@ -117,7 +117,7 @@ class DynamicsProcessingManager {
         return null
     }
 
-    fun start(eq: ParametricEqualizer) {
+    override fun start(eq: ParametricEqualizer) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
             Log.e(TAG, "DynamicsProcessing requires API 28+")
             return
@@ -251,7 +251,7 @@ class DynamicsProcessingManager {
     }
 
     private fun reclaimSession() {
-        val now = System.currentTimeMillis()
+        val now = android.os.SystemClock.elapsedRealtime()
         if (now - lastReclaimTime < reclaimCooldownMs) return  // Cooldown — don't fight endlessly
         lastReclaimTime = now
         Log.w(TAG, "DynamicsProcessing overridden by another app — reclaiming")
@@ -272,7 +272,7 @@ class DynamicsProcessingManager {
      *  false) when DP isn't active or has no remembered EQ. Caller is
      *  responsible for re-applying MBC per-band params / bypass after,
      *  same as any other start(). */
-    fun reattachActive(): Boolean {
+    override fun reattachActive(): Boolean {
         if (!isActive) return false
         val eq = lastEq ?: return false
         stop()
@@ -287,7 +287,7 @@ class DynamicsProcessingManager {
      *  call from any thread: returns false when DP isn't active, and any
      *  native read on a torn-down handle is caught and treated as "lost"
      *  (so the caller does a clean reattach). */
-    fun hasLostControl(): Boolean {
+    override fun hasLostControl(): Boolean {
         if (!isActive) return false
         val dp = dynamicsProcessing ?: return false
         return try {
@@ -302,20 +302,20 @@ class DynamicsProcessingManager {
      *  reclaimCooldownMs) so the watchdog and the listener path can't both
      *  fire a recreate inside the 2s window. Consumes the window when it
      *  returns true. */
-    fun reclaimCooldownElapsed(): Boolean {
-        val now = System.currentTimeMillis()
+    override fun reclaimCooldownElapsed(): Boolean {
+        val now = android.os.SystemClock.elapsedRealtime()
         if (now - lastReclaimTime < reclaimCooldownMs) return false
         lastReclaimTime = now
         return true
     }
 
-    fun updateFromEqualizer(eq: ParametricEqualizer) {
+    override fun updateFromEqualizer(eq: ParametricEqualizer) {
         updateFromEqualizers(eq, eq)
     }
 
     /** Apply potentially-different EQs to the two channels. Pass the same
      *  instance for both in shared/BOTH mode. */
-    fun updateFromEqualizers(leftEq: ParametricEqualizer, rightEq: ParametricEqualizer) {
+    override fun updateFromEqualizers(leftEq: ParametricEqualizer, rightEq: ParametricEqualizer) {
         val dp = dynamicsProcessing ?: return
 
         // If band count changed, must recreate the DP instance
@@ -462,7 +462,7 @@ class DynamicsProcessingManager {
     }
 
     /** Re-apply the current EQ with fresh channel settings (balance, preamp). */
-    fun updateChannelSettings() {
+    override fun updateChannelSettings() {
         val dp = dynamicsProcessing ?: return
         val eq = lastEq ?: return
         try {
@@ -492,7 +492,7 @@ class DynamicsProcessingManager {
      * @param bands List of band parameters: cutoff, attack, release, ratio, threshold, knee, noiseGate, expander, preGain, postGain
      * @param crossovers Crossover frequencies (bands.size - 1)
      */
-    fun applyMbcBands(
+    override fun applyMbcBands(
         bands: List<MbcBandParams>,
         crossovers: FloatArray
     ) {
@@ -545,7 +545,7 @@ class DynamicsProcessingManager {
         val postGainDb: Float = 0f
     )
 
-    fun setEnabled(enabled: Boolean) {
+    override fun setEnabled(enabled: Boolean) {
         dynamicsProcessing?.enabled = enabled
     }
 
@@ -554,7 +554,7 @@ class DynamicsProcessingManager {
      *  doesn't stall the UI thread on a binder transaction. Coalesced with
      *  the band-write job so back-to-back slider ticks collapse to one
      *  write. Falls back silently when DP isn't running. */
-    fun pushLimiterUpdate() {
+    override fun pushLimiterUpdate() {
         val dp = dynamicsProcessing ?: return
         val limiter = DynamicsProcessing.Limiter(
             limiterEnabled, limiterEnabled, 0,
@@ -577,7 +577,7 @@ class DynamicsProcessingManager {
         handler.post(job)
     }
 
-    fun stop() {
+    override fun stop() {
         // Drain any queued band-write before tearing down the DP instance —
         // the runnable would otherwise run against a released native handle.
         workerHandler?.let { handler ->

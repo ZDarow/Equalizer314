@@ -41,8 +41,7 @@ class EqViewModel(application: Application) : AndroidViewModel(application) {
     private val _eqEnabled = MutableStateFlow(true)
     val eqEnabled: StateFlow<Boolean> = _eqEnabled.asStateFlow()
 
-    private val _eqUiMode = MutableStateFlow(EqUiMode.PARAMETRIC)
-    val eqUiMode: StateFlow<EqUiMode> = _eqUiMode.asStateFlow()
+    // _eqUiMode был дубликатом _currentEqUiMode — удалён как dead code
 
     private val _parametricEq = MutableStateFlow(stateManager.parametricEq)
     val parametricEq: StateFlow<ParametricEqualizer> = _parametricEq.asStateFlow()
@@ -178,7 +177,7 @@ class EqViewModel(application: Application) : AndroidViewModel(application) {
     /** Switch the EQ editing mode and persist the choice. */
     fun setEqUiMode(mode: EqUiMode) {
         stateManager.currentEqUiMode = mode
-        _eqUiMode.value = mode
+        _currentEqUiMode.value = mode
         stateManager.saveState()
     }
 

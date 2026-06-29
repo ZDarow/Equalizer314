@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.os.SystemClock
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -67,7 +68,9 @@ class AudioOutputActivity : AppCompatActivity() {
     // dismisses also fires our click handler and would re-open the popup.
     private var currentDeviceLastDismissAt = 0L
 
+    @Volatile
     private var eqService: EqService? = null
+    @Volatile
     private var serviceBound = false
     private var activeKey: String? = null
     private var activeLabel: String? = null
@@ -200,13 +203,13 @@ class AudioOutputActivity : AppCompatActivity() {
         // ripple foreground); forward them to opening the popup so the
         // dropdown still toggles when the user taps the box.
         currentDeviceDropdown.setOnDismissListener {
-            currentDeviceLastDismissAt = System.currentTimeMillis()
+            currentDeviceLastDismissAt = SystemClock.elapsedRealtime()
         }
         currentDeviceDropdownLayout.setOnClickListener {
             // If the popup was just dismissed (within ~300ms) by an
             // outside-tap on this box, that same touch also fired this
             // click — don't reopen.
-            if (System.currentTimeMillis() - currentDeviceLastDismissAt < 300) {
+            if (SystemClock.elapsedRealtime() - currentDeviceLastDismissAt < 300) {
                 currentDeviceLastDismissAt = 0L
                 return@setOnClickListener
             }
@@ -525,10 +528,10 @@ class AudioOutputActivity : AppCompatActivity() {
             // avoids the reopen cycle when an outside-tap on the box
             // both dismisses the popup AND fires this click.
             dropdown.setOnDismissListener {
-                holder.lastDismissAt = System.currentTimeMillis()
+                holder.lastDismissAt = SystemClock.elapsedRealtime()
             }
             holder.presetLayout.setOnClickListener {
-                if (System.currentTimeMillis() - holder.lastDismissAt < 300) {
+                if (SystemClock.elapsedRealtime() - holder.lastDismissAt < 300) {
                     holder.lastDismissAt = 0L
                     return@setOnClickListener
                 }

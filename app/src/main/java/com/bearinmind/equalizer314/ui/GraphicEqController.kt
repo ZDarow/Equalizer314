@@ -317,7 +317,7 @@ class GraphicEqController(
             }
             if (event.action == android.view.MotionEvent.ACTION_DOWN) {
                 v.parent?.requestDisallowInterceptTouchEvent(true)
-                val now = System.currentTimeMillis()
+                val now = android.os.SystemClock.elapsedRealtime()
                 if (now - lastTapTime < 300) {
                     val b = eq.getBand(bandIndex) ?: return@setOnTouchListener false
                     if (isLpHp) {

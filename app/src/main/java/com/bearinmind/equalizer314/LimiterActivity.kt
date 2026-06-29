@@ -48,7 +48,9 @@ class LimiterActivity : AppCompatActivity() {
     private var wasMusicPlaying = true
 
     private var isUpdating = false
+    @Volatile
     private var eqService: EqService? = null
+    @Volatile
     private var serviceBound = false
 
     private val serviceConnection = object : ServiceConnection {
@@ -432,7 +434,7 @@ class LimiterActivity : AppCompatActivity() {
                 return@setOnTouchListener true
             }
             if (event.action == android.view.MotionEvent.ACTION_DOWN) {
-                val now = System.currentTimeMillis()
+                val now = android.os.SystemClock.elapsedRealtime()
                 if (now - lastTapTime < 300) {
                     isUpdating = true
                     onReset()

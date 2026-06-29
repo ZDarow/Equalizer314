@@ -238,7 +238,7 @@ class GateCurveView @JvmOverloads constructor(
                 val dotY = dbToY(threshOut)
                 val distThresh = sqrt((event.x - dotX).pow(2) + (event.y - dotY).pow(2))
 
-                val now = System.currentTimeMillis()
+                val now = android.os.SystemClock.elapsedRealtime()
 
                 if (distThresh < 55f) {
                     if (now - lastTapTime < doubleTapTimeout && lastTapType == 1) {

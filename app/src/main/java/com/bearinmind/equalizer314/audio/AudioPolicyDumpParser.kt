@@ -88,14 +88,14 @@ object AudioPolicyDumpParser {
         // Bound the blocking read. We could spawn a reader thread, but the
         // caller already runs on a HandlerThread — staying single-threaded
         // keeps the lifecycle trivial.
-        val deadline = System.currentTimeMillis() + timeoutMs
+        val deadline = android.os.SystemClock.elapsedRealtime() + timeoutMs
         val unmatched = mutableListOf<String>()
         val uidToSessions = mutableMapOf<Int, MutableSet<Int>>()
 
         try {
             BufferedReader(FileReader(readFd.fileDescriptor)).use { reader ->
                 while (true) {
-                    if (System.currentTimeMillis() > deadline) {
+                    if (android.os.SystemClock.elapsedRealtime() > deadline) {
                         Log.w(TAG, "dump read timed out after ${timeoutMs}ms")
                         break
                     }

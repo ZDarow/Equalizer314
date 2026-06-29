@@ -398,7 +398,7 @@ class GrTraceView @JvmOverloads constructor(
                 }
 
                 // Check threshold lines
-                val now = System.currentTimeMillis()
+                val now = android.os.SystemClock.elapsedRealtime()
                 for (b in 0 until numBands.coerceAtMost(xovers.size + 1)) {
                     val leftX = freqToX(if (b == 0) freqMin else xovers[b - 1], w)
                     val rightX = freqToX(if (b >= xovers.size) freqMax else xovers[b], w)

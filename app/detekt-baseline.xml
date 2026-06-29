@@ -1,10 +1,10 @@
-<?xml version="1.0" ?>
+<?xml version='1.0' encoding='UTF-8'?>
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>ComplexCondition:AudioOutputActivity.kt$AudioOutputActivity.DevicesAdapter$from &lt; 0 || to &lt; 0 || from &gt;= items.size || to &gt;= items.size</ID>
-    <ID>ComplexCondition:DiffusionDensityView.kt$DiffusionDensityView$event.x &lt; plotL - pad || event.x &gt; plotR + pad || event.y &lt; plotT - pad || event.y &gt; plotB + pad</ID>
-    <ID>ComplexCondition:EqGraphView.kt$EqGraphView$(eq != null &amp;&amp; eq.getBandCount() &gt; 0) || (crossovers != null &amp;&amp; gains != null)</ID>
+    <ID>ComplexCondition:AudioOutputActivity.kt$AudioOutputActivity.DevicesAdapter$from &lt; 0 || to &lt; 0 || from >= items.size || to >= items.size</ID>
+    <ID>ComplexCondition:DiffusionDensityView.kt$DiffusionDensityView$event.x &lt; plotL - pad || event.x > plotR + pad || event.y &lt; plotT - pad || event.y > plotB + pad</ID>
+    <ID>ComplexCondition:EqGraphView.kt$EqGraphView$(eq != null &amp;&amp; eq.getBandCount() > 0) || (crossovers != null &amp;&amp; gains != null)</ID>
     <ID>CyclomaticComplexMethod:ApoConverter.kt$ApoConverter$private fun tryAutoEqGraphicEq(s: String): String?</ID>
     <ID>CyclomaticComplexMethod:ApoConverter.kt$ApoConverter$private fun tryPowerampParametric(any: Any): String?</ID>
     <ID>CyclomaticComplexMethod:ApoConverter.kt$ApoConverter$private fun tryWaveletPreset(any: Any): String?</ID>
@@ -13,7 +13,7 @@
     <ID>CyclomaticComplexMethod:AudioEffectsPipelineActivity.kt$AudioEffectsPipelineActivity.ConnectorDecoration$override fun onDraw( c: android.graphics.Canvas, parent: RecyclerView, state: RecyclerView.State )</ID>
     <ID>CyclomaticComplexMethod:AudioOutputActivity.kt$AudioOutputActivity$private fun refreshActiveDevice()</ID>
     <ID>CyclomaticComplexMethod:AudioOutputActivity.kt$AudioOutputActivity.DevicesAdapter$@SuppressLint("ClickableViewAccessibility") override fun onBindViewHolder(holder: VH, position: Int)</ID>
-    <ID>CyclomaticComplexMethod:AudioPolicyDumpParser.kt$AudioPolicyDumpParser$private fun dumpInternal(context: Context, timeoutMs: Long): Map&lt;String, Set&lt;Int&gt;&gt;</ID>
+    <ID>CyclomaticComplexMethod:AudioPolicyDumpParser.kt$AudioPolicyDumpParser$private fun dumpInternal(context: Context, timeoutMs: Long): Map&lt;String, Set&lt;Int>></ID>
     <ID>CyclomaticComplexMethod:AutoEqActivity.kt$AutoEqActivity$private fun promptSaveToPresets(defaultBaseName: String, profile: AutoEqProfile)</ID>
     <ID>CyclomaticComplexMethod:AutoEqParser.kt$AutoEqParser$fun parse(text: String): AutoEqProfile?</ID>
     <ID>CyclomaticComplexMethod:BackupManager.kt$BackupManager$fun importAll(context: Context, json: String): Boolean</ID>
@@ -24,8 +24,8 @@
     <ID>CyclomaticComplexMethod:CompressorCurveView.kt$CompressorCurveView$override fun onDraw(canvas: Canvas)</ID>
     <ID>CyclomaticComplexMethod:CompressorCurveView.kt$CompressorCurveView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>CyclomaticComplexMethod:DynamicsProcessingManager.kt$DynamicsProcessingManager$private fun applyParametricResponse( dp: DynamicsProcessing, leftEq: ParametricEqualizer, rightEq: ParametricEqualizer, )</ID>
-    <ID>CyclomaticComplexMethod:EqFitter.kt$EqFitter$private fun autoeq(fr: Array&lt;FloatArray&gt;, frTarget: Array&lt;FloatArray&gt;, maxFilters: Int): List&lt;Filter&gt;</ID>
-    <ID>CyclomaticComplexMethod:EqFitter.kt$EqFitter$private fun optimizeFilter( fr: Array&lt;FloatArray&gt;, frTarget: Array&lt;FloatArray&gt;, filter: Filter, otherFilters: List&lt;Filter&gt; ): Filter</ID>
+    <ID>CyclomaticComplexMethod:EqFitter.kt$EqFitter$private fun autoeq(fr: Array&lt;FloatArray>, frTarget: Array&lt;FloatArray>, maxFilters: Int): List&lt;Filter></ID>
+    <ID>CyclomaticComplexMethod:EqFitter.kt$EqFitter$private fun optimizeFilter( fr: Array&lt;FloatArray>, frTarget: Array&lt;FloatArray>, filter: Filter, otherFilters: List&lt;Filter> ): Filter</ID>
     <ID>CyclomaticComplexMethod:EqGraphView.kt$EqGraphView$override fun onDraw(canvas: Canvas)</ID>
     <ID>CyclomaticComplexMethod:EqGraphView.kt$EqGraphView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>CyclomaticComplexMethod:EqGraphView.kt$EqGraphView$private fun drawCurve(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
@@ -44,7 +44,6 @@
     <ID>CyclomaticComplexMethod:LimiterActivity.kt$LimiterActivity$private fun initViews()</ID>
     <ID>CyclomaticComplexMethod:LimiterCeilingView.kt$LimiterCeilingView$override fun onDraw(canvas: Canvas)</ID>
     <ID>CyclomaticComplexMethod:LimiterWaveformView.kt$LimiterWaveformView$override fun onDraw(canvas: Canvas)</ID>
-    <ID>CyclomaticComplexMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
     <ID>CyclomaticComplexMethod:MainActivity.kt$MainActivity$override fun onResume()</ID>
     <ID>CyclomaticComplexMethod:MainActivity.kt$MainActivity$private fun reorderToggleRows(animate: Boolean = true)</ID>
     <ID>CyclomaticComplexMethod:MainActivity.kt$MainActivity$private fun setupListeners()</ID>
@@ -57,7 +56,7 @@
     <ID>CyclomaticComplexMethod:MbcActivity.kt$MbcActivity$private fun setupListeners()</ID>
     <ID>CyclomaticComplexMethod:MbcActivity.kt$MbcActivity$private fun startVisualizer()</ID>
     <ID>CyclomaticComplexMethod:ParametricToDpConverter.kt$ParametricToDpConverter$fun convertFeatureAware(eq: ParametricEqualizer): ConvertedBands</ID>
-    <ID>CyclomaticComplexMethod:ParametricToDpConverter.kt$ParametricToDpConverter$private fun supportsForBand(band: ParametricEqualizer.EqualizerBand): List&lt;Float&gt;</ID>
+    <ID>CyclomaticComplexMethod:ParametricToDpConverter.kt$ParametricToDpConverter$private fun supportsForBand(band: ParametricEqualizer.EqualizerBand): List&lt;Float></ID>
     <ID>CyclomaticComplexMethod:ReverbVisualizerView.kt$ReverbVisualizerView$private fun drawBars(c: Canvas, earlyDurationMs: Float, decayDurationMs: Float)</ID>
     <ID>CyclomaticComplexMethod:SessionEffectManager.kt$SessionEffectManager$@Synchronized fun attach( sessionId: Int, packageName: String, source: AttachSource = AttachSource.BROADCAST, )</ID>
     <ID>CyclomaticComplexMethod:SimpleEqController.kt$SimpleEqController$fun buildSliders()</ID>
@@ -70,80 +69,22 @@
     <ID>CyclomaticComplexMethod:TargetCurveActivity.kt$TargetCurveActivity$private fun showAddToPresetsDialog()</ID>
     <ID>CyclomaticComplexMethod:TargetCurveActivity.kt$TargetCurveActivity$private fun showEditDialog()</ID>
     <ID>DestructuringDeclarationWithTooManyEntries:EqFitter.kt$EqFitter$val (a0, a1, a2, b0, b1, b2) = coeffs</ID>
-    <ID>EmptyFunctionBlock:AudioEffectsPipelineActivity.kt$AudioEffectsPipelineActivity.&lt;no name provided&gt;${}</ID>
-    <ID>EmptyFunctionBlock:AudioOutputActivity.kt$AudioOutputActivity.&lt;no name provided&gt;${}</ID>
-    <ID>EmptyFunctionBlock:AutoEqActivity.kt$AutoEqActivity.&lt;no name provided&gt;${}</ID>
+    <ID>EmptyFunctionBlock:AudioEffectsPipelineActivity.kt$AudioEffectsPipelineActivity.&lt;no name provided>${}</ID>
+    <ID>EmptyFunctionBlock:AudioOutputActivity.kt$AudioOutputActivity.&lt;no name provided>${}</ID>
+    <ID>EmptyFunctionBlock:AutoEqActivity.kt$AutoEqActivity.&lt;no name provided>${}</ID>
     <ID>EmptyFunctionBlock:GrTraceView.kt$GrTraceView${}</ID>
-    <ID>EmptyFunctionBlock:LimiterActivity.kt$LimiterActivity.&lt;no name provided&gt;${}</ID>
+    <ID>EmptyFunctionBlock:LimiterActivity.kt$LimiterActivity.&lt;no name provided>${}</ID>
     <ID>EmptyFunctionBlock:LimiterWaveformView.kt$LimiterWaveformView${}</ID>
-    <ID>EmptyFunctionBlock:MeasurementSelectActivity.kt$MeasurementSelectActivity.&lt;no name provided&gt;${}</ID>
-    <ID>EmptyFunctionBlock:SpectrumControlActivity.kt$SpectrumControlActivity.&lt;no name provided&gt;${}</ID>
-    <ID>EmptyFunctionBlock:TargetSelectActivity.kt$TargetSelectActivity.&lt;no name provided&gt;${}</ID>
-    <ID>EmptyFunctionBlock:VisualizerHelper.kt$VisualizerHelper.&lt;no name provided&gt;${ }</ID>
-    <ID>ImplicitDefaultLocale:ChannelSideEqActivity.kt$ChannelSideEqActivity$String.format("%.1f", db)</ID>
-    <ID>ImplicitDefaultLocale:DiffusionDensityColumnsView.kt$DiffusionDensityColumnsView$String.format("%.0f", densityPct)</ID>
-    <ID>ImplicitDefaultLocale:DiffusionDensityColumnsView.kt$DiffusionDensityColumnsView$String.format("%.0f", diffusionPct)</ID>
-    <ID>ImplicitDefaultLocale:EqGraphView.kt$EqGraphView$String.format("%.1f dB", actualGain)</ID>
-    <ID>ImplicitDefaultLocale:EqGraphView.kt$EqGraphView$String.format("%.1fk", kHz)</ID>
-    <ID>ImplicitDefaultLocale:GrTraceView.kt$GrTraceView$String.format("%.1f", thresholds[b])</ID>
-    <ID>ImplicitDefaultLocale:GraphicEqController.kt$GraphicEqController$String.format("%.0f", band.frequency)</ID>
-    <ID>ImplicitDefaultLocale:GraphicEqController.kt$GraphicEqController$String.format("%.1f", band.gain)</ID>
-    <ID>ImplicitDefaultLocale:GraphicEqController.kt$GraphicEqController$String.format("%.1f", db)</ID>
-    <ID>ImplicitDefaultLocale:GraphicEqController.kt$GraphicEqController$String.format("%.1f", value)</ID>
-    <ID>ImplicitDefaultLocale:GraphicEqController.kt$GraphicEqController$String.format("%.1fk", hz / 1000)</ID>
-    <ID>ImplicitDefaultLocale:GraphicEqController.kt$GraphicEqController$String.format("%.2f", band.q)</ID>
-    <ID>ImplicitDefaultLocale:GraphicEqController.kt$GraphicEqController$String.format("%.2f", q)</ID>
-    <ID>ImplicitDefaultLocale:GraphicEqController.kt$GraphicEqController$String.format("%.2f", value)</ID>
-    <ID>ImplicitDefaultLocale:LimiterActivity.kt$LimiterActivity$String.format("%.0f", release)</ID>
-    <ID>ImplicitDefaultLocale:LimiterActivity.kt$LimiterActivity$String.format("%.1f", postGain)</ID>
-    <ID>ImplicitDefaultLocale:LimiterActivity.kt$LimiterActivity$String.format("%.1f", ratio)</ID>
-    <ID>ImplicitDefaultLocale:LimiterActivity.kt$LimiterActivity$String.format("%.1f", threshold)</ID>
-    <ID>ImplicitDefaultLocale:LimiterActivity.kt$LimiterActivity$String.format("%.1f", value)</ID>
-    <ID>ImplicitDefaultLocale:LimiterActivity.kt$LimiterActivity$String.format("%.2f", attack)</ID>
-    <ID>ImplicitDefaultLocale:LimiterCeilingView.kt$LimiterCeilingView$String.format("%.1f dB", ceilingDb)</ID>
-    <ID>ImplicitDefaultLocale:LimiterCeilingView.kt$LimiterCeilingView$String.format("%.1f dB", displayGr)</ID>
-    <ID>ImplicitDefaultLocale:LimiterWaveformView.kt$LimiterWaveformView$String.format("%.1f", ceilingDb)</ID>
-    <ID>ImplicitDefaultLocale:MainActivity.kt$MainActivity$String.format("%.0f", hz)</ID>
-    <ID>ImplicitDefaultLocale:MainActivity.kt$MainActivity$String.format("%.1f", band.gain)</ID>
-    <ID>ImplicitDefaultLocale:MainActivity.kt$MainActivity$String.format("%.1f", gain)</ID>
-    <ID>ImplicitDefaultLocale:MainActivity.kt$MainActivity$String.format("%.1f", hz)</ID>
-    <ID>ImplicitDefaultLocale:MainActivity.kt$MainActivity$String.format("%.1f", preampFromPreset)</ID>
-    <ID>ImplicitDefaultLocale:MainActivity.kt$MainActivity$String.format("%.1f", value)</ID>
-    <ID>ImplicitDefaultLocale:MainActivity.kt$MainActivity$String.format("%.2f", band.q)</ID>
-    <ID>ImplicitDefaultLocale:MainActivity.kt$MainActivity$String.format("%.2f", defaultQ)</ID>
-    <ID>ImplicitDefaultLocale:MainActivity.kt$MainActivity$String.format("%.2f", value)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.0f", b.noiseGateThreshold)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.0f", b.release)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.0f", value)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.1f", b.postGain)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.1f", b.preGain)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.1f", b.threshold)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.1f", snapped)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.1f", thresholdDb)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.1f", value)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.2f", b.attack)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.2f", b.expanderRatio)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.2f", b.kneeWidth)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.2f", b.ratio)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.2f", ratio)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.2f", v)</ID>
-    <ID>ImplicitDefaultLocale:MbcActivity.kt$MbcActivity$String.format("%.2f", value)</ID>
-    <ID>ImplicitDefaultLocale:SimpleEqBarsView.kt$SimpleEqBarsView$String.format("%.1f", gain)</ID>
-    <ID>ImplicitDefaultLocale:SimpleEqController.kt$SimpleEqController$String.format("%.1f", b.getDouble("gain"))</ID>
-    <ID>ImplicitDefaultLocale:SimpleEqController.kt$SimpleEqController$String.format("%.1f", obj.optDouble("preamp", 0.0))</ID>
-    <ID>ImplicitDefaultLocale:SimpleEqController.kt$SimpleEqController$String.format("%.2f", b.getDouble("q"))</ID>
-    <ID>ImplicitDefaultLocale:TableEqController.kt$TableEqController$String.format("%.0f", band.frequency)</ID>
-    <ID>ImplicitDefaultLocale:TableEqController.kt$TableEqController$String.format("%.1f", band.gain)</ID>
-    <ID>ImplicitDefaultLocale:TableEqController.kt$TableEqController$String.format("%.2f", band.q)</ID>
-    <ID>ImplicitDefaultLocale:TargetCurveActivity.kt$TargetCurveActivity$String.format("%.1f", f.gain)</ID>
-    <ID>ImplicitDefaultLocale:TargetCurveActivity.kt$TargetCurveActivity$String.format("%.1f", profile.preampDb)</ID>
-    <ID>ImplicitDefaultLocale:TargetCurveActivity.kt$TargetCurveActivity$String.format("%.2f", f.q)</ID>
+    <ID>EmptyFunctionBlock:MeasurementSelectActivity.kt$MeasurementSelectActivity.&lt;no name provided>${}</ID>
+    <ID>EmptyFunctionBlock:SpectrumControlActivity.kt$SpectrumControlActivity.&lt;no name provided>${}</ID>
+    <ID>EmptyFunctionBlock:TargetSelectActivity.kt$TargetSelectActivity.&lt;no name provided>${}</ID>
+    <ID>EmptyFunctionBlock:VisualizerHelper.kt$VisualizerHelper.&lt;no name provided>${ }</ID>
     <ID>LargeClass:MainActivity.kt$MainActivity : AppCompatActivity</ID>
     <ID>LongMethod:AttackReleaseView.kt$AttackReleaseView$override fun onDraw(canvas: Canvas)</ID>
     <ID>LongMethod:AttackReleaseView.kt$AttackReleaseView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>LongMethod:AudioEffectsPipelineActivity.kt$AudioEffectsPipelineActivity.PipelineAdapter$override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder</ID>
     <ID>LongMethod:AudioOutputActivity.kt$AudioOutputActivity$private fun refreshActiveDevice()</ID>
-    <ID>LongMethod:AudioOutputActivity.kt$AudioOutputActivity.&lt;no name provided&gt;$override fun onPreDraw(): Boolean</ID>
+    <ID>LongMethod:AudioOutputActivity.kt$AudioOutputActivity.&lt;no name provided>$override fun onPreDraw(): Boolean</ID>
     <ID>LongMethod:AudioOutputActivity.kt$AudioOutputActivity.DevicesAdapter$@SuppressLint("ClickableViewAccessibility") override fun onBindViewHolder(holder: VH, position: Int)</ID>
     <ID>LongMethod:AutoEqActivity.kt$AutoEqActivity$private fun promptSaveToPresets(defaultBaseName: String, profile: AutoEqProfile)</ID>
     <ID>LongMethod:AutoEqActivity.kt$AutoEqActivity.HeadphoneAdapter$override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder</ID>
@@ -154,7 +95,7 @@
     <ID>LongMethod:ChannelInputActivity.kt$ChannelInputActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
     <ID>LongMethod:CompressorCurveView.kt$CompressorCurveView$override fun onDraw(canvas: Canvas)</ID>
     <ID>LongMethod:CompressorCurveView.kt$CompressorCurveView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
-    <ID>LongMethod:DynamicsProcessingManager.kt$DynamicsProcessingManager$fun start(eq: ParametricEqualizer)</ID>
+    <ID>LongMethod:DynamicsProcessingManager.kt$DynamicsProcessingManager$override fun start(eq: ParametricEqualizer)</ID>
     <ID>LongMethod:DynamicsProcessingManager.kt$DynamicsProcessingManager$private fun applyParametricResponse( dp: DynamicsProcessing, leftEq: ParametricEqualizer, rightEq: ParametricEqualizer, )</ID>
     <ID>LongMethod:EnvironmentalReverbActivity.kt$EnvironmentalReverbActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
     <ID>LongMethod:EqGraphView.kt$EqGraphView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
@@ -185,10 +126,10 @@
     <ID>LongMethod:MbcActivity.kt$MbcActivity$private fun setupListeners()</ID>
     <ID>LongMethod:MbcActivity.kt$MbcActivity$private fun showMbcColorPicker()</ID>
     <ID>LongMethod:MbcActivity.kt$MbcActivity$private fun startVisualizer()</ID>
-    <ID>LongMethod:MbcActivity.kt$MbcActivity.&lt;no name provided&gt;$override fun run()</ID>
+    <ID>LongMethod:MbcActivity.kt$MbcActivity.&lt;no name provided>$override fun run()</ID>
     <ID>LongMethod:MeasurementSelectActivity.kt$MeasurementSelectActivity.MeasAdapter$override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder</ID>
     <ID>LongMethod:ParametricToDpConverter.kt$ParametricToDpConverter$fun convertFeatureAware(eq: ParametricEqualizer): ConvertedBands</ID>
-    <ID>LongMethod:ParametricToDpConverter.kt$ParametricToDpConverter$private fun supportsForBand(band: ParametricEqualizer.EqualizerBand): List&lt;Float&gt;</ID>
+    <ID>LongMethod:ParametricToDpConverter.kt$ParametricToDpConverter$private fun supportsForBand(band: ParametricEqualizer.EqualizerBand): List&lt;Float></ID>
     <ID>LongMethod:ReverbVisualizerView.kt$ReverbVisualizerView$private fun applyHandleDrag(h: Handle, x: Float, y: Float)</ID>
     <ID>LongMethod:ReverbVisualizerView.kt$ReverbVisualizerView$private fun drawBars(c: Canvas, earlyDurationMs: Float, decayDurationMs: Float)</ID>
     <ID>LongMethod:SimpleEqController.kt$SimpleEqController$fun buildSliders()</ID>
@@ -204,7 +145,7 @@
     <ID>LongMethod:TargetCurveActivity.kt$TargetCurveActivity$private fun showAddToPresetsDialog()</ID>
     <ID>LongMethod:TargetCurveActivity.kt$TargetCurveActivity$private fun showEditDialog()</ID>
     <ID>LongMethod:TargetSelectActivity.kt$TargetSelectActivity.TargetAdapter$override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder</ID>
-    <ID>LongParameterList:BandToggleManager.kt$BandToggleManager$( private val activity: Activity, private val toggleGroup: LinearLayout, private val toggleGroup2: LinearLayout, private val triangleIndicator: View, private val graphView: EqGraphView, private val state: EqStateManager, private val onEqChanged: () -&gt; Unit, private val onBandCountChanged: () -&gt; Unit, private val onBandSelected: (Int?) -&gt; Unit )</ID>
+    <ID>LongParameterList:BandToggleManager.kt$BandToggleManager$( private val activity: Activity, private val toggleGroup: LinearLayout, private val toggleGroup2: LinearLayout, private val triangleIndicator: View, private val graphView: EqGraphView, private val state: EqStateManager, private val onEqChanged: () -> Unit, private val onBandCountChanged: () -> Unit, private val onBandSelected: (Int?) -> Unit )</ID>
     <ID>LongParameterList:EqPreferencesManager.kt$EqPreferencesManager$(i: Int, enabled: Boolean, cutoff: Float, attack: Float, release: Float, ratio: Float, threshold: Float, knee: Float, noiseGate: Float, expander: Float, preGain: Float, postGain: Float, range: Float)</ID>
     <ID>LoopWithTooManyJumpStatements:ApoConverter.kt$ApoConverter$for</ID>
     <ID>LoopWithTooManyJumpStatements:ApoConverter.kt$ApoConverter$while</ID>
@@ -231,18 +172,17 @@
     <ID>LoopWithTooManyJumpStatements:SpectrumControlActivity.kt$SpectrumControlActivity$for</ID>
     <ID>MemberNameEqualsClassName:FFT.kt$FFT$private fun fft()</ID>
     <ID>NestedBlockDepth:ApoConverter.kt$ApoConverter$private fun JSONObject.optDoubleAny(vararg keys: String): Double?</ID>
-    <ID>NestedBlockDepth:AudioPolicyDumpParser.kt$AudioPolicyDumpParser$private fun dumpInternal(context: Context, timeoutMs: Long): Map&lt;String, Set&lt;Int&gt;&gt;</ID>
+    <ID>NestedBlockDepth:AudioPolicyDumpParser.kt$AudioPolicyDumpParser$private fun dumpInternal(context: Context, timeoutMs: Long): Map&lt;String, Set&lt;Int>></ID>
     <ID>NestedBlockDepth:BackupManager.kt$BackupManager$fun exportAll(context: Context): String</ID>
     <ID>NestedBlockDepth:BackupManager.kt$BackupManager$fun importAll(context: Context, json: String): Boolean</ID>
     <ID>NestedBlockDepth:BandToggleManager.kt$BandToggleManager$fun addNewBand()</ID>
     <ID>NestedBlockDepth:BandToggleManager.kt$BandToggleManager$fun removeBandAt(index: Int)</ID>
     <ID>NestedBlockDepth:CompressorCurveView.kt$CompressorCurveView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
-    <ID>NestedBlockDepth:EqFitter.kt$EqFitter$private fun optimizeFilter( fr: Array&lt;FloatArray&gt;, frTarget: Array&lt;FloatArray&gt;, filter: Filter, otherFilters: List&lt;Filter&gt; ): Filter</ID>
+    <ID>NestedBlockDepth:EqFitter.kt$EqFitter$private fun optimizeFilter( fr: Array&lt;FloatArray>, frTarget: Array&lt;FloatArray>, filter: Filter, otherFilters: List&lt;Filter> ): Filter</ID>
     <ID>NestedBlockDepth:EqGraphView.kt$EqGraphView$override fun onDraw(canvas: Canvas)</ID>
     <ID>NestedBlockDepth:EqGraphView.kt$EqGraphView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>NestedBlockDepth:EqGraphView.kt$EqGraphView$private fun drawCurve(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
     <ID>NestedBlockDepth:EqGraphView.kt$EqGraphView$private fun drawMbcBands(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
-    <ID>NestedBlockDepth:EqPreferencesManager.kt$EqPreferencesManager$fun getSimpleEqPresetGains(name: String): FloatArray?</ID>
     <ID>NestedBlockDepth:EqPreferencesManager.kt$EqPreferencesManager$private fun migrateLegacySimplePresets()</ID>
     <ID>NestedBlockDepth:EqService.kt$EqService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
     <ID>NestedBlockDepth:GrTraceView.kt$GrTraceView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
@@ -265,10 +205,10 @@
     <ID>ReturnCount:ApoConverter.kt$ApoConverter$private fun tryWrappedPresetArray(any: Any): String?</ID>
     <ID>ReturnCount:AttackReleaseView.kt$AttackReleaseView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>ReturnCount:AudioEffectsPipelineActivity.kt$AudioEffectsPipelineActivity$private fun currentAudioOutputDescription(): String?</ID>
-    <ID>ReturnCount:AudioEffectsPipelineActivity.kt$AudioEffectsPipelineActivity.&lt;no name provided&gt;$override fun onMove( rv: RecyclerView, from: RecyclerView.ViewHolder, to: RecyclerView.ViewHolder ): Boolean</ID>
+    <ID>ReturnCount:AudioEffectsPipelineActivity.kt$AudioEffectsPipelineActivity.&lt;no name provided>$override fun onMove( rv: RecyclerView, from: RecyclerView.ViewHolder, to: RecyclerView.ViewHolder ): Boolean</ID>
     <ID>ReturnCount:AudioPolicyDumpParser.kt$AudioPolicyDumpParser$private fun obtainAudioBinder(): IBinder?</ID>
-    <ID>ReturnCount:AudioPolicyDumpParser.kt$AudioPolicyDumpParser$private fun tryParsePowerampLine( line: String, out: MutableMap&lt;Int, MutableSet&lt;Int&gt;&gt;, ): Boolean</ID>
-    <ID>ReturnCount:AudioPolicyDumpParser.kt$AudioPolicyDumpParser$private fun tryParseWaveletLine( line: String, out: MutableMap&lt;Int, MutableSet&lt;Int&gt;&gt;, ): Boolean</ID>
+    <ID>ReturnCount:AudioPolicyDumpParser.kt$AudioPolicyDumpParser$private fun tryParsePowerampLine( line: String, out: MutableMap&lt;Int, MutableSet&lt;Int>>, ): Boolean</ID>
+    <ID>ReturnCount:AudioPolicyDumpParser.kt$AudioPolicyDumpParser$private fun tryParseWaveletLine( line: String, out: MutableMap&lt;Int, MutableSet&lt;Int>>, ): Boolean</ID>
     <ID>ReturnCount:AudioRoutingMonitor.kt$AudioRoutingMonitor$private fun recomputeAndEmit()</ID>
     <ID>ReturnCount:BackupManager.kt$BackupManager$fun importAll(context: Context, json: String): Boolean</ID>
     <ID>ReturnCount:BandToggleManager.kt$BandToggleManager$fun addNewBand()</ID>
@@ -277,17 +217,15 @@
     <ID>ReturnCount:CompressorCurveView.kt$CompressorCurveView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>ReturnCount:DiffusionDensityColumnsView.kt$DiffusionDensityColumnsView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>ReturnCount:DiffusionDensityView.kt$DiffusionDensityView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
-    <ID>ReturnCount:DynamicsProcessingManager.kt$DynamicsProcessingManager$fun hasLostControl(): Boolean</ID>
-    <ID>ReturnCount:DynamicsProcessingManager.kt$DynamicsProcessingManager$fun reattachActive(): Boolean</ID>
+    <ID>ReturnCount:DynamicsProcessingManager.kt$DynamicsProcessingManager$override fun hasLostControl(): Boolean</ID>
+    <ID>ReturnCount:DynamicsProcessingManager.kt$DynamicsProcessingManager$override fun reattachActive(): Boolean</ID>
     <ID>ReturnCount:EqGraphView.kt$EqGraphView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>ReturnCount:EqGraphView.kt$EqGraphView$private fun drawMbcBands(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
     <ID>ReturnCount:EqGraphView.kt$EqGraphView$private fun drawSpectrum(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
     <ID>ReturnCount:EqGraphView.kt$EqGraphView$private fun getBandColor(index: Int): Int?</ID>
     <ID>ReturnCount:EqGraphView.kt$EqGraphView$private fun handleMbcTouch(event: MotionEvent, crossovers: FloatArray): Boolean</ID>
     <ID>ReturnCount:EqPreferencesManager.kt$EqPreferencesManager$fun getSimpleEqPresetGains(name: String): FloatArray?</ID>
-    <ID>ReturnCount:EqPreferencesManager.kt$EqPreferencesManager$private fun parseSavedSlots(bandsStr: String?): List&lt;Int&gt;?</ID>
     <ID>ReturnCount:EqService.kt$EqService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
-    <ID>ReturnCount:EqService.kt$EqService$private fun verifyAndReclaimGlobalDp()</ID>
     <ID>ReturnCount:EqStateManager.kt$EqStateManager$fun setActiveChannel(channel: ActiveChannel)</ID>
     <ID>ReturnCount:GateCurveView.kt$GateCurveView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>ReturnCount:GrTraceView.kt$GrTraceView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
@@ -301,8 +239,8 @@
     <ID>ReturnCount:MbcGainComputer.kt$MbcGainComputer$fun getGainAtFrequency(freq: Float): Float</ID>
     <ID>ReturnCount:MeasurementSelectActivity.kt$MeasurementSelectActivity.MiniFrView$override fun onDraw(canvas: android.graphics.Canvas)</ID>
     <ID>ReturnCount:ParametricEqualizer.kt$ParametricEqualizer$fun getBandFrequencyResponse(index: Int, frequency: Float): Float</ID>
-    <ID>ReturnCount:PlaybackListenerService.kt$PlaybackListenerService$private fun collectActiveSessionPackages(): Set&lt;String&gt;</ID>
-    <ID>ReturnCount:PlaybackListenerService.kt$PlaybackListenerService$private fun collectActivelyPlayingPackages(): Set&lt;String&gt;</ID>
+    <ID>ReturnCount:PlaybackListenerService.kt$PlaybackListenerService$private fun collectActiveSessionPackages(): Set&lt;String></ID>
+    <ID>ReturnCount:PlaybackListenerService.kt$PlaybackListenerService$private fun collectActivelyPlayingPackages(): Set&lt;String></ID>
     <ID>ReturnCount:ReverbVisualizerView.kt$ReverbVisualizerView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>ReturnCount:RouteSwitchCoordinator.kt$RouteSwitchCoordinator$fun onRouteChange(change: AudioRoutingMonitor.RouteChange)</ID>
     <ID>ReturnCount:SessionEffectManager.kt$SessionEffectManager$@Synchronized fun attach( sessionId: Int, packageName: String, source: AttachSource = AttachSource.BROADCAST, )</ID>
@@ -312,29 +250,14 @@
     <ID>ReturnCount:SpectrumAnalyzerRenderer.kt$SpectrumAnalyzerRenderer$fun draw( canvas: Canvas, left: Float, top: Float, right: Float, bottom: Float, dbMin: Float, dbMax: Float, eqResponseDb: FloatArray? = null )</ID>
     <ID>ReturnCount:TargetCurveActivity.kt$TargetCurveActivity$private fun computeAndApply()</ID>
     <ID>ReturnCount:TargetSelectActivity.kt$TargetSelectActivity.MiniFrView$override fun onDraw(canvas: android.graphics.Canvas)</ID>
-    <ID>SwallowedException:ApoConverter.kt$ApoConverter$e: Exception</ID>
-    <ID>SwallowedException:TargetCurveActivity.kt$TargetCurveActivity$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:ApoConverter.kt$ApoConverter$e: Exception</ID>
     <ID>TooGenericExceptionCaught:AudioPolicyDumpParser.kt$AudioPolicyDumpParser$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:AudioSessionReceiver.kt$AudioSessionReceiver$t: Throwable</ID>
-    <ID>TooGenericExceptionCaught:AutoEqActivity.kt$AutoEqActivity$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:AutoEqDatabase.kt$AutoEqDatabase$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:BootCompletedReceiver.kt$BootCompletedReceiver$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:ConvertToApoActivity.kt$ConvertToApoActivity$e: Exception</ID>
     <ID>TooGenericExceptionCaught:DynamicsProcessingManager.kt$DynamicsProcessingManager$e: Exception</ID>
     <ID>TooGenericExceptionCaught:DynamicsProcessingManager.kt$DynamicsProcessingManager$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:Eq314TileService.kt$Eq314TileService$t: Throwable</ID>
-    <ID>TooGenericExceptionCaught:EqService.kt$EqService$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:EqualizerApp.kt$EqualizerApp$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:MainActivity.kt$MainActivity$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:MeasurementSelectActivity.kt$MeasurementSelectActivity$e: Exception</ID>
     <ID>TooGenericExceptionCaught:PlaybackListenerService.kt$PlaybackListenerService$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:SessionEffectManager.kt$SessionEffectManager$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:SessionEffectManager.kt$SessionEffectManager$t: Throwable</ID>
-    <ID>TooGenericExceptionCaught:SpectrumControlActivity.kt$SpectrumControlActivity$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:TargetCurveActivity.kt$TargetCurveActivity$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:TargetSelectActivity.kt$TargetSelectActivity$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:VisualizerHelper.kt$VisualizerHelper$e: Exception</ID>
     <ID>TooManyFunctions:ApoConverter.kt$ApoConverter</ID>
     <ID>TooManyFunctions:BottomNavHelper.kt$BottomNavHelper</ID>
     <ID>TooManyFunctions:EqFitter.kt$EqFitter</ID>
@@ -344,7 +267,7 @@
     <ID>TooManyFunctions:ReverbVisualizerView.kt$ReverbVisualizerView : View</ID>
     <ID>UnusedParameter:BiquadFilter.kt$BiquadFilter$cosOmega: Double</ID>
     <ID>UnusedParameter:BiquadFilter.kt$BiquadFilter$sinOmega: Double</ID>
-    <ID>UnusedParameter:EqFitter.kt$EqFitter$fr: Array&lt;FloatArray&gt;</ID>
+    <ID>UnusedParameter:EqFitter.kt$EqFitter$fr: Array&lt;FloatArray></ID>
     <ID>UnusedParameter:EqGraphView.kt$EqGraphView$graphWidth: Float</ID>
     <ID>UnusedParameter:GrTraceView.kt$GrTraceView$bandIndex: Int</ID>
     <ID>UnusedParameter:GrTraceView.kt$GrTraceView$gr: Float</ID>
@@ -355,19 +278,19 @@
     <ID>UnusedParameter:ReverbVisualizerView.kt$ReverbVisualizerView$decayDurationMs: Float</ID>
     <ID>UnusedParameter:ReverbVisualizerView.kt$ReverbVisualizerView$tailEndX: Float</ID>
     <ID>UnusedPrivateProperty:ApoConverter.kt$ApoConverter$/** Match the canonical Poweramp graphic-EQ centers (10-band ISO): * 31, 62, 125, 250, 500, 1k, 2k, 4k, 8k, 16k. */ private val graphicCenters = floatArrayOf(31f, 62f, 125f, 250f, 500f, 1000f, 2000f, 4000f, 8000f, 16000f)</ID>
-    <ID>UnusedPrivateProperty:BandToggleManager.kt$BandToggleManager$private val onEqChanged: () -&gt; Unit</ID>
+    <ID>UnusedPrivateProperty:BandToggleManager.kt$BandToggleManager$private val onEqChanged: () -> Unit</ID>
     <ID>UnusedPrivateProperty:BiquadFilter.kt$BiquadFilter$val sqrtA = sqrt(A)</ID>
     <ID>UnusedPrivateProperty:CompressorCurveView.kt$CompressorCurveView$private val dotFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFBBBBBB.toInt(); style = Paint.Style.FILL }</ID>
     <ID>UnusedPrivateProperty:EqFitter.kt$EqFitter$n</ID>
     <ID>UnusedPrivateProperty:EqFitter.kt$EqFitter$pass</ID>
     <ID>UnusedPrivateProperty:GrTraceView.kt$GrTraceView$private val gridTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF444444.toInt(); textSize = 16f }</ID>
-    <ID>UnusedPrivateProperty:LimiterActivity.kt$LimiterActivity.&lt;no name provided&gt;$i</ID>
+    <ID>UnusedPrivateProperty:LimiterActivity.kt$LimiterActivity.&lt;no name provided>$i</ID>
     <ID>UnusedPrivateProperty:LufsProcessor.kt$LufsProcessor$private val sampleRate: Int = 48000</ID>
-    <ID>UnusedPrivateProperty:MainActivity.kt$MainActivity$private val autoEqLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result -&gt; if (result.resultCode == RESULT_OK) handlePresetReturn() }</ID>
-    <ID>UnusedPrivateProperty:MainActivity.kt$MainActivity$private val targetCurveLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result -&gt; if (result.resultCode == RESULT_OK) handlePresetReturn() }</ID>
+    <ID>UnusedPrivateProperty:MainActivity.kt$MainActivity$private val autoEqLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result -> if (result.resultCode == RESULT_OK) handlePresetReturn() }</ID>
+    <ID>UnusedPrivateProperty:MainActivity.kt$MainActivity$private val targetCurveLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result -> if (result.resultCode == RESULT_OK) handlePresetReturn() }</ID>
     <ID>UnusedPrivateProperty:MainActivity.kt$MainActivity$private var powerAnimator: android.animation.ValueAnimator? = null</ID>
     <ID>UnusedPrivateProperty:MainActivity.kt$MainActivity.Companion$private const val TAG = "Equalizer314"</ID>
-    <ID>UnusedPrivateProperty:MbcActivity.kt$MbcActivity.&lt;no name provided&gt;$val overallLevel = if (count &gt; 0 &amp;&amp; sumPower &gt; 0) (10.0 * Math.log10(sumPower / count)).toFloat() else -96f</ID>
+    <ID>UnusedPrivateProperty:MbcActivity.kt$MbcActivity.&lt;no name provided>$val overallLevel = if (count > 0 &amp;&amp; sumPower > 0) (10.0 * Math.log10(sumPower / count)).toFloat() else -96f</ID>
     <ID>UnusedPrivateProperty:ReverbVisualizerView.kt$ReverbVisualizerView$// Dashed variant used when the cluster has collapsed (Early Refl // slider at its minimum). The dashes communicate "this region // exists but has no width yet." private val earlyBarDashedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE strokeCap = Paint.Cap.BUTT strokeWidth = 2.0f * density color = earlyBarColor pathEffect = android.graphics.DashPathEffect( floatArrayOf(3f * density, 3f * density), 0f ) }</ID>
     <ID>UnusedPrivateProperty:ReverbVisualizerView.kt$ReverbVisualizerView$private val arrowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFAAAAAA.toInt() strokeWidth = 1.2f * density style = Paint.Style.STROKE }</ID>
     <ID>UnusedPrivateProperty:ReverbVisualizerView.kt$ReverbVisualizerView$private val directBarPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE strokeCap = Paint.Cap.ROUND strokeWidth = 4f * density color = directBarColor }</ID>
@@ -399,34 +322,14 @@
     <ID>VariableNaming:BiquadFilter.kt$BiquadFilter$val q_factor = 1.0 / (2.0 * q)</ID>
     <ID>VariableNaming:GraphicEqController.kt$GraphicEqController$private val PAGE_SIZE = 8</ID>
     <ID>VariableNaming:SimpleEqBarsView.kt$SimpleEqBarsView$private val POP_SCALE = 1.1f // active bar is 10% bigger</ID>
-    <ID>WildcardImport:AttackReleaseView.kt$import android.graphics.*</ID>
     <ID>WildcardImport:AutoEqParserTest.kt$import org.junit.Assert.*</ID>
-    <ID>WildcardImport:BiquadFilter.kt$import kotlin.math.*</ID>
     <ID>WildcardImport:BiquadFilterTest.kt$import org.junit.Assert.*</ID>
-    <ID>WildcardImport:BottomNavHelper.kt$import com.bearinmind.equalizer314.*</ID>
     <ID>WildcardImport:ChannelMathTest.kt$import org.junit.Assert.*</ID>
-    <ID>WildcardImport:CompressorCurveView.kt$import android.graphics.*</ID>
     <ID>WildcardImport:EqDatabaseDaoTest.kt$import org.junit.Assert.*</ID>
-    <ID>WildcardImport:EqFitter.kt$import kotlin.math.*</ID>
-    <ID>WildcardImport:EqGraphView.kt$import android.graphics.*</ID>
     <ID>WildcardImport:EqMigrationHelperTest.kt$import org.junit.Assert.*</ID>
-    <ID>WildcardImport:EqService.kt$import android.app.*</ID>
     <ID>WildcardImport:EqViewModelTest.kt$import org.junit.Assert.*</ID>
-    <ID>WildcardImport:FFT.kt$import kotlin.math.*</ID>
-    <ID>WildcardImport:GateCurveView.kt$import android.graphics.*</ID>
-    <ID>WildcardImport:GrTraceView.kt$import android.graphics.*</ID>
-    <ID>WildcardImport:LimiterCeilingView.kt$import android.graphics.*</ID>
-    <ID>WildcardImport:LimiterMeterView.kt$import android.graphics.*</ID>
-    <ID>WildcardImport:LimiterWaveformView.kt$import android.graphics.*</ID>
-    <ID>WildcardImport:MainActivity.kt$import android.widget.*</ID>
     <ID>WildcardImport:ParametricEqualizerTest.kt$import org.junit.Assert.*</ID>
     <ID>WildcardImport:ParametricToDpConverterTest.kt$import org.junit.Assert.*</ID>
     <ID>WildcardImport:PresetRepositoryTest.kt$import org.junit.Assert.*</ID>
-    <ID>WildcardImport:SimpleFFT.kt$import kotlin.math.*</ID>
-    <ID>WildcardImport:SpectrumAnalyzerRenderer.kt$import android.graphics.*</ID>
-    <ID>WildcardImport:SpectrumAnalyzerRenderer.kt$import kotlin.math.*</ID>
-    <ID>WildcardImport:TargetCurveActivity.kt$import com.bearinmind.equalizer314.autoeq.*</ID>
-    <ID>WildcardImport:WaveformFftProcessor.kt$import kotlin.math.*</ID>
-    <ID>ReturnCount:EqService.kt$EqService$private fun verifyAndReclaimGlobalDp(): Boolean</ID>
   </CurrentIssues>
 </SmellBaseline>

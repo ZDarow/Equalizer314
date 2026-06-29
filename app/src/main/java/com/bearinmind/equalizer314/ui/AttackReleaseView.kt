@@ -219,7 +219,7 @@ class AttackReleaseView @JvmOverloads constructor(
                 val aDotDist = sqrt((event.x - aDX) * (event.x - aDX) + (event.y - dotCY) * (event.y - dotCY))
                 val rDotDist = sqrt((event.x - rDX) * (event.x - rDX) + (event.y - dotCY) * (event.y - dotCY))
 
-                val now = System.currentTimeMillis()
+                val now = android.os.SystemClock.elapsedRealtime()
 
                 if (aDotDist < 50f && aDotDist <= rDotDist) {
                     if (now - lastTapTime < doubleTapTimeout && lastTapType == 1) {

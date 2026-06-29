@@ -942,7 +942,9 @@ class EqService : Service() {
     }
 
     override fun onDestroy() {
-        stopWatchdog()
+        // Stop watchdog ПЕРЕД unregister — tick может быть уже в очереди Handler,
+        // и он вызывает verifyAndReclaimGlobalDp, которая требует живые ресиверы и сервис.
+        runCatching { stopWatchdog() }.onFailure { /* watchdog уже остановлен — ок */ }
         runCatching { unregisterReceiver(volumeReceiver) }.onFailure { Log.w(TAG, "unregister volumeReceiver failed: ${it.message}") }
         runCatching { unregisterReceiver(routePresetReceiver) }.onFailure { Log.w(TAG, "unregister routePresetReceiver failed: ${it.message}") }
         runCatching {

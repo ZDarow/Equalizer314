@@ -315,7 +315,7 @@ class LimiterCeilingView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 // Hit area includes triangle to the left (triR * 1.5 + margin)
                 if (event.x >= ceilingLeft - 40f && event.x <= ceilingRight + 10f) {
-                    val now = System.currentTimeMillis()
+                    val now = android.os.SystemClock.elapsedRealtime()
                     if (now - lastTapTime < doubleTapTimeout) {
                         ceilingDb = DEFAULT_CEILING
                         onCeilingChanged?.invoke(ceilingDb)
