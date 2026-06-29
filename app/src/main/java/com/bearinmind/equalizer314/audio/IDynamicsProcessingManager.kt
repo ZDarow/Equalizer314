@@ -78,4 +78,19 @@ interface IDynamicsProcessingManager {
 
     var mbcEnabled: Boolean
     var mbcBandCount: Int
+
+    // ---- MBC band count ----
+
+    /** Запрошенное количество полос (до применения в DSP). */
+    var requestedBandCount: Int
+
+    // ---- Limiter update ----
+
+    /** Принудительное обновление лимитера без полного restart. */
+    fun updateLimiter()
+
+    // ---- Auto-gain state ----
+
+    /** Последнее смещение auto-gain (dB). Читается для логов и диагностики. */
+    val lastAutoGainOffset: Float
 }

@@ -33,7 +33,7 @@ import org.json.JSONObject
 class RouteSwitchCoordinator(
     private val context: Context,
     private val eqPrefs: EqPreferencesManager,
-    private val dynamicsManager: DynamicsProcessingManager,
+    private val dynamicsManager: IDynamicsProcessingManager,
 ) {
 
     fun onRouteChange(change: AudioRoutingMonitor.RouteChange) {

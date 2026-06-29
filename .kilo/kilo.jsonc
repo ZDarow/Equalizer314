@@ -1,3 +1,17 @@
 {
-  "$schema": "https://app.kilo.ai/config.json"
+  "$schema": "https://app.kilo.ai/config.json",
+  "permission": {
+    "read": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "edit": "ask",
+    "bash": {
+      "echo*": "allow",
+      "ls*": "allow",
+      "which*": "allow",
+      "sudo *": "deny",
+      "rm *": "deny",
+      "*": "ask"
+    }
+  }
 }

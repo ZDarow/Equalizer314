@@ -100,7 +100,11 @@ class AudioRoutingMonitor(
         if (registered) return
         audioManager.registerAudioDeviceCallback(deviceCallback, handler)
         val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
-        ContextCompat.registerReceiver(context, noisyReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(noisyReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(noisyReceiver, filter)
+        }
         registered = true
         // Kick once immediately so a cold-start with a device already
         // routed emits a RouteChange.

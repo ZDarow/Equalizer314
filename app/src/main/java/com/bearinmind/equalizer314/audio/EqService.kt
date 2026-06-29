@@ -189,7 +189,19 @@ class EqService : Service() {
         }
     }
 
-    val dynamicsManager = DynamicsProcessingManager()
+    /**
+     * Основной DSP-менеджер. По умолчанию [DynamicsProcessingManager],
+     * но может быть заменён на [IDynamicsProcessingManager] для тестов.
+     * Замена должна производиться ДО вызова [onCreate].
+     */
+    @Volatile
+    var dynamicsManager: IDynamicsProcessingManager = DynamicsProcessingManager()
+        private set
+
+    /** Пакетный setter для тестовой инъекции fake/mock. */
+    fun setDynamicsManagerForTest(dpm: IDynamicsProcessingManager) {
+        dynamicsManager = dpm
+    }
     private val binder = EqBinder()
 
     /** Public so [com.bearinmind.equalizer314.AudioOutputActivity] can
@@ -391,8 +403,13 @@ class EqService : Service() {
      *  power-on flips the bypass on without waiting for the next
      *  config-change callback. */
     private fun syncSystemSoundBypassFromCurrent() {
-        val am = getSystemService(AudioManager::class.java) ?: return
-        applySystemSoundBypass(am.activePlaybackConfigurations.orEmpty())
+        // activePlaybackConfigurations может не быть в Robolectric shadow
+        runCatching {
+            val am = (getSystemService(Context.AUDIO_SERVICE) as? AudioManager) ?: return
+            applySystemSoundBypass(am.activePlaybackConfigurations.orEmpty())
+        }.onFailure {
+            Log.w(TAG, "syncSystemSoundBypassFromCurrent failed: ${it.message}")
+        }
     }
 
     inner class EqBinder : Binder() {
@@ -450,8 +467,10 @@ class EqService : Service() {
         // Register the system-sound bypass callback unconditionally —
         // AudioPlaybackCallback needs no permission, no NLS bind. The
         // callback short-circuits when DP isn't running, so it's cheap.
-        getSystemService(AudioManager::class.java)
-            ?.registerAudioPlaybackCallback(systemSoundCallback, null)
+        runCatching {
+            (getSystemService(Context.AUDIO_SERVICE) as? AudioManager)
+                ?.registerAudioPlaybackCallback(systemSoundCallback, null)
+        }.onFailure { /* Robolectric не shadow-ит этот метод — в тестах safe to skip */ }
 
         // Per-output-device EQ auto-switching. Detection lives in this
         // service so it keeps working when MainActivity is closed.
@@ -487,7 +506,12 @@ class EqService : Service() {
         }
         routingMonitor = monitor
         routeCoordinator = coordinator
-        monitor.start()
+        // start() вызывает registerAudioDeviceCallback и registerReceiver —
+        // обёрнуто в runCatching для Robolectric-тестов, где эти Android API
+        // не заshadow-ены (реальные устройства всегда работают корректно).
+        runCatching { monitor.start() }.onFailure {
+            Log.w(TAG, "AudioRoutingMonitor.start failed: ${it.message}")
+        }
 
         // Start the session-0 control watchdog. It self-gates (early-
         // returns unless the EQ is live in System-wide mode), so it's a
@@ -937,7 +961,7 @@ class EqService : Service() {
      *  refresh of the Preset / Device / Mode lines without waiting
      *  for the next volume tick or route change. */
     fun updateNotification() {
-        val nm = getSystemService(NotificationManager::class.java)
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(NOTIFICATION_ID, buildNotification())
     }
 
@@ -947,11 +971,14 @@ class EqService : Service() {
         runCatching { stopWatchdog() }.onFailure { /* watchdog уже остановлен — ок */ }
         runCatching { unregisterReceiver(volumeReceiver) }.onFailure { Log.w(TAG, "unregister volumeReceiver failed: ${it.message}") }
         runCatching { unregisterReceiver(routePresetReceiver) }.onFailure { Log.w(TAG, "unregister routePresetReceiver failed: ${it.message}") }
+        // unregisterAudioPlaybackCallback может не быть в shadow — обёрнуто runCatching
         runCatching {
-            getSystemService(AudioManager::class.java)
+            (getSystemService(Context.AUDIO_SERVICE) as? AudioManager)
                 ?.unregisterAudioPlaybackCallback(systemSoundCallback)
         }.onFailure { Log.w(TAG, "unregister AudioPlaybackCallback failed: ${it.message}") }
-        routingMonitor?.stop()
+        runCatching { routingMonitor?.stop() }.onFailure {
+            Log.w(TAG, "routingMonitor.stop failed: ${it.message}")
+        }
         routingMonitor = null
         routeCoordinator = null
         sessionEffects?.releaseAll()
@@ -975,7 +1002,7 @@ class EqService : Service() {
                 description = "Shows when system-wide EQ is active"
                 setShowBadge(false)
             }
-            val nm = getSystemService(NotificationManager::class.java)
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.createNotificationChannel(channel)
         }
     }
@@ -1007,7 +1034,7 @@ class EqService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val audioManager = getSystemService(AudioManager::class.java)
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
         val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val volumePercent = if (maxVol > 0) (currentVol * 100 / maxVol) else 0

@@ -53,7 +53,7 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
      * который использует Wavelet-таблицу из 127 частот. Реальное количество полос
      * после вызова всегда 127, независимо от запрошенного значения.
      */
-    var requestedBandCount: Int = 127
+    override var requestedBandCount: Int = 127
 
     // @Volatile: read off the main thread by EqService's watchdog and by
     // EqService.isDpRunning mirrors, written from start()/stop().
@@ -66,7 +66,7 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
 
     // Auto-gain
     override var autoGainEnabled: Boolean = false
-    var lastAutoGainOffset: Float = 0f
+    override var lastAutoGainOffset: Float = 0f
         private set
 
     // MBC
@@ -542,7 +542,7 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
         }
     }
 
-    fun updateLimiter() {
+    override fun updateLimiter() {
         val dp = dynamicsProcessing ?: return
         try {
             val limiter = DynamicsProcessing.Limiter(

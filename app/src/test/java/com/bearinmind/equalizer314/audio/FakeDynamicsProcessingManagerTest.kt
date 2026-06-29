@@ -89,6 +89,7 @@ class FakeDpm : IDynamicsProcessingManager {
 
     override var mbcEnabled: Boolean = false
     override var mbcBandCount: Int = 3
+    override var requestedBandCount: Int = 127
 
     override fun start(eq: ParametricEqualizer) {
         _lastStartedEq = eq
@@ -121,6 +122,10 @@ class FakeDpm : IDynamicsProcessingManager {
     override fun pushLimiterUpdate() { /* no-op */ }
 
     override fun updateChannelSettings() { /* no-op */ }
+
+    override fun updateLimiter() { /* no-op */ }
+
+    override val lastAutoGainOffset: Float get() = 0f
 
     override fun hasLostControl(): Boolean = false
 
