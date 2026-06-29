@@ -1,12 +1,12 @@
 # Вклад в Equalizer314
 
-Спасибо за интерес к проекту! Equalizer314 — это Android-приложение для параметрического эквалайзера с открытым исходным кодом. Этот документ описывает процесс внесения изменений.
+Спасибо за интерес к проекту! Equalizer314 — это Android-приложение для system-wide параметрического эквалайзера с открытым исходным кодом.
 
 ## Как начать
 
 1. Клонируйте репозиторий:
    ```bash
-   git clone https://github.com/bearinmindcat/Equalizer314.git
+   git clone https://github.com/ZDarow/Equalizer314.git
    cd Equalizer314
    ```
 
@@ -31,8 +31,8 @@
 Статический анализ выполняется с помощью **Detekt**:
 
 - Конфигурация: `config/detekt/detekt.yml`
-- Базлайн: `app/detekt-baseline.xml` (существующие предупреждения)
-- В CI Detekt настроен на **0 пропущенных ошибок** — все новые нарушения должны быть исправлены до мержа
+- Базлайн: `app/detekt-baseline.xml` (~400 suppressed)
+- В CI Detekt настроен на **0 пропущенных ошибок**
 
 Запуск анализа:
 ```bash
@@ -48,7 +48,7 @@
 
 ## Как запустить тесты
 
-Unit-тесты (DSP-модули):
+Unit-тесты (DSP-модули, Room DAO, парсеры):
 ```bash
 ./gradlew testDebugUnitTest
 ```
@@ -60,14 +60,14 @@ Android Lint:
 
 Полная проверка перед отправкой PR:
 ```bash
-./gradlew lint detekt testDebugUnitTest
+./gradlew lint detekt testDebugUnitTest assembleDebug
 ```
 
 ## Процесс PR
 
-1. Создайте ветку от `develop`:
+1. Создайте ветку от `main`:
    ```bash
-   git checkout develop
+   git checkout main
    git checkout -b feature/your-feature-name
    ```
 
@@ -76,33 +76,35 @@ Android Lint:
    - `fix/...` — исправление ошибок
    - `refactor/...` — рефакторинг
    - `docs/...` — документация
+   - `perf/...` — оптимизация производительности
+   - `ci/...` — CI/CD
 
-3. Коммиты должны следовать **Conventional Commits**:
-   - `feat: ...` — новая функция
-   - `fix: ...` — исправление
-   - `refactor: ...` — рефакторинг
-   - `docs: ...` — документация
-   - `test: ...` — тесты
-   - `ci: ...` — CI/CD
-   - `chore: ...` — обслуживание
+3. Commit message на русском, в повелительном наклонении, ≤72 символа:
+   ```
+   fix: исправлять потерю сессии при переключении Bluetooth
+   feat: добавлять поддержку 31-полосного Graphic EQ
+   refactor: выносить BroadcastReceiver из MainActivity
+   ```
 
 4. Откройте Pull Request в ветку `main`.
 
-5. Убедитесь, что все CI-проверки проходят (см. ниже).
+5. Убедитесь, что все CI-проверки проходят.
 
 ## CI pipeline
 
-GitHub Actions (`ci.yml`) запускается на push в `main`/`develop` и на PR в `main`. Состоит из 5 джобов:
+GitHub Actions (`ci.yml`) запускается на push в `main` и на PR в `main`. Состоит из 7 джобов:
 
 | Джоб | Команда | Артефакт |
 |------|---------|----------|
-| **Lint + Detekt** | `./gradlew lint detekt` | Detekt HTML report |
-| **Unit Tests** | `./gradlew testDebugUnitTest` + `koverXmlReport koverHtmlReport` | Test results, coverage report |
+| **Lint** | `./gradlew lint` | Lint report |
+| **Detekt** | `./gradlew detekt` | Detekt HTML report |
+| **Unit Tests** | `./gradlew testDebugUnitTest` + kover | Test results, coverage |
 | **Build Debug APK** | `./gradlew assembleDebug` | Debug APK |
-| **Dependency Versions** | `./gradlew dependencyUpdates` | Dependency report (JSON) |
+| **Instrumented Tests** | `./gradlew connectedDebugAndroidTest` | Test results |
+| **Dependency Check** | `./gradlew dependencyUpdates` | JSON report |
 | **Build Release APK** | `./gradlew assembleRelease` | Unsigned Release APK |
 
-Все джобы используют **JDK 17** и **Gradle Wrapper**.
+Все джобы используют **JDK 17**, **Gradle Wrapper** и **Gradle cache** (read-only на PR).
 
 ## Лицензия
 

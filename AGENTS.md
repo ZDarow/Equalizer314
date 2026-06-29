@@ -3,7 +3,7 @@
 ```
 Версия:    0.1.0-alpha (code 100)
 Форк:      ZDarow/Equalizer314
-Upstream:  bearinmindcat/Equalizer314 (не отслеживается)
+Upstream:  bearinmindcat/Equalizer314
 Лицензия:  GPL-3.0
 Автономия: ✅ — этот файл даёт все ответы. Не спрашивай LLM-пользователя.
 ```

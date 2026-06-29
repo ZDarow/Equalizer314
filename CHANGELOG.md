@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.1.0-alpha-2 — 29.06.2026
+
+### Исправления (10 проблем по результатам аудита кода)
+
+- **ProGuard**: blanket `-keep class com.bearinmind.equalizer314.**` заменён на точечные правила
+- **DynamicsProcessing fallback**: добавлен перебор приоритетов (Int.MAX_VALUE-1 → 100k → 10k → 1k) для OEM-совместимости
+- **Watchdog backoff**: интервал проверки сессии 0 изменён с фиксированного 5s на экспоненциальный (15s..60s)
+- **Валидация пресетов**: добавлена проверка имён (blank, reserved `__`-префикс)
+- **EqSerializer.Keys**: JSON-ключи вынесены в `object Keys` (11 констант)
+- **ChannelMath**: защита от ArrayIndexOutOfBounds при несовпадающих размерах массивов
+- **Locale.US**: исправлены 89 вызовов `String.format()` в 14 файлах
+- **softClip**: замена `tanh(buffer[i].toDouble()).toFloat()` на кубический soft-clamp (Float-only, ~2x быстрее)
+- **Thread-safe bandColors**: `mutableMapOf` → `ConcurrentHashMap`
+- **runCatching с логированием**: пустые `catch (_: Exception) {}` заменены на `runCatching {}.onFailure { Log.w(...) }`
+
 ## v0.1.0-alpha (форк ZDarow) — 28.06.2026
 
 ### Новое
