@@ -25,12 +25,12 @@
     <ID>CyclomaticComplexMethod:CompressorCurveView.kt$CompressorCurveView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>CyclomaticComplexMethod:EqFitter.kt$EqFitter$private fun autoeq(fr: Array&lt;FloatArray>, frTarget: Array&lt;FloatArray>, maxFilters: Int): List&lt;Filter></ID>
     <ID>CyclomaticComplexMethod:EqFitter.kt$EqFitter$private fun optimizeFilter( fr: Array&lt;FloatArray>, frTarget: Array&lt;FloatArray>, filter: Filter, otherFilters: List&lt;Filter> ): Filter</ID>
+    <ID>CyclomaticComplexMethod:EqGraphMbcRenderer.kt$EqGraphMbcRenderer$fun draw( canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float, crossovers: FloatArray, gains: FloatArray, bandColors: IntArray?, )</ID>
+    <ID>CyclomaticComplexMethod:EqGraphMbcRenderer.kt$EqGraphMbcRenderer$fun handleTouch(event: android.view.MotionEvent, crossovers: FloatArray, gains: FloatArray): Boolean</ID>
+    <ID>CyclomaticComplexMethod:EqGraphTouchHandler.kt$EqGraphTouchHandler$fun handleTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>CyclomaticComplexMethod:EqGraphView.kt$EqGraphView$override fun onDraw(canvas: Canvas)</ID>
-    <ID>CyclomaticComplexMethod:EqGraphView.kt$EqGraphView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>CyclomaticComplexMethod:EqGraphView.kt$EqGraphView$private fun drawCurve(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
-    <ID>CyclomaticComplexMethod:EqGraphView.kt$EqGraphView$private fun drawMbcBands(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
     <ID>CyclomaticComplexMethod:EqGraphView.kt$EqGraphView$private fun drawSpectrum(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
-    <ID>CyclomaticComplexMethod:EqGraphView.kt$EqGraphView$private fun handleMbcTouch(event: MotionEvent, crossovers: FloatArray): Boolean</ID>
     <ID>CyclomaticComplexMethod:EqService.kt$EqService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
     <ID>CyclomaticComplexMethod:EqService.kt$EqService$private fun buildNotification(): Notification</ID>
     <ID>CyclomaticComplexMethod:FreqResponseParser.kt$FreqResponseParser$fun parse(text: String): FreqResponse?</ID>
@@ -95,11 +95,11 @@
     <ID>LongMethod:CompressorCurveView.kt$CompressorCurveView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>LongMethod:DynamicsProcessingManager.kt$DynamicsProcessingManager$override fun start(eq: ParametricEqualizer)</ID>
     <ID>LongMethod:EnvironmentalReverbActivity.kt$EnvironmentalReverbActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
-    <ID>LongMethod:EqGraphView.kt$EqGraphView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
+    <ID>LongMethod:EqGraphMbcRenderer.kt$EqGraphMbcRenderer$fun draw( canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float, crossovers: FloatArray, gains: FloatArray, bandColors: IntArray?, )</ID>
+    <ID>LongMethod:EqGraphMbcRenderer.kt$EqGraphMbcRenderer$fun handleTouch(event: android.view.MotionEvent, crossovers: FloatArray, gains: FloatArray): Boolean</ID>
+    <ID>LongMethod:EqGraphTouchHandler.kt$EqGraphTouchHandler$fun handleTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>LongMethod:EqGraphView.kt$EqGraphView$private fun drawCurve(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
-    <ID>LongMethod:EqGraphView.kt$EqGraphView$private fun drawMbcBands(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
     <ID>LongMethod:EqGraphView.kt$EqGraphView$private fun drawSpectrum(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
-    <ID>LongMethod:EqGraphView.kt$EqGraphView$private fun handleMbcTouch(event: MotionEvent, crossovers: FloatArray): Boolean</ID>
     <ID>LongMethod:EqService.kt$EqService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
     <ID>LongMethod:GateCurveView.kt$GateCurveView$override fun onDraw(canvas: Canvas)</ID>
     <ID>LongMethod:GateCurveView.kt$GateCurveView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
@@ -142,6 +142,7 @@
     <ID>LongMethod:TargetCurveActivity.kt$TargetCurveActivity$private fun showEditDialog()</ID>
     <ID>LongMethod:TargetSelectActivity.kt$TargetSelectActivity.TargetAdapter$override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder</ID>
     <ID>LongParameterList:BandToggleManager.kt$BandToggleManager$( private val activity: Activity, private val toggleGroup: LinearLayout, private val toggleGroup2: LinearLayout, private val triangleIndicator: View, private val graphView: EqGraphView, private val state: EqStateManager, private val onEqChanged: () -> Unit, private val onBandCountChanged: () -> Unit, private val onBandSelected: (Int?) -> Unit )</ID>
+    <ID>LongParameterList:EqGraphGridRenderer.kt$EqGraphGridRenderer$( canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float, minGain: Float, maxGain: Float, viewWidth: Float, viewHeight: Float, )</ID>
     <ID>LongParameterList:EqPreferencesManager.kt$EqPreferencesManager$(i: Int, enabled: Boolean, cutoff: Float, attack: Float, release: Float, ratio: Float, threshold: Float, knee: Float, noiseGate: Float, expander: Float, preGain: Float, postGain: Float, range: Float)</ID>
     <ID>LoopWithTooManyJumpStatements:ApoConverter.kt$ApoConverter$for</ID>
     <ID>LoopWithTooManyJumpStatements:ApoConverter.kt$ApoConverter$while</ID>
@@ -174,10 +175,10 @@
     <ID>NestedBlockDepth:BandToggleManager.kt$BandToggleManager$fun removeBandAt(index: Int)</ID>
     <ID>NestedBlockDepth:CompressorCurveView.kt$CompressorCurveView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>NestedBlockDepth:EqFitter.kt$EqFitter$private fun optimizeFilter( fr: Array&lt;FloatArray>, frTarget: Array&lt;FloatArray>, filter: Filter, otherFilters: List&lt;Filter> ): Filter</ID>
+    <ID>NestedBlockDepth:EqGraphMbcRenderer.kt$EqGraphMbcRenderer$fun draw( canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float, crossovers: FloatArray, gains: FloatArray, bandColors: IntArray?, )</ID>
+    <ID>NestedBlockDepth:EqGraphTouchHandler.kt$EqGraphTouchHandler$fun handleTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>NestedBlockDepth:EqGraphView.kt$EqGraphView$override fun onDraw(canvas: Canvas)</ID>
-    <ID>NestedBlockDepth:EqGraphView.kt$EqGraphView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>NestedBlockDepth:EqGraphView.kt$EqGraphView$private fun drawCurve(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
-    <ID>NestedBlockDepth:EqGraphView.kt$EqGraphView$private fun drawMbcBands(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
     <ID>NestedBlockDepth:EqPreferencesManager.kt$EqPreferencesManager$private fun migrateLegacySimplePresets()</ID>
     <ID>NestedBlockDepth:EqService.kt$EqService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
     <ID>NestedBlockDepth:GrTraceView.kt$GrTraceView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
@@ -212,11 +213,11 @@
     <ID>ReturnCount:DiffusionDensityView.kt$DiffusionDensityView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>ReturnCount:DynamicsProcessingManager.kt$DynamicsProcessingManager$override fun hasLostControl(): Boolean</ID>
     <ID>ReturnCount:DynamicsProcessingManager.kt$DynamicsProcessingManager$override fun reattachActive(): Boolean</ID>
+    <ID>ReturnCount:EqGraphMbcRenderer.kt$EqGraphMbcRenderer$fun handleTouch(event: android.view.MotionEvent, crossovers: FloatArray, gains: FloatArray): Boolean</ID>
+    <ID>ReturnCount:EqGraphTouchHandler.kt$EqGraphTouchHandler$fun handleTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>ReturnCount:EqGraphView.kt$EqGraphView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
-    <ID>ReturnCount:EqGraphView.kt$EqGraphView$private fun drawMbcBands(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
     <ID>ReturnCount:EqGraphView.kt$EqGraphView$private fun drawSpectrum(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
     <ID>ReturnCount:EqGraphView.kt$EqGraphView$private fun getBandColor(index: Int): Int?</ID>
-    <ID>ReturnCount:EqGraphView.kt$EqGraphView$private fun handleMbcTouch(event: MotionEvent, crossovers: FloatArray): Boolean</ID>
     <ID>ReturnCount:EqPreferencesManager.kt$EqPreferencesManager$fun getSimpleEqPresetGains(name: String): FloatArray?</ID>
     <ID>ReturnCount:EqService.kt$EqService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
     <ID>ReturnCount:EqStateManager.kt$EqStateManager$fun setActiveChannel(channel: ActiveChannel)</ID>
@@ -253,7 +254,6 @@
     <ID>TooManyFunctions:ApoConverter.kt$ApoConverter</ID>
     <ID>TooManyFunctions:BottomNavHelper.kt$BottomNavHelper</ID>
     <ID>TooManyFunctions:EqFitter.kt$EqFitter</ID>
-    <ID>TooManyFunctions:EqGraphView.kt$EqGraphView : View</ID>
     <ID>TooManyFunctions:EqPreferencesManager.kt$EqPreferencesManager</ID>
     <ID>TooManyFunctions:MainActivity.kt$MainActivity : AppCompatActivityMainActivityContract</ID>
     <ID>TooManyFunctions:ReverbVisualizerView.kt$ReverbVisualizerView : View</ID>
