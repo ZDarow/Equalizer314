@@ -615,6 +615,11 @@ class MainActivity : AppCompatActivity(), MainActivityContract {
     private lateinit var sheetController: com.bearinmind.equalizer314.controller.SheetController
 
     private fun initControllers() {
+        // Preset manager должен быть инициализирован до создания PresetIoController
+        presetManager = com.bearinmind.equalizer314.state.PresetManager(
+            getSharedPreferences("custom_presets", MODE_PRIVATE)
+        )
+
         val onEqChanged = {
             eqViewModel.pushEqUpdate()
         }
@@ -1753,11 +1758,6 @@ class MainActivity : AppCompatActivity(), MainActivityContract {
             eqViewModel, eqGraphView, bandToggleManager
         )
         undoRedoManager.reset()
-
-        // Preset manager — custom preset persistence
-        presetManager = com.bearinmind.equalizer314.state.PresetManager(
-            getSharedPreferences("custom_presets", MODE_PRIVATE)
-        )
 
         undoBtn.setOnClickListener { undoRedoManager.undo() }
         redoBtn.setOnClickListener { undoRedoManager.redo() }
