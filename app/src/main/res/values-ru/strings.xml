@@ -281,4 +281,18 @@
     <!-- Spectrum extra -->
     <string name="spectrum_release">Спад спектра</string>
     <string name="spectrum_release_desc">Управляет скоростью спада спектра после пика. Меньше = медленнее, более плавный спад</string>
+
+    <!-- EQ Mode -->
+    <string name="eq_mode_simple">Простой</string>
+
+    <!-- Settings: Light Theme -->
+    <string name="settings_light_theme">Светлая тема</string>
+    <string name="settings_light_theme_desc">Переключение между светлой и тёмной темой</string>
+
+    <!-- Settings: Backup & Restore -->
+    <string name="title_backup_restore">Резервное копирование</string>
+    <string name="backup_restore_desc">Сохранение и восстановление настроек, пресетов и привязок</string>
+
+    <!-- Error messages -->
+    <string name="msg_err_parse_eq">Не удалось разобрать сгенерированный эквалайзер</string>
 </resources>

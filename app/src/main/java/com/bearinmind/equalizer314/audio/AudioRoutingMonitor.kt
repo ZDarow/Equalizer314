@@ -101,7 +101,7 @@ class AudioRoutingMonitor(
         audioManager.registerAudioDeviceCallback(deviceCallback, handler)
         val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(noisyReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+            context.registerReceiver(noisyReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
             context.registerReceiver(noisyReceiver, filter)
         }

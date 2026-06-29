@@ -30,22 +30,7 @@
       },
       "group": "none",
       "isBackground": true,
-      "problemMatcher": [
-        {
-          "owner": "android",
-          "pattern": [
-            {
-              "regexp": ".",
-              "file": 1
-            }
-          ],
-          "background": {
-            "activeOnStart": true,
-            "beginsPattern": "^emulator:",
-            "endsPattern": "^emulator: .*x86_64.*is running"
-          }
-        }
-      ]
+      "problemMatcher": []
     },
     {
       "label": "Android: Запустить AVD (PrologyEmulator, quick boot)",
@@ -66,22 +51,7 @@
       },
       "group": "none",
       "isBackground": true,
-      "problemMatcher": [
-        {
-          "owner": "android",
-          "pattern": [
-            {
-              "regexp": ".",
-              "file": 1
-            }
-          ],
-          "background": {
-            "activeOnStart": true,
-            "beginsPattern": "^emulator:",
-            "endsPattern": ".*is running"
-          }
-        }
-      ]
+      "problemMatcher": []
     },
     {
       "label": "Android: Остановить AVD",
@@ -130,22 +100,7 @@
         "clear": true
       },
       "isBackground": true,
-      "problemMatcher": [
-        {
-          "owner": "android",
-          "pattern": [
-            {
-              "regexp": ".",
-              "file": 1
-            }
-          ],
-          "background": {
-            "activeOnStart": true,
-            "beginsPattern": "^- waiting",
-            "endsPattern": "^- waiting"
-          }
-        }
-      ]
+      "problemMatcher": []
     },
     {
       "label": "Android: Logcat (все, verbose)",
@@ -159,22 +114,7 @@
         "clear": true
       },
       "isBackground": true,
-      "problemMatcher": [
-        {
-          "owner": "android",
-          "pattern": [
-            {
-              "regexp": ".",
-              "file": 1
-            }
-          ],
-          "background": {
-            "activeOnStart": true,
-            "beginsPattern": "^- waiting",
-            "endsPattern": "^- waiting"
-          }
-        }
-      ]
+      "problemMatcher": []
     },
     {
       "label": "Android: Установить APK и запустить",
