@@ -431,42 +431,8 @@ class EqService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(
-                volumeReceiver,
-                IntentFilter("android.media.VOLUME_CHANGED_ACTION"),
-                RECEIVER_NOT_EXPORTED
-            )
-            registerReceiver(
-                routePresetReceiver,
-                IntentFilter().apply {
-                    addAction(RouteSwitchCoordinator.ACTION_ROUTE_PRESET_APPLIED)
-                    addAction(ACTION_NOTIFICATION_REFRESH)
-                    addAction(ACTION_REAPPLY_DEVICE_BINDING)
-                    addAction(ACTION_REAPPLY_APP_BINDING)
-                },
-                RECEIVER_NOT_EXPORTED
-            )
-        } else {
-            registerReceiver(
-                volumeReceiver,
-                IntentFilter("android.media.VOLUME_CHANGED_ACTION")
-            )
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            registerReceiver(
-                routePresetReceiver,
-                IntentFilter().apply {
-                    addAction(RouteSwitchCoordinator.ACTION_ROUTE_PRESET_APPLIED)
-                    addAction(ACTION_NOTIFICATION_REFRESH)
-                    addAction(ACTION_REAPPLY_DEVICE_BINDING)
-                    addAction(ACTION_REAPPLY_APP_BINDING)
-                }
-            )
-        }
-
-        // Register the system-sound bypass callback unconditionally —
-        // AudioPlaybackCallback needs no permission, no NLS bind. The
-        // callback short-circuits when DP isn't running, so it's cheap.
+        registerVolumeAndRoutePresetReceivers()
+        // System-sound bypass callback — no permission needed, cheap when DP is off
         runCatching {
             (getSystemService(Context.AUDIO_SERVICE) as? AudioManager)
                 ?.registerAudioPlaybackCallback(systemSoundCallback, null)
@@ -518,6 +484,26 @@ class EqService : Service() {
         // cheap boolean check while off and the real recovery is driven by
         // the playback-change / session-open event hooks above.
         startWatchdog()
+    }
+
+    /** Регистрирует volumeReceiver и routePresetReceiver
+     *  с учётом API-уровня (TIRAMISU+ требует RECEIVER_NOT_EXPORTED). */
+    private fun registerVolumeAndRoutePresetReceivers() {
+        val routeFilter = IntentFilter().apply {
+            addAction(RouteSwitchCoordinator.ACTION_ROUTE_PRESET_APPLIED)
+            addAction(ACTION_NOTIFICATION_REFRESH)
+            addAction(ACTION_REAPPLY_DEVICE_BINDING)
+            addAction(ACTION_REAPPLY_APP_BINDING)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(volumeReceiver, IntentFilter("android.media.VOLUME_CHANGED_ACTION"), RECEIVER_NOT_EXPORTED)
+            registerReceiver(routePresetReceiver, routeFilter, RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(volumeReceiver, IntentFilter("android.media.VOLUME_CHANGED_ACTION"))
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(routePresetReceiver, routeFilter)
+        }
     }
 
     /** startForeground that won't crash the service when the OS refuses
