@@ -42,9 +42,12 @@ class DynamicsProcessingManager {
     private var lastRightEq: com.bearinmind.equalizer314.dsp.ParametricEqualizer? = null
     private var lastReclaimTime = 0L
     private val reclaimCooldownMs = 2000L  // Don't reclaim more than once every 2 seconds
-    /** User-configured band count (128..1024); used instead of hardcoded 127. */
+    /**
+     * User-configured band count. Передаётся в ParametricToDpConverter.setNumBands(),
+     * который использует Wavelet-таблицу из 127 частот. Реальное количество полос
+     * после вызова всегда 127, независимо от запрошенного значения.
+     */
     var requestedBandCount: Int = 127
-        set(value) { field = value.coerceIn(128, 1024) }
 
     // @Volatile: read off the main thread by EqService's watchdog and by
     // EqService.isDpRunning mirrors, written from start()/stop().
@@ -129,8 +132,8 @@ class DynamicsProcessingManager {
             workerHandler = android.os.Handler(this.looper)
         }
 
-        // Use user-configured band count (128..1024) from requestedBandCount.
-        // Defaults to 127 for backward compat with Wavelet's frequency table.
+        // Используем requestedBandCount, но ParametricToDpConverter.setNumBands()
+        // всегда даёт 127 (Wavelet-таблица). Это константа для данной сборки.
         ParametricToDpConverter.setNumBands(requestedBandCount)
         val bandCount = ParametricToDpConverter.numBands
         val variant = DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION
