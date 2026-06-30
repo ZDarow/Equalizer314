@@ -27,11 +27,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
         // broadcast. When blocked, DP simply comes up when the user next
         // opens the app (MainActivity's auto-start fallback).
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(svc)
-            } else {
-                context.startService(svc)
-            }
+            context.startForegroundService(svc)
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Log.w(TAG, "Boot DP start blocked by OS: ${e.javaClass.simpleName}: ${e.message}")
         }

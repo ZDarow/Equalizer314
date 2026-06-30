@@ -422,11 +422,6 @@ class EqStateManager(
      *  permission, then launches [EqService] and binds to it. When the service is
      *  already bound, calls [doStartEq] immediately. */
     fun startProcessing(doStartEq: () -> Unit, animatePower: (Boolean) -> Unit) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-            Toast.makeText(context, "DynamicsProcessing requires Android 9+", Toast.LENGTH_LONG).show()
-            return
-        }
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
                 != android.content.pm.PackageManager.PERMISSION_GRANTED

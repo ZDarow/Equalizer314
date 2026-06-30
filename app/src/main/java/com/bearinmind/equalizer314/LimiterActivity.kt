@@ -465,14 +465,12 @@ class LimiterActivity : AppCompatActivity() {
         // AudioPlaybackCallback for play/pause detection (same as VisualizerHelper)
         audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
         isMusicPlaying = true
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            playbackCallback = object : android.media.AudioManager.AudioPlaybackCallback() {
-                override fun onPlaybackConfigChanged(configs: MutableList<android.media.AudioPlaybackConfiguration>?) {
-                    isMusicPlaying = configs != null && configs.isNotEmpty()
-                }
+        playbackCallback = object : android.media.AudioManager.AudioPlaybackCallback() {
+            override fun onPlaybackConfigChanged(configs: MutableList<android.media.AudioPlaybackConfiguration>?) {
+                isMusicPlaying = configs != null && configs.isNotEmpty()
             }
-            audioManager?.registerAudioPlaybackCallback(playbackCallback!!, null)
         }
+        audioManager?.registerAudioPlaybackCallback(playbackCallback!!, null)
 
         // Visualizer — waveform callback stores latest peak
         latestPeakDb = -80f
@@ -544,9 +542,7 @@ class LimiterActivity : AppCompatActivity() {
 
     private fun stopMetering() {
         meterRunnable?.let { meterHandler.removeCallbacks(it) }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            playbackCallback?.let { audioManager?.unregisterAudioPlaybackCallback(it) }
-        }
+        playbackCallback?.let { audioManager?.unregisterAudioPlaybackCallback(it) }
         playbackCallback = null
         audioManager = null
         try {

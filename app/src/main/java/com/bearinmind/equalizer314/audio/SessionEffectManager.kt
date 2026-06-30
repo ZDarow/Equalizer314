@@ -119,7 +119,6 @@ class SessionEffectManager(private val context: Context) {
      *  Callers fall back to other display modes in those cases. */
     @Synchronized
     fun getCurrentDrivingPreset(): String? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return null
         if (eqPrefs.getAudioRoutingMode() != 1) return null
         return sessionInfo.values
             .firstOrNull { it.packageName in playingPackages && !it.presetName.isNullOrBlank() }
@@ -139,7 +138,6 @@ class SessionEffectManager(private val context: Context) {
      *  id and not tied to the binding's preset. */
     @Synchronized
     fun reapplyBindingFor(packageName: String) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
         if (eqPrefs.getAudioRoutingMode() != 1) return
         // Snapshot first — attach() will mutate sessionInfo.
         val affected = sessionInfo.values
@@ -173,7 +171,6 @@ class SessionEffectManager(private val context: Context) {
         packageName: String,
         source: AttachSource = AttachSource.BROADCAST,
     ) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
         // BROADCAST source requires a real session id — a broadcaster
         // that hands us a non-positive id is misbehaving. DETECTED is
         // allowed to use negative synthetic ids (package-hash based)
@@ -279,8 +276,6 @@ class SessionEffectManager(private val context: Context) {
         detected: Map<String, Set<Int>>,
         playingNow: Set<String> = emptySet(),
     ) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
-
         playingPackages = playingNow
 
         val newPairs = mutableSetOf<Pair<String, Int>>()
@@ -328,7 +323,6 @@ class SessionEffectManager(private val context: Context) {
      *  it elsewhere right after this so both effect types stay in sync. */
     @Synchronized
     fun onRoutingModeChanged() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
         val isSessionBased = eqPrefs.getAudioRoutingMode() == 1
         if (!isSessionBased) {
             // Leaving Session-based — release every per-session DP but
@@ -355,7 +349,6 @@ class SessionEffectManager(private val context: Context) {
      *  when it flips on we attach one for every tracked session. */
     @Synchronized
     fun applyReverbParamsToAll() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
         // Reverb follows the EQ's routing so it always passes through when on:
         //   • Session-based mode → one reverb per tracked app session
         //   • Global (System-wide) mode → a single reverb on session 0 (the
@@ -394,7 +387,6 @@ class SessionEffectManager(private val context: Context) {
     }
 
     private fun attachReverbLocked(sessionId: Int) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
         // Allow session 0 (global output mix); only reject negative/synthetic ids.
         if (sessionId < 0) return
         reverbs.remove(sessionId)?.let {
@@ -507,7 +499,6 @@ class SessionEffectManager(private val context: Context) {
      *  `onListenerDisconnected`, cascading effect release. */
     @Synchronized
     fun releaseDetected() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
         val toDrop = sessionInfo.entries
             .filter { it.value.source == AttachSource.DETECTED }
             .map { it.key }

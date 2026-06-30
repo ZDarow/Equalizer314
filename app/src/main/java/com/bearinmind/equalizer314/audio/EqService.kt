@@ -166,11 +166,7 @@ class EqService : Service() {
 
         fun start(context: Context) {
             val intent = Intent(context, EqService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
+            context.startForegroundService(intent)
         }
 
         fun stop(context: Context) {
@@ -181,11 +177,7 @@ class EqService : Service() {
             // disappear — fine for shutdown, wrong for a Power-FAB tap.
             val intent = Intent(context, EqService::class.java)
                 .setAction(ACTION_STOP)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
+            context.startForegroundService(intent)
         }
     }
 
@@ -747,7 +739,6 @@ class EqService : Service() {
     }
 
     fun startEq(eq: ParametricEqualizer): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
         dynamicsManager.start(eq)
         val active = dynamicsManager.isActive
         setDpRunning(active)
@@ -854,11 +845,7 @@ class EqService : Service() {
                 disabledByDevice = false
                 val svc = Intent(this, EqService::class.java)
                     .setAction(ACTION_AUTO_START)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(svc)
-                } else {
-                    startService(svc)
-                }
+                startForegroundService(svc)
                 Log.d(TAG, "Non-disable device '$deviceKey' routed in — resuming DP")
             }
         }
@@ -979,18 +966,16 @@ class EqService : Service() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "System EQ",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Shows when system-wide EQ is active"
-                setShowBadge(false)
-            }
-            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            nm.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "System EQ",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Shows when system-wide EQ is active"
+            setShowBadge(false)
         }
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.createNotificationChannel(channel)
     }
 
     private fun buildNotification(): Notification {

@@ -1,152 +1,201 @@
 # Настройка отладки Android в VS Code
 
-## Быстрый старт
-
-### 1. Запустить эмулятор
-
-**Вариант A — через задачу VS Code (tasks.json):**
-1. Нажми `Ctrl+Shift+P` → «Tasks: Run Task»
-2. Выбери **«Android: Запустить AVD (PrologyEmulator, quick boot)»**
-3. Дождись загрузки (зелёный статус в терминале)
-
-**Вариант B — через расширение Android Emulator Launcher:**
-1. Нажми `Ctrl+Shift+P` → «Launch Android Emulator»
-2. Выбери AVD «PrologyEmulator»
-
-**Вариант C — через терминал:**
-```bash
-emulator -avd PrologyEmulator -no-snapshot-load
-```
-
-### 2. Установить и запустить приложение
-
-**Вариант A — отладка через расширение Android Dev Extension:**
-1. Нажми `F5` (или `Ctrl+Shift+D` → выбери **«Android: Запуск и отладка»**)
-2. Расширение само соберёт APK, установит на устройство и подключит отладчик
-
-**Вариант B — установка через задачу:**
-1. `Ctrl+Shift+P` → «Tasks: Run Task» → **«Android: Установить APK и запустить»**
-2. Для чистой переустановки: **«Android: Переустановить APK (clean install)»**
-
-**Вариант C — ручная установка:**
-```bash
-./gradlew installDebug
-adb shell monkey -p com.bearinmind.equalizer314 1
-```
-
-### 3. Подключить отладчик
-
-Если приложение уже запущено:
-1. `Ctrl+Shift+D` → выбери **«Android: Attach к процессу»** → `F5`
-2. Расширение adelphes.android-dev-ext подключится к процессу
-
-### 4. Просмотр логов
-
-- **Логи только Equalizer314:** `Ctrl+Shift+P` → «Tasks: Run Task» → **«Android: Logcat (Equalizer314)»**
-- **Все логи:** задача **«Android: Logcat (все, verbose)»**
-- **Через расширение:** `Ctrl+Shift+P` → «Android: View Logcat»
-- **Через терминал:** `adb logcat -v threadtime com.bearinmind.equalizer314:D *:S`
+**Версия:** 0.3.0 | **AVD:** PrologyEmulator (Android 14, API 34) | **SDK:** 28–35
 
 ---
 
-## Все задачи VS Code (tasks.json)
+## 1. Расширения (Extensions)
 
-### Запуск эмулятора
-| Задача | Когда использовать |
-|--------|------------------|
-| **Android: Запустить AVD (PrologyEmulator, cold boot)** | Первый запуск или после смены системного образа. Стирает данные. |
-| **Android: Запустить AVD (PrologyEmulator, quick boot)** | Повседневный запуск. Быстрая загрузка из сна. |
-| **Android: Остановить AVD** | Завершить эмулятор. |
+Установлены и настроены в `.vscode/extensions.json`. Основные:
 
-### Управление приложением
-| Задача | Действие |
-|--------|----------|
-| **Android: Установить APK и запустить** | Сборка + установка + запуск через monkey |
-| **Android: Переустановить APK (clean install)** | `uninstallDebug` + `installDebug` |
-| **Android: Очистить данные приложения** | Сброс SharedPreferences и БД |
-| **Android: Полный запуск (AVD + ожидание + сборка)** | Последовательно: AVD → ожидание → сборка |
+| Расширение | ID | Зачем |
+|---|---|---|
+| **Android Dev Extension** | `adelphes.android-dev-ext` | Главный отладчик: breakpoints, step-through, переменные |
+| **ADB Interface** | `vinicioslc.adb-interface-vscode` | ADB-команды из палитры: установка APK, Wi-Fi, скриншоты |
+| **Emulator Launcher** | `343max.android-emulator-launcher` | Запуск AVD одной командой |
+| **Gradle** | `vscjava.vscode-gradle` | Gradle-задачи в дереве Explorer |
+| **Kotlin** | `fwcd.kotlin` | Подсветка и автодополнение Kotlin |
 
-### Диагностика
-| Задача | Действие |
-|--------|----------|
-| **Android: Список устройств ADB** | `adb devices -l` |
-| **Android: Ожидать загрузки устройства** | Ждёт `sys.boot_completed` |
-| **Android: Logcat (Equalizer314)** | Фильтр: только `com.bearinmind.equalizer314:D` |
-| **Android: Logcat (все, verbose)** | Все логи, уровень Verbose |
-| **Android: Снять скриншот** | Скриншот + pull в корень проекта |
-
-### Ключевые комбинации клавиш
-- `F5` — запуск/продолжение отладки
-- `Shift+F5` — остановка отладки
-- `F9` — поставить/снять breakpoint
-- `F10` — шаг с обходом (Step Over)
-- `F11` — шаг с входом (Step Into)
-- `Shift+F11` — шаг с выходом (Step Out)
-- `Ctrl+Shift+P` → Tasks: Run Task — список всех задач
-
----
-
-## Расширения VS Code для Android
-
-| Расширение | Версия | Назначение |
-|------------|--------|------------|
-| `adelphes.android-dev-ext` | 1.4.0 | Отладчик Android: breakpoints, step-through, переменные, logcat |
-| `343max.android-emulator-launcher` | 0.9.0 | Запуск AVD из палитры команд (macOS+Linux) |
-| `vscjava.vscode-gradle` | 3.17.3 | Интеграция Gradle: задачи, дерево, синхронизация |
-| `vinicioslc.adb-interface-vscode` | 0.22.4 | ADB-команды: установка APK, Wi-Fi подключение, FireBase debug |
-| `porum.android-sensitive-api-scanner` | 0.0.1 | Сканер чувствительных Android API |
-
-### Установка новых расширений
+Установка недостающих:
 ```bash
 code --install-extension <publisher.extension>
+# пример: code --install-extension adelphes.android-dev-ext
 ```
 
 ---
 
-## Конфигурация отладки (launch.json)
+## 2. Быстрый старт
 
-### Основные профили
+### 2.1 Запустить эмулятор
 
-1. **Android: Запуск и отладка** — сборка APK → установка → запуск → отладка (одной кнопкой)
-2. **Android: Attach к процессу** — подключение к уже работающему приложению
-3. **Gradle: Собрать Debug APK** — только сборка
-4. **Gradle: Unit-тесты (все)** — запуск unit-тестов
-5. **Gradle: Полная верификация** — сборка + тесты + detekt
-6. **Android: Полный цикл (compound)** — последовательно: сборка + отладка
+| Способ | Действие |
+|---|---|
+| **Через задачу** | `Ctrl+Shift+P` → «Tasks: Run Task» → «Android: Запустить AVD (PrologyEmulator, quick boot)» |
+| **Через расширение** | `Ctrl+Shift+P` → «Launch Android Emulator» → выбери PrologyEmulator |
+| **Через терминал** | `emulator -avd PrologyEmulator -no-snapshot-load` |
 
-### Структура launch.json
+### 2.2 Установить и отладить
 
-Расположение: `.vscode/launch.json`
+**Вариант A — отладка одной кнопкой (F5):**
+1. Убедись, что эмулятор запущен (иконка в строке состояния)
+2. Поставь breakpoint (`F9`) в нужном месте
+3. Нажми `F5` → выбери **«Android: Запуск и отладка»**
+4. Расширение соберёт APK, установит на эмулятор, запустит и подключит отладчик
 
-- `type: "android"` — использует расширение `adelphes.android-dev-ext`
-- `type: "java"` — использует встроенный Java-отладчик + Gradle
-- `preLaunchTask` — задача из `tasks.json`, выполняемая перед отладкой
-- `compounds` — запуск нескольких конфигураций последовательно
+**Вариант B — ручная установка:**
+1. `Ctrl+Shift+P` → «Tasks: Run Task» → **«Android: Собрать Debug APK»**
+2. `Ctrl+Shift+P` → «Tasks: Run Task» → **«Android: Установить APK и запустить»**
+3. `Ctrl+Shift+P` → «Tasks: Run Task» → **«Android: Logcat (Equalizer314)»**
+
+**Вариант C — полный цикл:**
+- `Ctrl+Shift+P` → «Tasks: Run Task» → **«Android: Полный цикл (AVD → сборка → установка → logcat)»**
+- Всё сделает автоматически: запустит эмулятор, соберёт APK, установит, запустит и откроет логи
+
+### 2.3 Подключиться к запущенному приложению
+
+Если приложение уже работает:
+1. `Ctrl+Shift+D` → выбери конфигурацию **«Android: Attach к процессу»**
+2. Нажми `F5` — отладчик подключится без перезапуска
 
 ---
 
-## Рабочий процесс "отладка фичи"
+## 3. Композитные конфигурации отладки (compounds)
+
+В `launch.json` есть **«Android: Полный цикл (сборка + установка + отладка)»**:
+- Запускает `Gradle: Собрать Debug APK`
+- Затем `Android: Запуск и отладка` (установка + запуск + отладчик)
+
+Используй когда хочешь всё одной кнопкой: выбери compound в выпадающем списке Run → `F5`.
+
+---
+
+## 4. Управление приложением (задачи)
+
+| Задача | Действие | Когда |
+|---|---|---|
+| **Установить APK и запустить** | Сборка + установка + запуск | Повседневная установка |
+| **Переустановить APK (clean install)** | `uninstallDebug` + `installDebug` | Чистая установка после смены package name |
+| **Очистить данные приложения** | `pm clear` | Сброс БД/SharedPreferences |
+| **Остановить приложение** | `am force-stop` | Принудительное завершение |
+| **Перезапустить приложение** | force-stop + install + запуск | Полный перезапуск с новой версией |
+
+---
+
+## 5. Диагностика
+
+### 5.1 Логи (Logcat)
+
+| Задача | Показывает |
+|---|---|
+| **Logcat (Equalizer314)** | Только теги EqService, MainActivity, MbcActivity, LimiterActivity |
+| **Logcat (все, verbose)** | Все логи системы |
+| **Logcat (ошибки только)** | Только Error и Fatal |
+
+### 5.2 Другие диагностические задачи
+
+| Задача | Описание |
+|---|---|
+| **Список устройств ADB** | Показать все подключённые девайсы |
+| **Проверить AVD запущен** | Быстрая проверка эмулятора |
+| **Bugreport** | Полный дамп для отладки сложных проблем |
+| **Pull all traces** | Выгрузить ANR-трейсы и heap dumps |
+| **Снять скриншот** | Скриншот эмулятора → в корень проекта |
+| **Записать видео экрана** | 30-секундная запись экрана |
+
+### 5.3 Advanced: расширенная диагностика
+
+```bash
+# CPU/memory профиль приложения
+adb shell dumpsys meminfo com.bearinmind.equalizer314
+
+# Активности в стеке
+adb shell dumpsys activity activities | grep Equalizer
+
+# Сервисы
+adb shell dumpsys activity services | grep Equalizer
+
+# Broadcast receivers
+adb shell dumpsys activity broadcasts | grep equalizer
+
+# Текущая аудиосессия
+adb shell dumpsys media_session | grep equalizer
+```
+
+---
+
+## 6. Foreground Service и отладка
+
+Equalizer314 — foreground service (`EqService`). При отладке:
+
+1. **Обычный F5 работает** — отладчик подключается к Activity, сервис запускается как обычно
+2. **Для отладки сервиса с запуска:**
+   - Поставь breakpoint в `EqService.onCreate()` или `onStartCommand()`
+   - Запусти через F5 — Activity запустит сервис, отладчик остановится на breakpoint
+3. **Если сервис «молча» падает:**
+   - Задача **«Logcat (Equalizer314)»** покажет `EqService:D`
+   - Если не помогло — **«Logcat (все, verbose)»** и ищи `FATAL EXCEPTION`
+4. **Watchdog Session-0:**
+   - Если EQ отключается через 5–30 мин фоновой работы — проверь `VisualizerHelper` логи
+   - Баг Android: система «тихо убивает» аудиосессию 0, watchdog пересоздаёт
+
+---
+
+## 7. Расширения для ADB (adb-interface-vscode)
+
+Расширение `vinicioslc.adb-interface-vscode` добавляет в палитру команд (`Ctrl+Shift+P`):
+
+| Команда | Что делает |
+|---|---|
+| `ADB: Install APK` | Установить APK |
+| `ADB: Uninstall App` | Удалить приложение |
+| `ADB: Screenshot` | Скриншот |
+| `ADB: Screen Record` | Запись экрана |
+| `ADB: Wireless debugging` | Подключение по Wi-Fi |
+| `ADB: FireBase Debug` | Firebase DebugView |
+
+Удобно для быстрых операций без навигации по задачам.
+
+---
+
+## 8. Рабочий процесс «отладка фичи»
 
 ```mermaid
 flowchart TD
-    A[Ctrl+Shift+P → Запустить AVD] --> B[Дождаться загрузки]
-    B --> C[Поставить breakpoint в коде]
-    C --> D[F5 → Android: Запуск и отладка]
-    D --> E[APK собирается и устанавливается]
-    E --> F[Приложение запускается с отладчиком]
-    F --> G[Шагаем по коду F10/F11]
-    G --> H[Смотрим логи: Logcat задача]
-    H --> I{Баг найден?}
+    A[Правка кода] --> B[F5 → Android: Запуск и отладка]
+    B --> C[APK собирается автоматически]
+    C --> D[APK устанавливается на эмулятор]
+    D --> E[Приложение запускается с отладчиком]
+    E --> F{Breakpoint сработал?}
+    F -->|Да| G[Шагаем F10/F11, смотрим переменные]
+    F -->|Нет| H[F5 → продолжить выполнение]
+    G --> I{Баг найден?}
     I -->|Да| J[Правим код → Ctrl+S]
-    J --> D
-    I -->|Нет| K[Стоп Shift+F5]
+    J --> K[Ctrl+Shift+F5 → перезапустить отладку]
+    K --> B
+    I -->|Нет| L[Shift+F5 → стоп]
+    L --> M[Логи через Logcat задачу]
+    M --> N{Есть ошибки?}
+    N -->|Да| O[Ставим breakpoint на место ошибки]
+    O --> B
+    N -->|Нет| P[Фича готова ✅]
 ```
+
+### Оптимизация итерации:
+
+| Этап | Время | Инструмент |
+|---|---|---|
+| Изменить код | ~5 сек | VS Code редактор |
+| Пересобрать и запустить | ~30–90 сек | `F5` (compound: сборка + отладка) |
+| **Горячая перезамена кода** (Hot Code Replace) | ~3 сек | Отладчик → изменить код → `Ctrl+S` → продолжить (`F5`) |
+
+> **Hot Code Replace:** при отладке через `adelphes.android-dev-ext` можно менять тело методов прямо во время сессии. Код перекомпилируется на лету. Не работает для: новых методов, новых классов, изменения сигнатур.
 
 ---
 
-## Troubleshooting
+## 9. Troubleshooting
 
 ### Эмулятор не запускается
+
 ```bash
 # Проверить, что AVD существует
 emulator -list-avds
@@ -157,33 +206,84 @@ ls ~/Android/Sdk/emulator/emulator
 
 # Запуск с verbose-логами
 emulator -avd PrologyEmulator -verbose -show-kernel
+
+# Если ошибка "Intel HAXM is not installed" — включи KVM
+# Для Linux: sudo apt install qemu-kvm && sudo adduser $USER kvm
 ```
 
 ### ADB не видит устройство
+
 ```bash
 adb kill-server && adb start-server
 adb devices -l
 # Если всё равно пусто — перезапусти эмулятор
+# Или: adb connect localhost:5555
 ```
 
 ### Отладчик не подключается
+
 1. Проверь, что APK собран в debug-режиме: `./gradlew assembleDebug`
-2. Проверь, что на устройстве включена USB-отладка
-3. В launch.json укажи правильный `apkFile`:
-   - Старый путь: `build/outputs/apk/app-debug.apk`
-   - Новый AGP 8.x: `build/outputs/apk/debug/app-debug.apk`
+2. Убедись, что в `build.gradle.kts` нет `debuggable false` в debug-конфигурации
+3. В launch.json проверь `apkFile` — путь должен совпадать с актуальным:
+   ```bash
+   find app/build/outputs/apk -name "*.apk" 2>/dev/null
+   ```
+4. Проверь, что расширение `adelphes.android-dev-ext` активировано:
+   - `Ctrl+Shift+X` → поищи «android-dev-ext» → оно должно быть включено
+5. Если используется compound — проверь, что `preLaunchTask` ссылается на сущестующую задачу
 
-### Ошибка "No APK found"
-```bash
-# Найти актуальный путь
-find app/build/outputs/apk -name "*.apk" 2>/dev/null
-```
-При необходимости обнови `apkFile` в `launch.json`.
+### Логи не отображаются
 
-### Logcat ничего не показывает
 ```bash
 # Сбросить буфер
 adb logcat -c
-# Запустить с фильтром по тегу
+# Фильтр по конкретному тегу
 adb logcat -s EqService:* MainActivity:*
+# Фильтр по PID приложения
+adb shell ps | grep equalizer  # получить PID
+adb logcat --pid=<PID>
 ```
+
+### Foreground Service убивается системой
+
+Android 13+ может убивать foreground service если не показано уведомление:
+- Убедись, что `NotificationChannel` создан ДО `startForegroundService()`
+- Проверь канал в настройках: Настройки → Приложения → Equalizer314 → Уведомления
+- Если канал отключён пользователем — сервис будет убит
+
+---
+
+## 10. Полезные комбинации клавиш
+
+| Клавиши | Что делают |
+|---|---|
+| `F5` | Запуск/продолжение отладки |
+| `Shift+F5` | Остановка отладки |
+| `Ctrl+Shift+F5` | Перезапуск отладки |
+| `F9` | Поставить/снять breakpoint |
+| `F10` | Шаг с обходом (Step Over) |
+| `F11` | Шаг с входом (Step Into) |
+| `Shift+F11` | Шаг с выходом (Step Out) |
+| `Ctrl+K Ctrl+I` | Показать подсказку |
+| `Ctrl+Shift+P` | Палитра команд |
+| `` Ctrl+` `` | Терминал |
+| `Ctrl+Shift+` ` | Создать новый терминал |
+
+---
+
+## 11. Структура .vscode/
+
+```
+.vscode/
+├── extensions.json       # Рекомендуемые расширения
+├── launch.json           # Конфигурации отладчика (8 профилей)
+├── tasks.json            # Автоматизация (25+ задач)
+├── settings.json         # Настройки рабочей области
+└── ANDROID_DEBUG_GUIDE.md  # Этот файл
+```
+
+### Файлы для самостоятельного изменения
+
+- **`launch.json`**: `apkFile` — если изменился путь к APK; `launchActivity` — если другой экран для отладки
+- **`settings.json`**: `java.jdt.ls.java.home` — если другой JDK
+- **`tasks.json`**: команды `emulator -avd ...` при добавлении нового AVD; `ANDROID_SDK_ROOT` при смене пути

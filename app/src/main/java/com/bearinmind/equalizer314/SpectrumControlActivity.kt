@@ -360,18 +360,16 @@ class SpectrumControlActivity : AppCompatActivity() {
     private fun startSpectrum() {
         audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
         isMusicPlaying = true
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            playbackCallback = object : android.media.AudioManager.AudioPlaybackCallback() {
-                override fun onPlaybackConfigChanged(configs: MutableList<android.media.AudioPlaybackConfiguration>?) {
-                    val wasPlaying = isMusicPlaying
-                    isMusicPlaying = configs != null && configs.isNotEmpty()
-                    if (!wasPlaying && isMusicPlaying) {
-                        renderer?.resetOpacity()
-                    }
+        playbackCallback = object : android.media.AudioManager.AudioPlaybackCallback() {
+            override fun onPlaybackConfigChanged(configs: MutableList<android.media.AudioPlaybackConfiguration>?) {
+                val wasPlaying = isMusicPlaying
+                isMusicPlaying = configs != null && configs.isNotEmpty()
+                if (!wasPlaying && isMusicPlaying) {
+                    renderer?.resetOpacity()
                 }
             }
-            audioManager?.registerAudioPlaybackCallback(playbackCallback!!, null)
         }
+        audioManager?.registerAudioPlaybackCallback(playbackCallback!!, null)
         try {
             visualizer = android.media.audiofx.Visualizer(0).apply {
                 captureSize = android.media.audiofx.Visualizer.getCaptureSizeRange()[1]

@@ -1,18 +1,20 @@
 {
   // Задачи автоматизации для Equalizer314
+  // Версия: 0.3.0
   // Группы:
-  //   build  — сборка проекта
-  //   test   — запуск тестов
-  //   lint   — статический анализ
-  //   clean  — очистка
-  //   android — работа с эмулятором, установка, logcat
+  //   build   — сборка проекта
+  //   test    — запуск тестов
+  //   lint    — статический анализ
+  //   clean   — очистка
+  //   android — эмулятор, установка, logcat, диагностика
   "version": "2.0.0",
   "tasks": [
     // ======================================================
-    // ANDROID: ЭМУЛЯТОР И УСТРОЙСТВО
+    // ANDROID: ЭМУЛЯТОР
     // ======================================================
     {
       "label": "Android: Запустить AVD (PrologyEmulator, cold boot)",
+      "detail": "Холодный запуск — стирает snapshot и данные. Нужен после смены образа системы.",
       "type": "shell",
       "command": "emulator -avd PrologyEmulator -no-snapshot -wipe-data",
       "options": {
@@ -34,6 +36,7 @@
     },
     {
       "label": "Android: Запустить AVD (PrologyEmulator, quick boot)",
+      "detail": "Быстрый запуск из сна snapshot. Повседневное использование.",
       "type": "shell",
       "command": "emulator -avd PrologyEmulator -no-snapshot-load",
       "options": {
@@ -55,6 +58,7 @@
     },
     {
       "label": "Android: Остановить AVD",
+      "detail": "Элегантное завершение эмулятора через ADB.",
       "type": "shell",
       "command": "adb emu kill",
       "presentation": {
@@ -65,7 +69,31 @@
       "problemMatcher": []
     },
     {
+      "label": "Android: Список AVD",
+      "detail": "Показать все доступные AVD на этой машине.",
+      "type": "shell",
+      "command": "emulator -list-avds",
+      "options": {
+        "env": {
+          "ANDROID_SDK_ROOT": "/home/mi/Android/Sdk",
+          "ANDROID_HOME": "/home/mi/Android/Sdk"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    // ======================================================
+    // ANDROID: ПРОВЕРКА УСТРОЙСТВА
+    // ======================================================
+    {
       "label": "Android: Список устройств ADB",
+      "detail": "Показать все подключённые Android-устройства (usb/эмулятор).",
       "type": "shell",
       "command": "adb devices -l",
       "presentation": {
@@ -76,9 +104,22 @@
       "problemMatcher": []
     },
     {
-      "label": "Android: Ожидать загрузки устройства",
+      "label": "Android: Проверить AVD запущен",
+      "detail": "Проверяет, работает ли эмулятор. Возвращает статус и ID устройства.",
       "type": "shell",
-      "command": "adb wait-for-device && adb shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done;' && echo \"Устройство готово\"",
+      "command": "adb devices 2>/dev/null | grep -q emulator && echo \"✅ Эмулятор запущен\" || echo \"❌ Эмулятор НЕ запущен. Запусти через 'Android: Запустить AVD'\"",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Ожидать загрузки устройства",
+      "detail": "Ждать, пока AVD полностью загрузится (system.boot_completed).",
+      "type": "shell",
+      "command": "adb wait-for-device && adb shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done;' && echo \"✅ Устройство готово\"",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
@@ -88,10 +129,63 @@
       },
       "problemMatcher": []
     },
+    // ======================================================
+    // ANDROID: УСТАНОВКА И ЗАПУСК
+    // ======================================================
+    {
+      "label": "Android: Установить APK и запустить",
+      "detail": "Собрать debug APK, установить через Gradle и запустить monkey.",
+      "type": "shell",
+      "command": "./gradlew installDebug && adb shell monkey -p com.bearinmind.equalizer314 1",
+      "dependsOn": [
+        "Android: Ожидать загрузки устройства"
+      ],
+      "dependsOrder": "sequence",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": ["$gradle"]
+    },
+    {
+      "label": "Android: Переустановить APK (clean install)",
+      "detail": "Полная переустановка: удалить старый APK, установить новый.",
+      "type": "shell",
+      "command": "./gradlew uninstallDebug installDebug && adb shell monkey -p com.bearinmind.equalizer314 1",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": ["$gradle"]
+    },
+    {
+      "label": "Android: Установить APK (без запуска)",
+      "detail": "Просто установить APK без автоматического запуска.",
+      "type": "shell",
+      "command": "./gradlew installDebug",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": ["$gradle"]
+    },
+    // ======================================================
+    // ANDROID: ДИАГНОСТИКА ПРИЛОЖЕНИЯ
+    // ======================================================
     {
       "label": "Android: Logcat (Equalizer314)",
+      "detail": "Логи только приложения Equalizer314 (фильтр по тегам: EqService, MainActivity и др.).",
       "type": "shell",
-      "command": "adb logcat -v threadtime com.bearinmind.equalizer314:D *:S",
+      "command": "adb logcat -v threadtime EqService:D MainActivity:D MbcActivity:D LimiterActivity:D *:S",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
@@ -104,6 +198,7 @@
     },
     {
       "label": "Android: Logcat (все, verbose)",
+      "detail": "Все логи системы, включая Android Runtime — для глубокой диагностики.",
       "type": "shell",
       "command": "adb logcat -v threadtime *:V",
       "presentation": {
@@ -117,10 +212,10 @@
       "problemMatcher": []
     },
     {
-      "label": "Android: Установить APK и запустить",
+      "label": "Android: Logcat (ошибки только)",
+      "detail": "Только ошибки и фаталы — для быстрой оценки багов.",
       "type": "shell",
-      "command": "./gradlew installDebug && adb shell monkey -p com.bearinmind.equalizer314 1",
-      "dependsOn": ["Android: Ожидать загрузки устройства"],
+      "command": "adb logcat -v threadtime *:E *:F",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
@@ -128,23 +223,15 @@
         "showReuseMessage": false,
         "clear": true
       },
+      "isBackground": true,
       "problemMatcher": []
     },
-    {
-      "label": "Android: Переустановить APK (clean install)",
-      "type": "shell",
-      "command": "./gradlew uninstallDebug installDebug",
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "group": "android",
-        "showReuseMessage": false,
-        "clear": true
-      },
-      "problemMatcher": []
-    },
+    // ======================================================
+    // ANDROID: ДЕЙСТВИЯ С ПРИЛОЖЕНИЕМ
+    // ======================================================
     {
       "label": "Android: Очистить данные приложения",
+      "detail": "Сбросить SharedPreferences, Room БД и кэш приложения.",
       "type": "shell",
       "command": "adb shell pm clear com.bearinmind.equalizer314",
       "presentation": {
@@ -157,9 +244,74 @@
       "problemMatcher": []
     },
     {
-      "label": "Android: Снять скриншот",
+      "label": "Android: Остановить приложение (force-stop)",
+      "detail": "Принудительная остановка процесса — эквивалент «Остановить приложение» в настройках.",
       "type": "shell",
-      "command": "adb shell screencap -p /sdcard/screenshot.png && adb pull /sdcard/screenshot.png && echo \"Скриншот сохранён: screenshot.png\"",
+      "command": "adb shell am force-stop com.bearinmind.equalizer314",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Перезапустить приложение (force-stop + запуск)",
+      "detail": "Полный перезапуск: убить процесс, очистить данные, установить APK, запустить.",
+      "type": "shell",
+      "command": "adb shell am force-stop com.bearinmind.equalizer314 && ./gradlew installDebug && adb shell monkey -p com.bearinmind.equalizer314 1",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android"
+      },
+      "problemMatcher": ["$gradle"]
+    },
+    // ======================================================
+    // ANDROID: СКРИНШОТЫ И ДАМПЫ
+    // ======================================================
+    {
+      "label": "Android: Снять скриншот",
+      "detail": "Скриншот эмулятора → pull в корень проекта.",
+      "type": "shell",
+      "command": "adb shell screencap -p /sdcard/screenshot.png && adb pull /sdcard/screenshot.png && mv screenshot.png \"screenshot_$(date +%Y%m%d_%H%M%S).png\" && echo \"✅ Скриншот сохранён\"",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Записать видео экрана",
+      "detail": "Запись экрана эмулятора (до 3 мин). Файл: screenrecord_*.mp4.",
+      "type": "shell",
+      "command": "adb shell screenrecord /sdcard/screenrecord.mp4 --time-limit 30 --bit-rate 4M && adb pull /sdcard/screenrecord.mp4 && mv screenrecord.mp4 \"screenrecord_$(date +%Y%m%d_%H%M%S).mp4\" && echo \"✅ Видео сохранено\"",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Bugreport",
+      "detail": "Полный отладочный дамп: логи, traces, dump sys services.",
+      "type": "shell",
+      "command": "adb bugreport bugreport_$(date +%Y%m%d_%H%M%S).zip",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Pull all traces",
+      "detail": "Выгрузить все ANR-трейсы и heap dumps с устройства.",
+      "type": "shell",
+      "command": "adb shell ls /data/anr/ 2>/dev/null && adb pull /data/anr/ ./traces_$(date +%Y%m%d_%H%M%S) || echo \"Нет ANR-трейсов\"",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
@@ -172,6 +324,7 @@
     // ======================================================
     {
       "label": "Android: Собрать Debug APK",
+      "detail": "Сборка debug-версии APK через Gradle.",
       "type": "shell",
       "command": "./gradlew assembleDebug",
       "group": {
@@ -184,10 +337,14 @@
         "showReuseMessage": false,
         "clear": true
       },
-      "problemMatcher": ["$gradle", "$java"]
+      "problemMatcher": [
+        "$gradle",
+        "$java"
+      ]
     },
     {
       "label": "Gradle: Собрать Release APK",
+      "detail": "Сборка release-версии с ProGuard/минацией. Требует ключа подписи.",
       "type": "shell",
       "command": "./gradlew assembleRelease",
       "group": "build",
@@ -197,13 +354,17 @@
         "showReuseMessage": false,
         "clear": true
       },
-      "problemMatcher": ["$gradle", "$java"]
+      "problemMatcher": [
+        "$gradle",
+        "$java"
+      ]
     },
     // ======================================================
     // ТЕСТЫ
     // ======================================================
     {
       "label": "Gradle: Unit-тесты",
+      "detail": "Запуск всех unit-тестов в проекте.",
       "type": "shell",
       "command": "./gradlew testDebugUnitTest",
       "group": {
@@ -216,10 +377,14 @@
         "showReuseMessage": false,
         "clear": true
       },
-      "problemMatcher": ["$gradle", "$java"]
+      "problemMatcher": [
+        "$gradle",
+        "$java"
+      ]
     },
     {
       "label": "Gradle: Unit-тесты (выборочно)",
+      "detail": "Запуск unit-тестов по маске (запросит имя класса).",
       "type": "shell",
       "command": "./gradlew testDebugUnitTest --tests \"${input:testFilter}\"",
       "presentation": {
@@ -228,13 +393,31 @@
         "showReuseMessage": false,
         "clear": true
       },
-      "problemMatcher": ["$gradle", "$java"]
+      "problemMatcher": [
+        "$gradle",
+        "$java"
+      ]
+    },
+    {
+      "label": "Gradle: Инструментальные тесты (AndroidTest)",
+      "detail": "Запуск инструментальных тестов на подключённом устройстве.",
+      "type": "shell",
+      "command": "./gradlew connectedDebugAndroidTest",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "test"
+      },
+      "problemMatcher": [
+        "$gradle"
+      ]
     },
     // ======================================================
     // СТАТИЧЕСКИЙ АНАЛИЗ
     // ======================================================
     {
       "label": "Gradle: Detekt",
+      "detail": "Статический анализ Kotlin-кода (стиль, потенциальные ошибки).",
       "type": "shell",
       "command": "./gradlew detekt",
       "group": "lint",
@@ -244,10 +427,13 @@
         "showReuseMessage": false,
         "clear": true
       },
-      "problemMatcher": ["$detekt"]
+      "problemMatcher": [
+        "$detekt"
+      ]
     },
     {
       "label": "Gradle: Lint (Android Lint)",
+      "detail": "Android Lint — проверка ресурсов, манифеста, совместимости API.",
       "type": "shell",
       "command": "./gradlew lint",
       "group": "lint",
@@ -257,13 +443,16 @@
         "showReuseMessage": false,
         "clear": true
       },
-      "problemMatcher": ["$androidLint"]
+      "problemMatcher": [
+        "$androidLint"
+      ]
     },
     // ======================================================
     // ПОКРЫТИЕ И ДОКУМЕНТАЦИЯ
     // ======================================================
     {
       "label": "Gradle: Kover отчёт (HTML)",
+      "detail": "Генерация HTML-отчёта о покрытии тестами.",
       "type": "shell",
       "command": "./gradlew koverHtmlReport",
       "presentation": {
@@ -276,6 +465,7 @@
     },
     {
       "label": "Gradle: Kover отчёт (XML)",
+      "detail": "Генерация XML-отчёта о покрытии (для CI/Kover).",
       "type": "shell",
       "command": "./gradlew koverXmlReport",
       "presentation": {
@@ -288,6 +478,7 @@
     },
     {
       "label": "Gradle: Dokka документация",
+      "detail": "Генерация HTML-документации Kotlin из KDoc-комментариев.",
       "type": "shell",
       "command": "./gradlew :app:dokkaHtml",
       "presentation": {
@@ -303,6 +494,7 @@
     // ======================================================
     {
       "label": "Gradle: Clean",
+      "detail": "Очистка всех артефактов сборки.",
       "type": "shell",
       "command": "./gradlew clean",
       "group": "clean",
@@ -316,6 +508,7 @@
     },
     {
       "label": "Gradle: Полная пересборка (clean + assembleDebug)",
+      "detail": "Очистка и полная пересборка debug APK — при игре со скриптами сборки.",
       "type": "shell",
       "command": "./gradlew clean assembleDebug",
       "presentation": {
@@ -324,13 +517,17 @@
         "showReuseMessage": false,
         "clear": true
       },
-      "problemMatcher": ["$gradle", "$java"]
+      "problemMatcher": [
+        "$gradle",
+        "$java"
+      ]
     },
     // ======================================================
     // ПОЛНАЯ ВЕРИФИКАЦИЯ
     // ======================================================
     {
       "label": "Gradle: Полная верификация (CI pipeline)",
+      "detail": "Штатный CI-пайплайн: lint → detekt → unit-тесты → debug APK → release APK.",
       "type": "shell",
       "command": "./gradlew lint detekt testDebugUnitTest assembleDebug assembleRelease",
       "presentation": {
@@ -339,13 +536,19 @@
         "showReuseMessage": false,
         "clear": true
       },
-      "problemMatcher": ["$gradle", "$java", "$detekt", "$androidLint"]
+      "problemMatcher": [
+        "$gradle",
+        "$java",
+        "$detekt",
+        "$androidLint"
+      ]
     },
     // ======================================================
-    // КОМПОЗИТНЫЕ: ЗАПУСК AVD + ОЖИДАНИЕ + СБОРКА
+    // КОМПОЗИТНЫЕ: ПОЛНЫЙ РАБОЧИЙ ПРОЦЕСС
     // ======================================================
     {
       "label": "Android: Полный запуск (AVD + ожидание + сборка)",
+      "detail": "Запустить AVD, дождаться загрузки и собрать APK — фоновая подготовка.",
       "dependsOn": [
         "Android: Запустить AVD (PrologyEmulator, quick boot)",
         "Android: Собрать Debug APK"
@@ -359,6 +562,42 @@
         "clear": true
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Android: Полный цикл (AVD → сборка → установка → logcat)",
+      "detail": "Запустить AVD, собрать APK, установить, запустить и показать логи.",
+      "dependsOn": [
+        "Android: Запустить AVD (PrologyEmulator, quick boot)",
+        "Android: Собрать Debug APK",
+        "Android: Установить APK и запустить",
+        "Android: Logcat (Equalizer314)"
+      ],
+      "dependsOrder": "sequence",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Быстрый цикл (сборка → установка → запуск)",
+      "detail": "Если эмулятор уже запущен — только собрать, установить и запустить.",
+      "dependsOn": [
+        "Android: Собрать Debug APK",
+        "Android: Установить APK и запустить"
+      ],
+      "dependsOrder": "sequence",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": ["$gradle"]
     }
   ],
   "inputs": [

@@ -146,11 +146,6 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
     }
 
     override fun start(eq: ParametricEqualizer) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-            Log.e(TAG, "DynamicsProcessing requires API 28+")
-            return
-        }
-
         stop() // Clean up any existing instance
 
         // Пересоздаём coroutine scope (предыдущий был отменён в stop())

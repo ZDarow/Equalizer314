@@ -176,11 +176,7 @@ class PlaybackListenerService : NotificationListenerService() {
         val intent = Intent(this, EqService::class.java)
             .setAction(EqService.ACTION_RELEASE_DETECTED)
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent)
-            } else {
-                startService(intent)
-            }
+            startForegroundService(intent)
         } catch (t: Throwable) {
             Log.w(TAG, "could not dispatch ACTION_RELEASE_DETECTED", t)
         }
@@ -276,11 +272,7 @@ class PlaybackListenerService : NotificationListenerService() {
             .setAction(EqService.ACTION_PLAYBACK_DETECTED)
             .putExtra(EqService.EXTRA_DETECTED_BUNDLE, bundle)
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent)
-            } else {
-                startService(intent)
-            }
+            startForegroundService(intent)
         } catch (t: Throwable) {
             // Service may be shutting down — next snapshot will retry.
             Log.w(TAG, "could not dispatch ACTION_PLAYBACK_DETECTED", t)

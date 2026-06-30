@@ -117,11 +117,7 @@ class AudioEffectsPipelineActivity : AppCompatActivity() {
                     val intent = android.content.Intent(this, com.bearinmind.equalizer314.audio.EqService::class.java)
                         .setAction(com.bearinmind.equalizer314.audio.EqService.ACTION_APPLY_REVERB)
                     try {
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                            startForegroundService(intent)
-                        } else {
-                            startService(intent)
-                        }
+                        startForegroundService(intent)
                     } catch (_: Throwable) { /* service may not be running */ }
                 }
             },

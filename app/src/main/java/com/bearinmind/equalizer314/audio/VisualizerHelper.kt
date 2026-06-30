@@ -40,23 +40,21 @@ class VisualizerHelper {
         audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         isMusicPlaying = true  // assume playing on start
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            playbackCallback = object : AudioManager.AudioPlaybackCallback() {
-                override fun onPlaybackConfigChanged(configs: MutableList<android.media.AudioPlaybackConfiguration>?) {
-                    val wasPlaying = isMusicPlaying
-                    // Check if ANY playback config exists (regardless of volume level)
-                    isMusicPlaying = configs != null && configs.isNotEmpty()
-                    if (wasPlaying && !isMusicPlaying) {
-                        Log.d(TAG, "Playback stopped — fading spectrum")
-                    }
-                    if (!wasPlaying && isMusicPlaying) {
-                        renderer.resetOpacity()
-                        Log.d(TAG, "Playback started — showing spectrum")
-                    }
+        playbackCallback = object : AudioManager.AudioPlaybackCallback() {
+            override fun onPlaybackConfigChanged(configs: MutableList<android.media.AudioPlaybackConfiguration>?) {
+                val wasPlaying = isMusicPlaying
+                // Check if ANY playback config exists (regardless of volume level)
+                isMusicPlaying = configs != null && configs.isNotEmpty()
+                if (wasPlaying && !isMusicPlaying) {
+                    Log.d(TAG, "Playback stopped — fading spectrum")
+                }
+                if (!wasPlaying && isMusicPlaying) {
+                    renderer.resetOpacity()
+                    Log.d(TAG, "Playback started — showing spectrum")
                 }
             }
-            audioManager?.registerAudioPlaybackCallback(playbackCallback!!, null)
         }
+        audioManager?.registerAudioPlaybackCallback(playbackCallback!!, null)
 
         try {
             visualizer = Visualizer(0).apply {
@@ -122,9 +120,7 @@ class VisualizerHelper {
 
     fun stop() {
         // Unregister playback callback
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            playbackCallback?.let { audioManager?.unregisterAudioPlaybackCallback(it) }
-        }
+        playbackCallback?.let { audioManager?.unregisterAudioPlaybackCallback(it) }
         playbackCallback = null
         audioManager = null
         graphViewRef = null

@@ -57,11 +57,7 @@ class AudioSessionReceiver : BroadcastReceiver() {
         // running; the service promotes itself via startForeground on
         // first onStartCommand to satisfy the 5-second FGS deadline.
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent)
-            } else {
-                context.startService(serviceIntent)
-            }
+            context.startForegroundService(serviceIntent)
         } catch (t: Throwable) {
             Log.w(TAG, "Could not forward session intent to EqService", t)
         }

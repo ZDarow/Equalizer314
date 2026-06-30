@@ -451,11 +451,7 @@ class MainActivity : AppCompatActivity(), MainActivityContract {
                 persistedPowerOn -> {
                     val svc = Intent(this, EqService::class.java)
                         .setAction(EqService.ACTION_AUTO_START)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        startForegroundService(svc)
-                    } else {
-                        startService(svc)
-                    }
+                    startForegroundService(svc)
                 }
                 else -> eqViewModel.eqPrefs.savePowerState(false)
             }
@@ -2413,11 +2409,6 @@ class MainActivity : AppCompatActivity(), MainActivityContract {
     // ---- Processing Control ----
 
     private fun startProcessing() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-            Toast.makeText(this, getString(R.string.msg_dsp_requires_api), Toast.LENGTH_LONG).show()
-            return
-        }
-
         // POST_NOTIFICATIONS is only needed to *display* the foreground-service
         // notification. The service starts fine without it on API 33+ — the
         // notification is just silently suppressed. Don't gate the EQ on it,

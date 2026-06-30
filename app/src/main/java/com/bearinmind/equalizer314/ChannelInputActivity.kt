@@ -219,11 +219,7 @@ class ChannelInputActivity : AppCompatActivity() {
             val intent = Intent(this, com.bearinmind.equalizer314.audio.EqService::class.java)
                 .setAction(com.bearinmind.equalizer314.audio.EqService.ACTION_APPLY_BYPASS_PREF)
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(intent)
-                } else {
-                    startService(intent)
-                }
+                startForegroundService(intent)
             } catch (_: Throwable) {
                 // Service might not be running — that's fine, the pref
                 // is saved and will be picked up the next time EQ starts.
@@ -437,11 +433,7 @@ class ChannelInputActivity : AppCompatActivity() {
             val serviceIntent = android.content.Intent(this, com.bearinmind.equalizer314.audio.EqService::class.java)
                 .setAction(com.bearinmind.equalizer314.audio.EqService.ACTION_APPLY_ROUTING_MODE)
             try {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    startForegroundService(serviceIntent)
-                } else {
-                    startService(serviceIntent)
-                }
+                startForegroundService(serviceIntent)
             } catch (_: Throwable) { /* service may already be torn down */ }
         }
     }

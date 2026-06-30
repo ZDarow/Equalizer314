@@ -25,7 +25,7 @@ import com.bearinmind.equalizer314.R
  * persisted power-state pref in case the service start failed silently
  * (e.g. no saved bands on a fresh install).
  */
-@RequiresApi(Build.VERSION_CODES.N)
+
 class Eq314TileService : TileService() {
 
     override fun onStartListening() {
@@ -50,11 +50,7 @@ class Eq314TileService : TileService() {
         val intent = Intent(this, EqService::class.java)
             .setAction(EqService.ACTION_START_FROM_TILE)
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent)
-            } else {
-                startService(intent)
-            }
+            startForegroundService(intent)
             Log.d(TAG, "onClick — dispatched ${intent.action}")
         } catch (t: Throwable) {
             // Foreground-service-from-tile is allowed on every API
