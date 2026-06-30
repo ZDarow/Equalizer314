@@ -7,7 +7,6 @@
     <string name="eq_mode_parametric">Parametric</string>
     <string name="eq_mode_graphic">Graphic</string>
     <string name="eq_mode_table">Table</string>
-    <string name="simple_eq_mode">Simple EQ Mode</string>
 
     <!-- Param Labels -->
     <string name="hz_label">Hz</string>
@@ -51,10 +50,6 @@
     <string name="action_ok">OK</string>
     <string name="action_reset">Reset</string>
     <string name="action_add">Add</string>
-    <string name="action_undo">Undo</string>
-    <string name="action_redo">Redo</string>
-    <string name="action_edit">Edit</string>
-    <string name="action_clear">Clear</string>
 
     <!-- Content Descriptions -->
     <string name="cd_toggle_band_points">Toggle band points</string>
@@ -115,7 +110,6 @@
     <string name="param_post_gain">Post Gain (dB)</string>
     <string name="param_gate_thresh_db">Gate Thresh (dB)</string>
     <string name="param_gate_ratio">Gate Ratio (X:1)</string>
-    <string name="param_range_db">Range (dB)</string>
     <string name="param_band_label">Band %d</string>
 
     <!-- Channel Side EQ -->
@@ -123,7 +117,6 @@
     <string name="channel_l">L</string>
     <string name="channel_r">R</string>
     <string name="channel_percent_50">50%</string>
-    <string name="channel_percent_0">0%</string>
     <string name="channel_preamp">Channel Preamp</string>
     <string name="channel_preamp_l">Preamp (L)</string>
     <string name="channel_preamp_r">Preamp (R)</string>
@@ -133,7 +126,6 @@
     <string name="reverb_room_level">Room Level</string>
     <string name="reverb_parameters">Reverb Parameters</string>
     <string name="reverb_pre_delay_ms">Pre-delay (ms)</string>
-    <string name="reverb_early_reflect_decay_ms">Early Reflect. Decay (ms)</string>
     <string name="reverb_early_reflect_level_db">Early Reflect. Level (dB)</string>
     <string name="reverb_delay_ms">Reverb Delay (ms)</string>
     <string name="reverb_decay_ms">Reverb Decay (ms)</string>
@@ -142,7 +134,6 @@
     <string name="reverb_hf_damping">HF Damping</string>
 
     <!-- Audio Output / Binding -->
-    <string name="output_bind_preset_hint">Bind a saved EQ preset to a specific output device…</string>
     <string name="output_preset_label">Preset</string>
     <string name="output_unbound">Unbound</string>
     <string name="output_bound">Bound \"%1$s\" to %2$s</string>
@@ -150,13 +141,6 @@
     <string name="output_missing">(missing)</string>
 
     <!-- Pipeline -->
-    <string name="pipeline_channel_input">Channel Input</string>
-    <string name="pipeline_channel_input_desc">System audio at session 0 — input to the effects chain</string>
-    <string name="pipeline_dynamics_processing">Dynamics Processing</string>
-    <string name="pipeline_dynamics_processing_desc">Main audio processing chain for EQ, MBC &amp; Limiting</string>
-    <string name="pipeline_environmental_reverb">Environmental Reverb</string>
-    <string name="pipeline_audio_output">Audio Output</string>
-    <string name="pipeline_audio_output_desc">Speakers, headphones, or other connected output</string>
 
     <!-- AutoEQ / Target Curve / Measurement -->
     <string name="autoeq_import_poweramp">Import Poweramp EQ .json</string>
@@ -180,8 +164,6 @@
     <string name="experimental_dp_band_count">DP Band Count</string>
     <string name="experimental_dp_engine">Experimental DP Engine</string>
     <string name="experimental_dp_engine_desc">32 bands + time-resolution FFT (vs. legacy 128 bands + frequency-resolution). Aimed at fixing bass boom &amp; thin treble. Toggle restarts the audio engine.</string>
-    <string name="experimental_gain_compensation">Gain Compensation</string>
-    <string name="experimental_gain_compensation_desc">reduces highest gain to 0 dB to prevent clipping</string>
 
     <!-- Dialogs -->
     <string name="dialog_save_custom_preset">Save Custom Preset</string>
@@ -195,14 +177,6 @@
     <string name="dialog_add_to_autoeq">Add this EQ to the AutoEQ &amp; Presets list</string>
 
     <!-- Colors -->
-    <string name="color_default">Default</string>
-    <string name="color_white">White</string>
-    <string name="color_green">Green</string>
-    <string name="color_blue">Blue</string>
-    <string name="color_yellow">Yellow</string>
-    <string name="color_orange">Orange</string>
-    <string name="color_purple">Purple</string>
-    <string name="color_indigo">Indigo</string>
 
     <!-- Visualizer Labels -->
     <string name="viz_hf_level">HF Level</string>
@@ -210,7 +184,6 @@
     <string name="viz_pre_delay">Pre-delay</string>
     <string name="viz_early_reflections">Early Reflections</string>
     <string name="viz_decay">Decay</string>
-    <string name="viz_reverb_tail">Reverb Tail</string>
     <string name="viz_direct_sound">Direct Sound</string>
     <string name="viz_amplitude">amplitude</string>
     <string name="viz_time_ms">Time (ms)</string>
@@ -232,7 +205,6 @@
     <string name="msg_eq_reset">EQ reset to defaults</string>
     <string name="msg_mbc_reset">MBC reset to defaults</string>
     <string name="msg_limiter_reset">Limiter reset to defaults</string>
-    <string name="msg_dsp_requires_api">DynamicsProcessing requires Android 9+</string>
     <string name="msg_dsp_start">DynamicsProcessing Start</string>
     <string name="msg_dsp_stop">DynamicsProcessing Stop</string>
     <string name="msg_notifications_disabled">Notifications disabled — EQ will run without the Turn Off notification.</string>
@@ -255,32 +227,23 @@
     <string name="msg_12db">12 dB</string>
 
     <!-- Import/Conversion -->
-    <string name="convert_import_poweramp">Import Poweramp EQ .json</string>
-    <string name="convert_import_wavelet">Import Wavelet .txt</string>
     <string name="convert_to_apo">Convert to APO format</string>
     <string name="convert_added_to_autoeq">Added \"%1$s\" to AutoEQ &amp; Presets</string>
-    <string name="convert_desc">Convert wavelet &amp; poweramp eq exports to APO format</string>
 
     <!-- Settings cards -->
-    <string name="settings_simple_eq_desc">Simple 10 band graphic EQ</string>
     <string name="settings_channel_side_desc">Balance, per-channel EQ, and channel swap</string>
     <string name="settings_pipeline_title">Audio Effects Pipeline - NOT READY</string>
     <string name="settings_pipeline_desc">Configure session based audio effects pipeline</string>
     <string name="settings_experimental_desc">probably don\'t touch this shit (yet)</string>
     <string name="cd_lock_experimental">Lock Experimental</string>
-    <string name="settings_auto_gain">Auto-Gain</string>
     <string name="settings_auto_gain_desc">Automatically reduces gain to prevent clipping</string>
-    <string name="settings_offset_format">Offset: %.1f dB</string>
 
     <!-- Pipeline long description -->
     <string name="pipeline_reorder_desc">Drag the handle on the left of each effects card to re-order the order of the processing effects chain. The audio stream begins from Channel Input and ends at the Audio Output. DynamicsProcessing is the main EQ, MBC, Limiting that is exposed in the app, the other audio effects that can attach to the channel input can be clicked on and edited right here in a new screen.</string>
 
     <!-- MBC extra -->
-    <string name="mbc_range_visual_only">Range (visual only)\nTo achieve this range, set threshold and ratio accordingly</string>
 
     <!-- Spectrum extra -->
-    <string name="spectrum_release">Spectrum Release</string>
-    <string name="spectrum_release_desc">Controls how fast the spectrum falls after a peak. Lower = slower, smoother falloff</string>
 
     <!-- EQ Mode -->
     <string name="eq_mode_simple">Simple</string>
@@ -324,52 +287,13 @@
     <string name="cd_toggle_band_point_visibility">Toggle band point visibility</string>
     <string name="cd_toggle_per_band_curves">Toggle per-band curves</string>
     <string name="cd_toggle_eq_on_off">Toggle EQ on or off</string>
-    <string name="settings_session_detection">Session detection</string>
-    <string name="settings_session_detection_desc">Lists every app currently playing audio</string>
-    <string name="settings_device_auto_switch">Device auto-switch</string>
-    <string name="settings_device_auto_switch_desc">Uses selected preset for current output</string>
-    <string name="settings_skip_system_sounds">Skip system sounds</string>
-    <string name="settings_skip_system_sounds_desc">Turns processing off for system sounds</string>
-    <string name="value_na">N/A</string>
-    <string name="title_presets_conversions">Presets &amp; Conversions</string>
-    <string name="label_routing_mode">Routing mode</string>
-    <string name="routing_system_wide">System-wide</string>
-    <string name="routing_session_based">Session-based</string>
-    <string name="label_now_playing">Now playing</string>
-    <string name="status_no_sessions">No sessions detected</string>
-    <string name="label_apps">Apps</string>
-    <string name="filter_filtered">Filtered</string>
-    <string name="filter_show_all">Show All</string>
-    <string name="status_loading_apps">Loading apps…</string>
-    <string name="cd_app_icon">App icon</string>
-    <string name="cd_remove_device">Remove device</string>
-    <string name="cd_toggle_visibility">Toggle visibility</string>
-    <string name="cd_pipeline_info">Pipeline info</string>
-    <string name="cd_favorite">Favorite</string>
-    <string name="cd_toggle_effect">Toggle effect</string>
     <string name="status_no_current_device">No current device</string>
     <string name="label_current_output">Current output</string>
     <string name="msg_eq_disabled_for">EQ disabled for %1$s</string>
     <string name="output_disable_eq">Disable EQ</string>
-    <string name="msg_generating_eq">Generating</string>
-    <string name="msg_no_preset_applied">No preset applied yet</string>
-    <string name="msg_could_not_load_active_preset">Couldn\'t load the active preset</string>
-    <string name="msg_saved_to_presets">Saved \"%1$s\" to your presets</string>
-    <string name="msg_by_source">by %1$s</string>
-    <string name="msg_updated_preset">Updated \"%1$s\"</string>
-    <string name="msg_cannot_open_notification_settings">Could not open Notification access settings</string>
-    <string name="msg_dsp_start_failed">Failed to start DynamicsProcessing</string>
     <string name="msg_backup_saved">Backup saved</string>
     <string name="msg_backup_failed">Backup failed: %1$s</string>
     <string name="msg_backup_restored">Backup restored</string>
     <string name="msg_invalid_backup">Not a valid Equalizer314 backup</string>
     <string name="msg_restore_failed">Restore failed: %1$s</string>
-    <string name="msg_applied_per_channel_filters">Applied L:%1$d R:%2$d filters</string>
-    <string name="dialog_backup_restore_message">Export or import settings, presets &amp; bindings to/from a .json file. Importing will override all current settings in the app.</string>
-    <string name="msg_no_apps_detected">No apps detected yet.</string>
-    <string name="label_routing_mode_title">Routing mode</string>
-    <string name="settings_session_detection_desc_v2">Lists apps playing audio using dumpsys</string>
-    <string name="cd_toggle_band_fill">Toggle band fill</string>
-    <string name="power_eq_title">Equalizer</string>
-    <string name="settings_visualizer">Visualizer</string>
 </resources>
