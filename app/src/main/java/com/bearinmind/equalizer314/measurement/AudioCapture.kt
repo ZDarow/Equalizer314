@@ -37,6 +37,7 @@ class AudioCapture {
      * @param durationMs максимальная длительность записи в мс (0 = без лимита)
      * @return true если запись успешно начата
      */
+    @Suppress("ReturnCount")
     fun start(durationMs: Int = 15000): Boolean {
         if (isRecording.get()) {
             Log.w(TAG, "Уже записываем")

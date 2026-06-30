@@ -56,7 +56,6 @@
     <ID>CyclomaticComplexMethod:ParametricToDpConverter.kt$ParametricToDpConverter$fun convertFeatureAware(eq: ParametricEqualizer): ConvertedBands</ID>
     <ID>CyclomaticComplexMethod:ParametricToDpConverter.kt$ParametricToDpConverter$private fun supportsForBand(band: ParametricEqualizer.EqualizerBand): List&lt;Float></ID>
     <ID>CyclomaticComplexMethod:ReverbVisualizerView.kt$ReverbVisualizerView$private fun drawBars(c: Canvas, earlyDurationMs: Float, decayDurationMs: Float)</ID>
-    <ID>CyclomaticComplexMethod:SessionEffectManager.kt$SessionEffectManager$@Synchronized fun attach( sessionId: Int, packageName: String, source: AttachSource = AttachSource.BROADCAST, )</ID>
     <ID>CyclomaticComplexMethod:SimpleEqController.kt$SimpleEqController$fun buildSliders()</ID>
     <ID>CyclomaticComplexMethod:SimpleEqController.kt$SimpleEqController$private fun createPresetRow(name: String): View</ID>
     <ID>CyclomaticComplexMethod:SimpleEqController.kt$SimpleEqController$private fun exportPresetApo(name: String)</ID>
@@ -101,6 +100,7 @@
     <ID>LongMethod:EqGraphView.kt$EqGraphView$private fun drawCurve(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
     <ID>LongMethod:EqGraphView.kt$EqGraphView$private fun drawSpectrum(canvas: Canvas, vPad: Float, graphWidth: Float, graphHeight: Float)</ID>
     <ID>LongMethod:EqService.kt$EqService$override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</ID>
+    <ID>LongMethod:FreqMeasurementEngine.kt$FreqMeasurementEngine$suspend fun runMeasurement( signalType: TestSignalGenerator.SignalType = TestSignalGenerator.SignalType.PINK_NOISE, targetFreq: FreqResponse? = null, numBands: Int = 10, onProgress: (Float) -> Unit = {} ): MeasurementResult</ID>
     <ID>LongMethod:GateCurveView.kt$GateCurveView$override fun onDraw(canvas: Canvas)</ID>
     <ID>LongMethod:GateCurveView.kt$GateCurveView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>LongMethod:GrTraceView.kt$GrTraceView$override fun onDraw(canvas: Canvas)</ID>
@@ -237,8 +237,6 @@
     <ID>ReturnCount:ReverbVisualizerView.kt$ReverbVisualizerView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>ReturnCount:RouteSwitchCoordinator.kt$RouteSwitchCoordinator$fun onRouteChange(change: AudioRoutingMonitor.RouteChange)</ID>
     <ID>ReturnCount:SessionEffectManager.kt$SessionEffectManager$@Synchronized fun attach( sessionId: Int, packageName: String, source: AttachSource = AttachSource.BROADCAST, )</ID>
-    <ID>ReturnCount:SessionEffectManager.kt$SessionEffectManager$@Synchronized fun getCurrentDrivingPreset(): String?</ID>
-    <ID>ReturnCount:SessionEffectManager.kt$SessionEffectManager$private fun attachReverbLocked(sessionId: Int)</ID>
     <ID>ReturnCount:SimpleEqBarsView.kt$SimpleEqBarsView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>ReturnCount:SpectrumAnalyzerRenderer.kt$SpectrumAnalyzerRenderer$fun draw( canvas: Canvas, left: Float, top: Float, right: Float, bottom: Float, dbMin: Float, dbMax: Float, eqResponseDb: FloatArray? = null )</ID>
     <ID>ReturnCount:TargetCurveActivity.kt$TargetCurveActivity$private fun computeAndApply()</ID>
@@ -257,6 +255,7 @@
     <ID>TooManyFunctions:EqPreferencesManager.kt$EqPreferencesManager</ID>
     <ID>TooManyFunctions:MainActivity.kt$MainActivity : AppCompatActivityMainActivityContract</ID>
     <ID>TooManyFunctions:ReverbVisualizerView.kt$ReverbVisualizerView : View</ID>
+    <ID>TooManyFunctions:TestSignalGenerator.kt$TestSignalGenerator</ID>
     <ID>UnusedParameter:BiquadFilter.kt$BiquadFilter$cosOmega: Double</ID>
     <ID>UnusedParameter:BiquadFilter.kt$BiquadFilter$sinOmega: Double</ID>
     <ID>UnusedParameter:EqFitter.kt$EqFitter$fr: Array&lt;FloatArray></ID>

@@ -200,7 +200,6 @@ class FreqMeasurementEngine {
         val window = FloatArray(FFT_SIZE) { i ->
             (0.5 * (1.0 - cos(2.0 * PI * i / (FFT_SIZE - 1)))).toFloat()
         }
-        val windowPower = window.sumOf { (it * it).toDouble() }
 
         // Выравнивание: обрезаем до меньшей длины
         val len = minOf(original.size, recorded.size)

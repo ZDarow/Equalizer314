@@ -53,6 +53,7 @@ import org.json.JSONObject
 class MeasurementActivity : AppCompatActivity() {
 
     companion object {
+        @Suppress("UnusedPrivateProperty")
         private const val TAG = "MeasurementActivity"
         private const val DEFAULT_NUM_BANDS = 10
     }
@@ -185,6 +186,7 @@ class MeasurementActivity : AppCompatActivity() {
         statusText.text = getString(R.string.measurement_playing) + " (${selectedType.label})"
 
         measurementJob = scope.launch {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val result = withContext(Dispatchers.IO) {
                     engine.runMeasurement(
@@ -254,158 +256,166 @@ class MeasurementActivity : AppCompatActivity() {
      * Рисует измеренную АЧХ и кривую коррекции на Canvas.
      */
     private fun drawResultCurves(result: FreqMeasurementEngine.MeasurementResult) {
-        val profile = result.correctionProfile
+        val correctionLevels = computeCorrectionLevels(result)
 
-        // Вычисляем АЧХ коррекции (суммарный отклик всех фильтров)
+        resultCurveContainer.post {
+            val w = resultCurveContainer.width.coerceAtLeast(1)
+            val h = resultCurveContainer.height.coerceAtLeast(1)
+            val bmp = android.graphics.Bitmap.createBitmap(
+                w, h, android.graphics.Bitmap.Config.ARGB_8888
+            )
+            val canvas = Canvas(bmp)
+            val bgColor = MaterialColors.getColor(
+                resultCurveContainer,
+                com.google.android.material.R.attr.colorSurfaceVariant
+            )
+            canvas.drawColor(bgColor)
+
+            val padLeft = 40f; val padRight = 16f
+            val padTop = 16f; val padBottom = 24f
+            val plotW = w - padLeft - padRight
+            val plotH = h - padTop - padBottom
+            val dbMin = -24f; val dbMax = 24f
+
+            val transformer = GraphTransformer(padLeft, padRight, padTop, padBottom,
+                plotW, plotH, dbMin, dbMax)
+
+            drawGrid(canvas, w, h, transformer)
+            drawLineSeries(canvas, transformer,
+                result.measuredFreq, result.measuredLevel,
+                Color.argb(180, 255, 100, 100))
+            drawLineSeries(canvas, transformer,
+                result.measuredFreq, correctionLevels,
+                Color.argb(200, 80, 200, 255))
+            drawZeroLine(canvas, transformer)
+            drawLegend(canvas, transformer)
+
+            resultCurveContainer.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            resultCurveContainer.background =
+                android.graphics.drawable.BitmapDrawable(resources, bmp)
+        }
+    }
+
+    /** Вычисляет суммарный отклик всех фильтров коррекции на логарифмической сетке. */
+    private fun computeCorrectionLevels(
+        result: FreqMeasurementEngine.MeasurementResult
+    ): FloatArray {
+        val profile = result.correctionProfile
         val eq = ParametricEqualizer(48000)
         for (filter in profile.filters) {
             eq.addBand(
-                filter.frequency,
-                filter.gain,
+                filter.frequency, filter.gain,
                 com.bearinmind.equalizer314.dsp.BiquadFilter.FilterType.valueOf(filter.filterType),
                 filter.q.toDouble()
             )
         }
-
-        val correctionLevels = FloatArray(result.measuredFreq.size) { i ->
+        return FloatArray(result.measuredFreq.size) { i ->
             eq.getFrequencyResponse(result.measuredFreq[i])
         }
+    }
 
-        // Рисуем на resultCurveContainer
-        resultCurveContainer.post {
-            val w = resultCurveContainer.width.coerceAtLeast(1)
-            val h = resultCurveContainer.height.coerceAtLeast(1)
-            val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bmp)
-            val bgColor = MaterialColors.getColor(resultCurveContainer, com.google.android.material.R.attr.colorSurfaceVariant)
-            canvas.drawColor(bgColor)
+    /**
+     * Функции преобразования freq↔x и db↔y для графика АЧХ.
+     */
+    @Suppress("LongParameterList")
+    class GraphTransformer(
+        val padLeft: Float,
+        val padRight: Float,
+        val padTop: Float,
+        val padBottom: Float,
+        val plotW: Float,
+        val plotH: Float,
+        val dbMin: Float,
+        val dbMax: Float
+    ) {
+        private val dbRange = dbMax - dbMin
+        private val logMin = kotlin.math.log10(20f)
+        private val logMax = kotlin.math.log10(20000f)
 
-            // Границы графика (dB)
-            val dbMin = -24f
-            val dbMax = 24f
-            val dbRange = dbMax - dbMin
-
-            // Padding
-            val padLeft = 40f
-            val padRight = 16f
-            val padTop = 16f
-            val padBottom = 24f
-            val plotW = w - padLeft - padRight
-            val plotH = h - padTop - padBottom
-
-            // Функция преобразования
-            fun freqToX(freq: Float): Float {
-                val logMin = kotlin.math.log10(20f)
-                val logMax = kotlin.math.log10(20000f)
-                val logF = kotlin.math.log10(freq.coerceIn(20f, 20000f))
-                return padLeft + ((logF - logMin) / (logMax - logMin)) * plotW
-            }
-
-            fun dbToY(db: Float): Float {
-                return padTop + ((dbMax - db.coerceIn(dbMin, dbMax)) / dbRange) * plotH
-            }
-
-            // Сетка
-            val gridPaint = Paint().apply {
-                color = Color.argb(40, 255, 255, 255)
-                strokeWidth = 1f
-            }
-            val textPaint = Paint().apply {
-                color = Color.argb(120, 255, 255, 255)
-                textSize = 24f
-                isAntiAlias = true
-            }
-
-            // Горизонтальные линии (каждые 6 dB)
-            for (db in dbMin.toInt()..dbMax.toInt() step 6) {
-                val y = dbToY(db.toFloat())
-                canvas.drawLine(padLeft, y, w - padRight, y, gridPaint)
-                canvas.drawText("$db", 2f, y + 8f, textPaint)
-            }
-
-            // Вертикальные линии (частоты)
-            val markerFreqs = floatArrayOf(20f, 50f, 100f, 200f, 500f, 1000f, 2000f, 5000f, 10000f, 20000f)
-            for (f in markerFreqs) {
-                val x = freqToX(f)
-                canvas.drawLine(x, padTop, x, h - padBottom, gridPaint)
-                val label = when {
-                    f >= 1000f -> "${(f / 1000f).toInt()}k"
-                    else -> f.toInt().toString()
-                }
-                canvas.drawText(label, x - 12f, h - 4f, textPaint)
-            }
-
-            // Измеренная АЧХ (красная)
-            val measuredPaint = Paint().apply {
-                color = Color.argb(180, 255, 100, 100)
-                strokeWidth = 3f
-                style = Paint.Style.STROKE
-                isAntiAlias = true
-            }
-
-            val measuredPath = Path()
-            var firstMeasured = true
-            for (i in result.measuredFreq.indices) {
-                val x = freqToX(result.measuredFreq[i])
-                val y = dbToY(result.measuredLevel[i])
-                if (firstMeasured) {
-                    measuredPath.moveTo(x, y)
-                    firstMeasured = false
-                } else {
-                    measuredPath.lineTo(x, y)
-                }
-            }
-            canvas.drawPath(measuredPath, measuredPaint)
-
-            // Кривая коррекции (зелёная/голубая)
-            val correctionPaint = Paint().apply {
-                color = Color.argb(200, 80, 200, 255)
-                strokeWidth = 3f
-                style = Paint.Style.STROKE
-                isAntiAlias = true
-            }
-
-            val correctionPath = Path()
-            var firstCorrection = true
-            for (i in result.measuredFreq.indices) {
-                val x = freqToX(result.measuredFreq[i])
-                val y = dbToY(correctionLevels[i])
-                if (firstCorrection) {
-                    correctionPath.moveTo(x, y)
-                    firstCorrection = false
-                } else {
-                    correctionPath.lineTo(x, y)
-                }
-            }
-            canvas.drawPath(correctionPath, correctionPaint)
-
-            // Нулевая линия
-            val zeroPaint = Paint().apply {
-                color = Color.argb(100, 255, 255, 255)
-                strokeWidth = 1f
-                pathEffect = android.graphics.DashPathEffect(floatArrayOf(8f, 8f), 0f)
-            }
-            canvas.drawLine(padLeft, dbToY(0f), w - padRight, dbToY(0f), zeroPaint)
-
-            // Легенда
-            val legendPaint = Paint().apply {
-                textSize = 22f
-                isAntiAlias = true
-            }
-            canvas.drawText("— Измеренная АЧХ", w - 200f, padTop + 24f, Paint().apply {
-                color = Color.argb(180, 255, 100, 100)
-                textSize = 22f
-                isAntiAlias = true
-            })
-            canvas.drawText("— Коррекция", w - 200f, padTop + 50f, Paint().apply {
-                color = Color.argb(200, 80, 200, 255)
-                textSize = 22f
-                isAntiAlias = true
-            })
-
-            resultCurveContainer.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            resultCurveContainer.background = android.graphics.drawable.BitmapDrawable(resources, bmp)
+        fun freqToX(freq: Float): Float {
+            val logF = kotlin.math.log10(freq.coerceIn(20f, 20000f))
+            return padLeft + ((logF - logMin) / (logMax - logMin)) * plotW
         }
+
+        fun dbToY(db: Float): Float {
+            return padTop + ((dbMax - db.coerceIn(dbMin, dbMax)) / dbRange) * plotH
+        }
+
+        fun width(): Float = plotW + padLeft + padRight
+        fun height(): Float = plotH + padTop + padBottom
+    }
+
+    /** Рисует сетку графика: горизонтальные линии (dB) и вертикальные (частоты). */
+    private fun drawGrid(
+        canvas: Canvas,
+        w: Int, h: Int,
+        t: GraphTransformer
+    ) {
+        val gridPaint = Paint().apply {
+            color = Color.argb(40, 255, 255, 255); strokeWidth = 1f
+        }
+        val textPaint = Paint().apply {
+            color = Color.argb(120, 255, 255, 255); textSize = 24f; isAntiAlias = true
+        }
+        // Горизонтальные линии каждые 6 dB
+        for (db in t.dbMin.toInt()..t.dbMax.toInt() step 6) {
+            val y = t.dbToY(db.toFloat())
+            canvas.drawLine(t.padLeft, y, w - t.padRight, y, gridPaint)
+            canvas.drawText("$db", 2f, y + 8f, textPaint)
+        }
+        // Вертикальные линии (частоты)
+        val markerFreqs = floatArrayOf(
+            20f, 50f, 100f, 200f, 500f, 1000f, 2000f, 5000f, 10000f, 20000f
+        )
+        for (f in markerFreqs) {
+            val x = t.freqToX(f)
+            canvas.drawLine(x, t.padTop, x, h - t.padBottom, gridPaint)
+            val label = if (f >= 1000f) "${(f / 1000f).toInt()}k" else f.toInt().toString()
+            canvas.drawText(label, x - 12f, h - 4f, textPaint)
+        }
+    }
+
+    /** Рисует одну ломаную линию на графике. */
+    private fun drawLineSeries(
+        canvas: Canvas,
+        t: GraphTransformer,
+        freqs: FloatArray,
+        levels: FloatArray,
+        color: Int
+    ) {
+        val paint = Paint().apply {
+            this.color = color; strokeWidth = 3f
+            style = Paint.Style.STROKE; isAntiAlias = true
+        }
+        val path = Path()
+        var first = true
+        for (i in freqs.indices) {
+            val x = t.freqToX(freqs[i])
+            val y = t.dbToY(levels[i])
+            if (first) { path.moveTo(x, y); first = false }
+            else { path.lineTo(x, y) }
+        }
+        canvas.drawPath(path, paint)
+    }
+
+    /** Рисует нулевую линию (0 dB). */
+    private fun drawZeroLine(canvas: Canvas, t: GraphTransformer) {
+        val paint = Paint().apply {
+            color = Color.argb(100, 255, 255, 255); strokeWidth = 1f
+            pathEffect = android.graphics.DashPathEffect(floatArrayOf(8f, 8f), 0f)
+        }
+        canvas.drawLine(t.padLeft, t.dbToY(0f),
+            t.padLeft + t.plotW, t.dbToY(0f), paint)
+    }
+
+    /** Рисует легенду в правом верхнем углу. */
+    private fun drawLegend(canvas: Canvas, t: GraphTransformer) {
+        canvas.drawText("— Измеренная АЧХ", t.width() - 200f, t.padTop + 24f, Paint().apply {
+            color = Color.argb(180, 255, 100, 100); textSize = 22f; isAntiAlias = true
+        })
+        canvas.drawText("— Коррекция", t.width() - 200f, t.padTop + 50f, Paint().apply {
+            color = Color.argb(200, 80, 200, 255); textSize = 22f; isAntiAlias = true
+        })
     }
 
     /**

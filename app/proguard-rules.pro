@@ -28,6 +28,12 @@
 -keep class com.bearinmind.equalizer314.data.** { *; }
 -keep class com.bearinmind.equalizer314.dsp.EqSerializer { *; }
 
+# ── Measurement engine — direct AudioRecord/AudioTrack, no reflection ──
+-keep class com.bearinmind.equalizer314.measurement.** { *; }
+-keep class com.bearinmind.equalizer314.controller.** { *; }
+-keep class com.bearinmind.equalizer314.audio.LufsProcessor { *; }
+-keep class com.bearinmind.equalizer314.audio.MbcGainComputer { *; }
+
 # ── Kotlin Coroutines ─────────────────────────────────────────────
 # R8 handles coroutines correctly out of the box since AGP 8.x.
 

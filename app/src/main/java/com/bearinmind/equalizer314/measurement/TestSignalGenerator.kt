@@ -133,7 +133,6 @@ object TestSignalGenerator {
         // Генерируем белый шум
         val white = FloatArray(numSamples) { rng.nextFloat() * 2f - 1f }
         // Применяем формирующий фильтр 1/f через БПФ
-        val fftSize = 1
         var n = 1
         while (n < numSamples) n *= 2
 

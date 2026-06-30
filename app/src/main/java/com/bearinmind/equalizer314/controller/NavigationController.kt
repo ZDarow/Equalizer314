@@ -146,6 +146,36 @@ class NavigationController(
     }
 
     // ========================================================================
+    // Experimental Card (lock/unlock)
+    // ========================================================================
+
+    private fun setupExperimentalCard() {
+        val experimentalLockButton = findViewById<ImageButton>(R.id.experimentalLockButton)
+        val experimentalCard = findViewById<View>(R.id.experimentalCard)
+        fun applyLockState() {
+            val unlocked = eqPrefs.getExperimentalUnlocked()
+            experimentalLockButton.setImageResource(
+                if (unlocked) R.drawable.ic_lock_open else R.drawable.ic_lock
+            )
+            experimentalCard.isClickable = unlocked
+            experimentalCard.alpha = if (unlocked) 1f else 0.6f
+        }
+        applyLockState()
+        experimentalLockButton.setOnClickListener {
+            val newState = !eqPrefs.getExperimentalUnlocked()
+            eqPrefs.saveExperimentalUnlocked(newState)
+            applyLockState()
+        }
+        experimentalCard.setOnClickListener {
+            if (!eqPrefs.getExperimentalUnlocked()) return@setOnClickListener
+            context.startActivity(Intent(context, ExperimentalActivity::class.java))
+            (context as? android.app.Activity)?.overridePendingTransition(
+                R.anim.fade_in, R.anim.fade_out
+            )
+        }
+    }
+
+    // ========================================================================
     // Settings Cards
     // ========================================================================
 
@@ -200,29 +230,7 @@ class NavigationController(
         }
 
         // Experimental
-        val experimentalLockButton = findViewById<ImageButton>(R.id.experimentalLockButton)
-        val experimentalCard = findViewById<View>(R.id.experimentalCard)
-        fun applyExperimentalLockState() {
-            val unlocked = eqPrefs.getExperimentalUnlocked()
-            experimentalLockButton.setImageResource(
-                if (unlocked) R.drawable.ic_lock_open else R.drawable.ic_lock
-            )
-            experimentalCard.isClickable = unlocked
-            experimentalCard.alpha = if (unlocked) 1f else 0.6f
-        }
-        applyExperimentalLockState()
-        experimentalLockButton.setOnClickListener {
-            val newState = !eqPrefs.getExperimentalUnlocked()
-            eqPrefs.saveExperimentalUnlocked(newState)
-            applyExperimentalLockState()
-        }
-        experimentalCard.setOnClickListener {
-            if (!eqPrefs.getExperimentalUnlocked()) return@setOnClickListener
-            context.startActivity(Intent(context, ExperimentalActivity::class.java))
-            (context as? android.app.Activity)?.overridePendingTransition(
-                R.anim.fade_in, R.anim.fade_out
-            )
-        }
+        setupExperimentalCard()
 
         // Spectrum Control
         findViewById<View>(R.id.spectrumControlCard).setOnClickListener {
