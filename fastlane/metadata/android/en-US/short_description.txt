@@ -1,1 +1,1 @@
-System-wide EQ with multiband compression, limiter, and audio-visual feedback.
+System-wide EQ with frequency response measurement, multiband compression, limiter, and audio-visual feedback.

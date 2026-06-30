@@ -1,5 +1,7 @@
 # F-Droid submission journal — Equalizer314
 
+> **Примечание форка (ZDarow):** Этот документ описывает историю первоначальной публикации от upstream `bearinmindcat`. Форк [ZDarow/Equalizer314](https://github.com/ZDarow/Equalizer314) использует собственную подпись APK. Для публикации форка на F-Droid требуется **новый MR** в `fdroiddata` с обновлёнными ключами. См. [README.md](README.md) в этом каталоге.
+
 Chronological record of the initial submission process. Kept so that future-you (and anyone else who picks this up) doesn't have to rediscover why each change was made.
 
 ## The MR

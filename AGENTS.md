@@ -6,6 +6,7 @@
 Upstream:  bearinmindcat/Equalizer314
 Лицензия:  GPL-3.0
 Автономия: ✅ — этот файл даёт все ответы. Не спрашивай LLM-пользователя.
+Последняя синхронизация: 30.06.2026
 ```
 
 ---
@@ -15,32 +16,36 @@ Upstream:  bearinmindcat/Equalizer314
 ### 1.1 Стек
 
 | Слой | Технология |
-|---|---|
+|---|---|---|
 | Язык | Kotlin 100% (Java 0 строк) |
 | SDK | `minSdk=28` (Android 9), `compileSdk=35`, `targetSdk=35` |
-| Сборка | Gradle 8.x + Kotlin DSL + Version Catalog (`gradle/libs.versions.toml`) |
+| Сборка | Gradle 8.9 + Kotlin 2.1.0 + AGP 8.7.3 + Version Catalog (`gradle/libs.versions.toml`) |
 | UI | Android Views (XML), кастомные Canvas View, НЕ Jetpack Compose |
 | БД | Room (KSP), 3 сущности: `PresetEntity`, `DeviceBindingEntity`, `SeenDeviceEntity` |
 | DI | Нет фреймворка (ручной singleton через `companion object`) |
 | Архитектура | ViewModel + StateFlow, god-классы в Activity |
 | Линтер | Detekt, baseline в `app/detekt-baseline.xml` (~400 suppressed) |
-| Покрытие | Kover (line ~4%, метод ~10%), 160 unit-тестов, 7 instrumented |
+| Покрытие | Kover (line ~4%, метод ~10%), 184 unit-теста, 7 instrumented |
 | CI/CD | GitHub Actions (7 jobs), Gradle cache (read-only на PR) |
-| Документация | Dokka (HTML), KDoc ~76 комментариев |
+| Документация | Dokka (HTML), KDoc |
+| **Новое:** Измерение АЧХ | 14 типов сигналов, Welch FFT, EqFitter |
+| **Новое:** Измерение АЧХ | 14 типов сигналов, Welch FFT, EqFitter |
 
 ### 1.2 Структура директорий
 
 ```
 app/src/main/java/com/bearinmind/equalizer314/
-├── MainActivity.kt          # God-класс (~3760 LOC) — EQ, MBC, лимитер, реверб, навигация, импорт
-├── MbcActivity.kt           # (~1820 LOC) — мультибенд компрессор
+├── MainActivity.kt          # God-класс (~2824 LOC) — EQ, MBC, лимитер, реверб, навигация, импорт
+├── MbcActivity.kt           # (~1850 LOC) — мультибенд компрессор
 ├── LimiterActivity.kt       # (~1100 LOC) — лимитер + waveform
+├── MeasurementActivity.kt   # (~400 LOC) — измерение АЧХ [NEW]
+├── MeasurementSelectActivity.kt  # Выбор типа сигнала для замера
 ├── TargetCurveActivity.kt   # AutoEQ — загрузка target кривых
 ├── AutoEqActivity.kt        # AutoEQ — импорт Squiglink/Wavelet/APO
-├── ... (ещё ~15 Activity)
+├── ... (ещё 11 Activity)
 │
-├── audio/                   # Аудиообработка (18 файлов)
-│   ├── EqService.kt         # Foreground service (~1070 LOC) — ядро
+├── audio/                   # Аудиообработка (20 файлов)
+│   ├── EqService.kt         # Foreground service (~1088 LOC) — ядро
 │   ├── DynamicsProcessingManager.kt  # DSP pipeline + Android API
 │   ├── VisualizerHelper.kt  # FFT-спектр анализатор
 │   ├── ChannelMath.kt       # L/R канальная математика
@@ -57,7 +62,9 @@ app/src/main/java/com/bearinmind/equalizer314/
 │   ├── AudioPolicyDumpParser.kt  # Парсинг dumpsys audio policy
 │   ├── SimpleFFT.kt  # Быстрая FFT (упрощённая)
 │   ├── SpectrumAnalyzerRenderer.kt  # Отрисовка спектра
-│   └── WaveformFftProcessor.kt  # Waveform + FFT процессор
+│   ├── WaveformFftProcessor.kt  # Waveform + FFT процессор
+│   ├── TestSignalGenerator.kt  # Генератор тестовых сигналов [NEW]
+│   └── FreqMeasurementEngine.kt  # Движок измерения АЧХ [NEW]
 │
 ├── dsp/                     # Цифровая обработка сигналов (6 файлов)
 │   ├── ParametricEqualizer.kt  # Параметрический эквалайзер (127 полос)
@@ -74,8 +81,8 @@ app/src/main/java/com/bearinmind/equalizer314/
 │   ├── PresetManager.kt    # CRUD пресетов
 │   └── UndoRedoManager.kt  # Undo/Redo для EQ
 │
-├── ui/                      # UI-компоненты (25 файлов)
-│   ├── EqGraphView.kt      # Кастомный View (~1710 LOC) — основная EQ кривая
+├── ui/                      # UI-компоненты (30 файлов)
+│   ├── EqGraphView.kt      # Кастомный View (~697 LOC) — основная EQ кривая
 │   ├── ReverbVisualizerView.kt  # (~1414 LOC) — визуализатор реверберации
 │   ├── FilterRole.kt       # Enum + 5 filter-type функций
 │   ├── UIExtensions.kt     # hzToSlider, sliderToHz, formatHzValue, blendColor
@@ -99,7 +106,9 @@ app/src/main/java/com/bearinmind/equalizer314/
 │   ├── DiffusionDensityColumnsView.kt  # Колонки Diffusion/Density
 │   ├── LimiterWaveformView.kt  # Waveform лимитера
 │   ├── LimiterMeterView.kt  # Meter лимитера
-│   └── LimiterCeilingView.kt  # Визуализация Ceiling лимитера
+│   ├── LimiterCeilingView.kt  # Визуализация Ceiling лимитера
+│   ├── MeasurementResultGraphView.kt  # График результата замера АЧХ [NEW]
+│   └── ... (ещё 4 файла)
 │
 ├── data/                    # Слой данных (10 файлов)
 │   ├── EqDatabase.kt       # Room БД (v1)
@@ -120,6 +129,19 @@ app/src/main/java/com/bearinmind/equalizer314/
 │   ├── ApoConverter.kt     # EqualizerAPO конвертер
 │   ├── AutoEqModels.kt     # Data-классы AutoEQ
 │   └── AutoEqDatabase.kt   # Room БД для AutoEQ
+│
+├── measurement/             # Измерение АЧХ (4 файла) [NEW]
+│   ├── FrequencyMeasurement.kt  # Core-алгоритм измерения
+│   ├── TestSignalType.kt    # Enum 14 типов сигналов
+│   ├── MeasurementResult.kt # Data class результата
+│   └── WelchPeriodogram.kt # Welch averaged periodogram
+│
+├── controller/              # Контроллеры (5 файлов) [NEW]
+│   ├── MainActivityContract.kt  # Контракт Activity
+│   ├── GraphicController.kt  # Graphic EQ контроллер
+│   ├── ParametricController.kt  # Parametric EQ контроллер
+│   ├── SimpleEqUiController.kt  # Simple EQ контроллер
+│   └── TableEqUiController.kt  # Table EQ контроллер
 │
 └── ... (остальные файлы в корне: EqualizerApp.kt, BackupManager.kt, EqUiMode.kt)
 ```
@@ -333,10 +355,10 @@ git log --oneline upstream/main --not main  # неприменённые upstrea
 ### 🟡 Medium приоритет
 
 | # | Задача | Файлы | Почему |
-|---|---|---|---|
+|---|---|---|---|---|
 | M1 | **EqService lifecycle тест** | `audio/EqService.kt`, `app/src/test/...` | Foreground service — критический компонент без тестовой инфраструктуры |
-| M2 | **MainActivity декомпозиция, Фаза 2** (BroadcastReceiver extraction) | `MainActivity.kt` (3762 LOC) | Бог-класс тормозит разработку |
-| M3 | **EqGraphView декомпозиция** | `ui/EqGraphView.kt` (1700 LOC) | Сложный кастомный View с бизнес-логикой |
+| M2 | **MainActivity декомпозиция, Фаза 2** (BroadcastReceiver extraction) | `MainActivity.kt` (2824 LOC) | Бог-класс тормозит разработку |
+| M3 | **EqGraphView декомпозиция** | `ui/EqGraphView.kt` (697 LOC) | Сложный кастомный View с бизнес-логикой |
 | M4 | **Room миграция v1→v2** (отказ от `fallbackToDestructiveMigration`) | `data/EqDatabase.kt`, `app/schemas/` | Текущая реализация сбрасывает БД при изменении схемы |
 | M5 | **Dependabot** (`.github/dependabot.yml`) | `.github/dependabot.yml` | Автоматические обновления через `libs.versions.toml` |
 
@@ -347,8 +369,9 @@ git log --oneline upstream/main --not main  # неприменённые upstrea
 | L1 | **OverridePendingTransition deprecation** | 15 файлов (~30 вхождений) | Deprecated в API 35 |
 | L2 | **scaledDensity deprecation** | `MainActivity.kt`, `PresetCurveView.kt`, `SimpleEqController.kt` | Deprecated в API 35 |
 | L3 | **Kover coverage improvement** | все тестовые файлы | Текущее покрытие ~4% |
-| L4 | **Fastlane + русская локализация** | `fastlane/` | Только en-US |
+| L4 | **Fastlane + русская локализация** ✅ Уже сделано | `app/src/main/res/values-ru/`, `fastlane/` | Полная русская локализация (460+ строк) |
 | L5 | **CI badge в README** ✅ Уже сделано | `README.md` | Визуальный статус |
+| L6 | **Measurement unit-тесты** | `app/src/test/...` | Новый модуль измерения АЧХ без тестов |
 
 ### ❌ Не планируется
 
@@ -403,17 +426,17 @@ git log --oneline upstream/main --not main  # неприменённые upstrea
 ### 5.4 Ключевые метрики для принятия решений
 
 ```yaml
-prod_loc: 33032
-test_loc: 1745
+prod_loc: 35354
+test_loc: 2465
 android_test_loc: 78
-unit_tests: 160
+unit_tests: 184
 instrumented_tests: 7
 detekt_suppressed: ~400
 kover_line_coverage: ~4%
 largest_files:
-  - MainActivity.kt: 3762 LOC
-  - MbcActivity.kt: 1822 LOC
-  - EqGraphView.kt: 1700 LOC
+  - MainActivity.kt: 2824 LOC
+  - MbcActivity.kt: 1850 LOC
+  - EqGraphView.kt: 697 LOC
   - ReverbVisualizerView.kt: 1414 LOC
-  - EqService.kt: 1070 LOC
+  - EqService.kt: 1088 LOC
 ```

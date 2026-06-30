@@ -21,8 +21,9 @@
 
 - **Android Studio** Hedgehog (2023.1.1) или новее
 - **JDK 17** (Temurin/OpenJDK 17)
-- **Gradle** — используется Gradle Wrapper (версия определяется `gradle-wrapper.properties`)
-- **Android SDK** — API 35 (compileSdk), API 28 (minSdk)
+- **Gradle 8.9** — используется Gradle Wrapper (`./gradlew`)
+- **Kotlin** 2.1.0 + KSP 2.1.0-1.0.29
+- **Android SDK** — API 35 (compileSdk, targetSdk), API 28 (minSdk)
 
 Сборка и тесты запускаются через `./gradlew`, отдельная установка Gradle не требуется.
 
@@ -92,19 +93,19 @@ Android Lint:
 
 ## CI pipeline
 
-GitHub Actions (`ci.yml`) запускается на push в `main` и на PR в `main`. Состоит из 7 джобов:
+GitHub Actions (`ci.yml`) запускается на push в `main`/`develop` и на PR в `main`. Состоит из 7 джобов:
 
 | Джоб | Команда | Артефакт |
 |------|---------|----------|
-| **Lint** | `./gradlew lint` | Lint report |
-| **Detekt** | `./gradlew detekt` | Detekt HTML report |
+| **Lint + Detekt** | `./gradlew lint detekt` | Detekt HTML report |
 | **Unit Tests** | `./gradlew testDebugUnitTest` + kover | Test results, coverage |
 | **Build Debug APK** | `./gradlew assembleDebug` | Debug APK |
-| **Instrumented Tests** | `./gradlew connectedDebugAndroidTest` | Test results |
+| **Instrumented Tests** | `./gradlew connectedDebugAndroidTest` (API 28) | Test results |
+| **Dokka Docs** | `./gradlew :app:dokkaHtml` | HTML documentation |
 | **Dependency Check** | `./gradlew dependencyUpdates` | JSON report |
-| **Build Release APK** | `./gradlew assembleRelease` | Unsigned Release APK |
+| **Build Release APK** | `./gradlew assembleRelease` (unsigned) | Unsigned Release APK |
 
-Все джобы используют **JDK 17**, **Gradle Wrapper** и **Gradle cache** (read-only на PR).
+Все джобы используют **JDK 17** (Temurin), **Gradle Wrapper** и **Gradle cache** (read-only на PR).
 
 ## Лицензия
 

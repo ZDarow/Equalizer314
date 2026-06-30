@@ -13,7 +13,7 @@
   <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/{%22id%22:%22com.bearinmind.equalizer314%22,%22url%22:%22https://github.com/ZDarow/Equalizer314%22,%22author%22:%22ZDarow%22,%22name%22:%22Equalizer314%22}"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/b1c8ac6f2ab08497189721a788a5763e28ff64cd/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="70"></a>
 </p>
 
-**Equalizer314** — system-wide параметрический эквалайзер для Android с открытым исходным кодом. Использует `android.media.audiofx.DynamicsProcessing` (127 полос) и `Visualizer` API для аудио-визуальной обратной связи. Форк [bearinmindcat/Equalizer314](https://github.com/bearinmindcat/Equalizer314) с существенными архитектурными улучшениями.
+**Equalizer314** — system-wide параметрический эквалайзер для Android с открытым исходным кодом. Использует `android.media.audiofx.DynamicsProcessing` (127 полос) и `Visualizer` API для аудио-визуальной обратной связи. Форк [bearinmindcat/Equalizer314](https://github.com/bearinmindcat/Equalizer314) с существенными архитектурными улучшениями. **Полностью переведён на русский язык.**
 
 ## Возможности
 
@@ -23,6 +23,7 @@
 - **Multi-band компрессор** (MBC, 1–6 полос) с soft-knee, GR trace, crossover
 - **Лимитер** с waveform и LUFS-измерениями
 - **Environmental Reverb** — 10 параметров через Android API
+- **Измерение АЧХ** — розовый шум / лог-свип / 14 типов сигналов → Welch periodogram → EqFitter → автоматическое создание пресета
 - **AutoEQ** — импорт Squiglink/Wavelet/APO, подбор фильтров под target-кривую
 - **Привязка пресетов** к устройствам (Bluetooth MAC) и приложениям (audio session)
 - **Undo/Redo** для всех режимов EQ
@@ -30,6 +31,7 @@
 - **Импорт/экспорт APO**, конвертация Wavelet/Poweramp EQ
 - **Backup/restore** — полный экспорт/импорт всех настроек
 - **Foreground service** — постоянная обработка после перезагрузки
+- **Русский интерфейс** — полная локализация (460+ строк)
 
 ## Скриншоты
 
@@ -56,24 +58,75 @@ cd Equalizer314
 ./gradlew assembleDebug
 ```
 
-**Требования:** JDK 17, Android SDK 35 (compileSdk), SDK 28 (minSdk).
+**Требования:** JDK 17 (Temurin), Android SDK 35 (compileSdk), minSdk 28.
+
+APK подписывается debug-ключом. Для release-сборки настройте подпись в `app/build.gradle.kts`.
 
 ## Архитектура
 
 | Компонент | Технология |
 |---|---|
-| Язык | 100% Kotlin |
+| Язык | 100% Kotlin (107 файлов, ~35 350 LOC) |
 | UI | Android Views + кастомные Canvas View (`EqGraphView`, `ReverbVisualizerView`) |
 | Аудиоядро | `DynamicsProcessing` + `EnvironmentalReverb` (API 28+) |
 | Состояние | `EqViewModel` (StateFlow) + `EqStateManager` |
-| Хранилище | Room (KSP) — SharedPreferences мигрированы |
-| Сборка | Gradle 8.x + Kotlin DSL + Version Catalog |
+| Хранилище | Room (KSP) + SharedPreferences |
+| Сборка | Gradle 8.9 + Kotlin 2.1.0 + AGP 8.7.3 |
 | DI | Ручной (singleton через companion object) |
-| Стат. анализ | Detekt + baseline |
-| Покрытие | Kover (~4% line, 160 unit-тестов) |
+| Стат. анализ | Detekt + baseline (~400 suppressed) |
+| Покрытие | Kover (~4% line, 184 unit-тестов, 7 instrumented) |
 | CI/CD | GitHub Actions (7 jobs) |
+| Документация | Dokka (HTML), KDoc |
+| **Новое:** Измерение АЧХ | 14 типов сигналов, Welch FFT, EqFitter |
 
-Подробнее см. [CHANGELOG.md](CHANGELOG.md) и [AGENTS.md](AGENTS.md).
+### Структура проекта
+
+```
+app/src/main/java/com/bearinmind/equalizer314/
+├── MainActivity.kt           # God-класс (2824 LOC)
+├── MbcActivity.kt            # Мультибенд компрессор (1850 LOC)
+├── LimiterActivity.kt        # Лимитер + waveform
+├── MeasurementActivity.kt    # Измерение АЧХ (новая!)
+├── TargetCurveActivity.kt    # AutoEQ — target кривые
+├── AutoEqActivity.kt         # AutoEQ — импорт
+├── ... (ещё 12 Activity)
+│
+├── audio/                    # Аудиообработка (20 файлов)
+├── dsp/                      # ЦОС (6 файлов)
+├── state/                    # Состояние (5 файлов)
+├── ui/                       # UI-компоненты (30 файлов)
+├── data/                     # Слой данных (10 файлов)
+├── autoeq/                   # AutoEQ импорт (6 файлов)
+├── measurement/              # Измерение АЧХ (4 файла) [NEW]
+├── controller/               # Контроллеры (5 файлов)
+└── корневые файлы            # EqualizerApp, BackupManager и др.
+```
+
+Подробнее см. [CHANGELOG.md](CHANGELOG.md), [AGENTS.md](AGENTS.md) и [ARCHITECTURE_AUDIT.md](ARCHITECTURE_AUDIT.md).
+
+## Измерение АЧХ (функция замера)
+
+Приложение умеет измерять АЧХ наушников/колонок и автоматически создавать корректирующий EQ-пресет.
+
+**Доступные типы тестовых сигналов (14):**
+
+| Тип | Характеристика |
+|-----|---------------|
+| Розовый шум (Kellet) | 1/f, 7-каскадный IIR |
+| Розовый шум (FFT) | Спектральное формирование через БПФ |
+| Белый шум | Равномерный спектр |
+| Коричневый шум | 1/f², глубокий бас |
+| Синий шум | +3 dB/окт, ВЧ акцент |
+| Фиолетовый шум | +6 dB/окт, свистящий |
+| Серый шум | Психоакустически плоский |
+| Лог. свип | 20 Гц – 20 кГц, экспоненциальный |
+| Линейный свип | 20 Гц – 20 кГц, линейный |
+| Ступенчатый тон | 12 дискретных частот |
+| Multi-tone | 8 синусов одновременно |
+| MLS | Maximum Length Sequence |
+| Импульс (Dirac) | Единичный отсчёт для IR |
+
+**Алгоритм:** Pink Noise / test signal → AudioRecord → Welch's averaged periodogram (Hann window, 50% overlap, FFT 8192) → 1/3-octave smoothing → EqFitter.computeCorrection() → сохранение пресета.
 
 ## Известные проблемы
 
@@ -83,6 +136,8 @@ cd Equalizer314
 - **Hidden API (EnvironmentalReverb)**: для расширенных функций реверберации используется рефлексия — может не работать на Android 14+.
 - **Spotify/Chrome**: приложения, блокирующие внутренний захват аудио, не обрабатываются (аналогично Wavelet).
 - **PlaybackListenerService**: для определения сессий приложений, не транслирующих broadcast-интенты, требуется ручное разрешение `NotificationListenerService`.
+- **Измерение АЧХ**: точность ограничена встроенным микрофоном телефона (нет калибровки), рекомендуется использовать в тихом помещении.
+- **Измерение АЧХ (график)**: график результата рисуется на Canvas без интерактивного масштабирования — только статический предпросмотр.
 
 ## Лицензия
 

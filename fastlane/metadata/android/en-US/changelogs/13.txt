@@ -1,0 +1,3 @@
+- Frequency Response Measurement: 14 test signal types (pink/white/brown/blue/purple/grey noise, log/linear sweep, stepped tone, multi-tone, MLS, Dirac impulse), Welch periodogram FFT analysis, automatic EQ preset generation.
+- Russian interface: full translation of all strings (460+ lines).
+- Bugfix: Graphic/Table EQ controllers now rebuild correctly after loading a preset from the picker.

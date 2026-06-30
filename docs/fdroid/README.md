@@ -14,7 +14,7 @@
 
 - **Upstream MR:** https://gitlab.com/fdroid/fdroiddata/-/merge_requests/36655 (от bearinmindcat)
 - **Форк — требуется новый MR** с ключом ZDarow
-- **Версия:** 0.1.0-alpha-2 (`versionCode 100`)
+- **Версия:** 0.1.0-alpha-2 (`versionCode 100`) — измерение АЧХ, русская локализация, 184 теста
 - **Подпись:** ключи форка (см. `com.bearinmind.equalizer314.yml`)
 
 ## Историческое состояние (upstream)

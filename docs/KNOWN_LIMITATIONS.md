@@ -40,7 +40,15 @@
 
 **Workaround:** Switch to system-wide mode in Settings → Audio Routing. For Spotify specifically, a ReVanced patch removing the screen capture restriction may help.
 
-## 6. PlaybackListenerService — NotificationListenerService requirement
+## 6. Measurement accuracy (built-in microphone)
+
+**Issue:** Frequency response measurement uses the phone's built-in microphone, which has no calibrated frequency response. The measured curve includes the microphone's own coloration.
+
+**Impact:** The auto-generated EQ preset may over- or under-correct at certain frequencies. Measurements should be used as a rough guide, not as a precision calibration tool.
+
+**Recommended for best results:** Use an external calibrated measurement microphone (e.g., miniDSP UMIK-1) via USB audio adapter. The app processes raw PCM from `AudioRecord` — any USB microphone that Android recognizes will work.
+
+## 7. PlaybackListenerService — NotificationListenerService requirement
 
 **Issue:** Session detection for non-broadcasting apps requires `NotificationListenerService` permission (manually granted by the user in system settings).
 

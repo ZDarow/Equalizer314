@@ -1,11 +1,35 @@
-To start off there is really no "free" and/or "open source" alternative to Wavelet and Poweramp EQ that pairs the full DynamicsProcessing API with real audio-visual feedback, and I felt like after using both of those apps among other various EQ apps that there were huge shortcomings in terms of the features & accessibilities they offered. When I started developing this app I wanted to have both a powerful parametric eq function with minimal permissions; this is why I choose to use both the DynamicsProcessing & Visualizer APIs as the framework for this app as you only need minimal permissions for both of them to work in tandem. There are shortcomings from both these APIs, but I'll discuss more of that later.
+Equalizer314 is a system-wide parametric equalizer for Android with full DynamicsProcessing API support (127 bands), multiband compression, limiting, reverb, and real-time audio-visual feedback via the Visualizer API.
 
-This app is built off of DynamicsProcessing API; this is the same API that Poweramp EQ & Wavelet both use but I felt in some aspects they weren't really being able really squeeze out the max potential that this API can offer.
+Unlike other EQ apps, Equalizer314 provides a complete audio-visual feedback loop — see exactly what each band, compressor, and limiter does in real time. All features are free and unlocked; nothing is premium-locked.
 
-As someone who comes from the audio production & IEM world I have a lot of experience understanding what both sides of those worlds want and wanted to be able to take advantage of both to create something that met my creative endeavors.
+✨ WHAT'S NEW
+- Frequency Response Measurement: measure your headphones/speakers using 14 test signal types (pink noise, white noise, log sweep, MLS, Dirac impulse, and more). The Welch periodogram analyzes the captured signal and automatically creates a correction EQ preset.
+- Russian localization: the entire interface is now available in Russian (460+ translated strings).
 
-Using the Visualizer API I wanted to give users a way they can reliably cross reference visual data with audio data; this is both useful for the main EQ portion as you can visually reference audio changes you make, but this comes more into play with the Limiting & Multiband Compression sides of the app. While these features are for use in the DynamicsProcessing API; and many apps like Poweramp EQ & Wavelet (who premium locks these features); they just add knobs/sliders in and expect the user to understand exactly how these features work and without real audio-visual feedback, users aren't really able to take advantage of these features in their full potential. This is the reason why many DAWs and VST Plugins use audio-visual feedback with these functions specifically.
+🎛️ FEATURES
+- 4 EQ modes: Parametric, Graphic (31 bands), Table, Simple (7 bands)
+- 127-band DSP via DynamicsProcessing API
+- Independent Left/Right channel EQ (Channel Side EQ)
+- Multiband compressor (MBC, 1-6 bands) with soft-knee, GR trace, Linkwitz-Riley crossover
+- Limiter with waveform visualization and LUFS metering
+- Environmental Reverb (10 parameters)
+- AutoEQ import: Squiglink, Wavelet, EqualizerAPO formats
+- Preset binding to Bluetooth devices and apps
+- Undo/Redo for all EQ modes
+- FFT spectrum analyzer with multiple display modes
+- APO import/export, Wavelet/Poweramp EQ conversion
+- Full backup & restore (single .json file)
+- Foreground service with boot persistence
+- Quick Settings tile
+- Light & Dark theme
+- Detect and auto-apply presets per output device
 
-Using Visualizer API with these DynamicsProcessing features; you're really able to get an intimate audio-visual feedback loop that gives you complete control over your audio framework.
+🔒 PRIVACY
+- No internet access (INTERNET permission is NOT declared)
+- No analytics, no ads, no trackers, no accounts
+- Only on-device processing
+- Open source under GPL-3.0
 
-This app is free and open source software (FOSS) licensed under the GPL-3.0 License.
+This app is built off of DynamicsProcessing API; this is the same API that Poweramp EQ & Wavelet both use. Using the Visualizer API in tandem gives you an intimate audio-visual feedback loop that puts you in complete control of your audio.
+
+Equalizer314 is free and open source software (FOSS) licensed under the GPL-3.0 License.
