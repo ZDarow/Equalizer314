@@ -319,6 +319,45 @@
       },
       "problemMatcher": []
     },
+    {
+      "label": "Android: Scrcpy (зеркало экрана)",
+      "detail": "Запустить scrcpy — зеркалирование экрана устройства в отдельное окно.",
+      "type": "shell",
+      "command": "scrcpy --window-title 'Equalizer314' --max-size 1024",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Scrcpy (без звука, без управления)",
+      "detail": "Только просмотр экрана без перехвата мыши/клавиатуры и без звука.",
+      "type": "shell",
+      "command": "scrcpy --no-control --no-audio --window-title 'Equalizer314 (read-only)' --max-size 1024",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Scrcpy (высокое качество, 60fps)",
+      "detail": "Зеркало с максимальным битрейтом и частотой кадров.",
+      "type": "shell",
+      "command": "scrcpy --bit-rate 20M --max-fps 60 --window-title 'Equalizer314 (60fps)'",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "android"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
     // ======================================================
     // СБОРКА
     // ======================================================

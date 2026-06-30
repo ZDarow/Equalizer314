@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="?attr/colorSurface"
+    android:fitsSystemWindows="true">
+
+    <!-- Top bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <ImageButton
+            android:id="@+id/measurementBackButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_arrow_back"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/action_back"
+            app:tint="?attr/colorOnSurface" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/measurement_title"
+            android:textAppearance="@style/TextAppearance.AppCompat.Title"
+            android:textColor="?attr/colorOnSurface"
+            android:layout_marginStart="8dp" />
+
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Инструкция -->
+            <TextView
+                android:id="@+id/measurementInstructions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/measurement_instructions"
+                android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+                android:textColor="?attr/colorOnSurface"
+                android:lineSpacingExtra="4dp"
+                android:paddingBottom="12dp" />
+
+            <!-- Выбор типа сигнала -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/measurement_signal_type_label"
+                android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
+                android:textColor="?attr/colorOnSurface"
+                android:paddingBottom="4dp" />
+
+            <Spinner
+                android:id="@+id/signalTypeSpinner"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="?attr/colorSurfaceVariant"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:layout_marginBottom="16dp"
+                android:popupBackground="?attr/colorSurface"
+                android:dropDownVerticalOffset="4dp" />
+
+            <!-- График АЧХ (референсная кривая) -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/measurement_ref_curve"
+                android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
+                android:textColor="?attr/colorOnSurface"
+                android:paddingBottom="4dp" />
+
+            <View
+                android:id="@+id/refCurveContainer"
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                android:background="?attr/colorSurfaceVariant"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Статус / прогресс -->
+            <LinearLayout
+                android:id="@+id/statusSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <ProgressBar
+                    android:id="@+id/measurementProgress"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/measurementStatusText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="@style/TextAppearance.AppCompat.Body2"
+                    android:textColor="?attr/colorOnSurface"
+                    android:gravity="center" />
+
+            </LinearLayout>
+
+            <!-- График результата (измеренная АЧХ + коррекция) -->
+            <TextView
+                android:id="@+id/resultLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/measurement_result_curve"
+                android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
+                android:textColor="?attr/colorOnSurface"
+                android:paddingBottom="4dp"
+                android:visibility="gone" />
+
+            <View
+                android:id="@+id/resultCurveContainer"
+                android:layout_width="match_parent"
+                android:layout_height="160dp"
+                android:background="?attr/colorSurfaceVariant"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone" />
+
+            <!-- Информация о результате -->
+            <TextView
+                android:id="@+id/resultInfo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="@style/TextAppearance.AppCompat.Body2"
+                android:textColor="?attr/colorOnSurface"
+                android:visibility="gone"
+                android:paddingBottom="16dp" />
+
+            <!-- Кнопка сохранения -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/savePresetButton"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="@string/measurement_save_preset"
+                android:visibility="gone"
+                android:layout_marginBottom="8dp" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+    <!-- Нижняя панель с кнопкой старта -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="16dp"
+        android:background="?attr/colorSurface">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/startMeasurementButton"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="@string/measurement_start"
+            app:icon="@drawable/ic_play"
+            app:iconGravity="textStart" />
+
+    </LinearLayout>
+
+</LinearLayout>

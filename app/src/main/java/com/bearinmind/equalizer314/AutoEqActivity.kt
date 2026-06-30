@@ -241,7 +241,7 @@ class AutoEqActivity : AppCompatActivity() {
             setPadding((24 * density).toInt(), (20 * density).toInt(), (24 * density).toInt(), (16 * density).toInt())
         }
         val title = android.widget.TextView(this).apply {
-            text = "Save Custom Preset"
+            text = getString(R.string.dialog_save_custom_preset)
             setTextColor(0xFFE2E2E2.toInt())
             textSize = 20f
             setPadding(0, 0, 0, (12 * density).toInt())

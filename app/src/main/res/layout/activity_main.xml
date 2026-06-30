@@ -72,7 +72,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginStart="4dp"
-                            android:text="Graphic"
+                            android:text="@string/eq_mode_graphic"
                             android:textSize="12sp"
                             android:minHeight="0dp"
                             android:insetTop="0dp"
@@ -210,7 +210,7 @@
                             android:minWidth="0dp"
                             android:minHeight="0dp"
                             android:padding="0dp"
-                            android:text="ON"
+                            android:text="@string/toggle_on"
                             android:textSize="9sp"
                             android:textAllCaps="true"
                             android:visibility="gone"
@@ -218,7 +218,7 @@
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
                             app:strokeColor="?attr/colorOutline"
                             app:strokeWidth="1dp"
-                            android:contentDescription="Toggle band point visibility" />
+                            android:contentDescription="@string/cd_toggle_band_point_visibility" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/bandFillToggle"
@@ -239,7 +239,7 @@
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
                             app:strokeColor="?attr/colorOutline"
                             app:strokeWidth="1dp"
-                            android:contentDescription="Toggle per-band curves" />
+                            android:contentDescription="@string/cd_toggle_per_band_curves" />
 
 <com.google.android.material.button.MaterialButton
                             android:id="@+id/savePresetButton"
@@ -295,7 +295,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="top|start"
-                            android:text="L"
+                            android:text="@string/channel_l"
                             android:textSize="6sp"
                             android:textStyle="bold"
                             android:textColor="?attr/colorOnSurface"
@@ -474,14 +474,14 @@
                             android:minWidth="0dp"
                             android:minHeight="0dp"
                             android:padding="0dp"
-                            android:text="OFF"
+                            android:text="@string/toggle_off"
                             android:textSize="9sp"
                             android:textAllCaps="true"
                             app:iconPadding="0dp"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.ResetButton"
                             app:strokeColor="?attr/colorOutline"
                             app:strokeWidth="1dp"
-                            android:contentDescription="Toggle EQ on or off" />
+                            android:contentDescription="@string/cd_toggle_eq_on_off" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/visualizerToggle"
@@ -1201,6 +1201,51 @@ android:text="@string/title_channel_side_options"
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- Frequency Response Measurement — play test signal, record
+                     with microphone, auto-generate EQ correction preset. -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/freqMeasurementCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/measurement_title"
+                                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                                android:textColor="?attr/colorOnSurface" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/measurement_card_desc"
+                                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                                android:textColor="?attr/colorOnSurfaceVariant"
+                                android:paddingTop="4dp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
                 <!-- Backup & Restore — export/import all settings, presets,
                      and bindings so they survive a reinstall / source switch. -->
                 <com.google.android.material.card.MaterialCardView
@@ -1319,14 +1364,14 @@ android:text="@string/title_channel_side_options"
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Gain Reduction"
+                                android:text="@string/title_gain_reduction"
                                 android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                                 android:textColor="?attr/colorOnSurface" />
 
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Automatically reduces gain to prevent clipping"
+                                android:text="@string/settings_auto_gain_desc"
                                 android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                                 android:textColor="?attr/colorOnSurfaceVariant"
                                 android:paddingTop="4dp" />

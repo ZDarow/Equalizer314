@@ -142,7 +142,7 @@ class TargetCurveActivity : AppCompatActivity() {
                 )
             )
         } else {
-            measurementStatus.text = "No measurement selected"
+            measurementStatus.text = getString(R.string.status_no_measurement)
             measurementStatus.setTextColor(0xFF888888.toInt())
         }
     }
@@ -158,7 +158,7 @@ class TargetCurveActivity : AppCompatActivity() {
                 )
             )
         } else {
-            targetSelectStatus.text = "No target selected"
+            targetSelectStatus.text = getString(R.string.status_no_target)
             targetSelectStatus.setTextColor(0xFF888888.toInt())
         }
     }
@@ -274,14 +274,14 @@ class TargetCurveActivity : AppCompatActivity() {
                 resultGraphContainer.addView(resultEqView)
 
                 dotHandler.removeCallbacks(dotRunnable)
-                computeButton.text = "Generate EQ"
+                computeButton.text = getString(R.string.autoeq_generate_eq)
                 computeButton.isEnabled = true
                 setResult(Activity.RESULT_OK)
             }
             } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                 runOnUiThread {
                     dotHandler.removeCallbacks(dotRunnable)
-                    computeButton.text = "Generate EQ"
+                    computeButton.text = getString(R.string.autoeq_generate_eq)
                     computeButton.isEnabled = true
                     android.widget.Toast.makeText(this, getString(R.string.msg_eq_generation_failed) + e.message, android.widget.Toast.LENGTH_LONG).show()
                 }

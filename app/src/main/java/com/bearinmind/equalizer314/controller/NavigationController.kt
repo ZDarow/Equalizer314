@@ -189,6 +189,16 @@ class NavigationController(
             )
         }
 
+        // Frequency Response Measurement
+        findViewById<View>(R.id.freqMeasurementCard).setOnClickListener {
+            context.startActivity(
+                Intent(context, com.bearinmind.equalizer314.measurement.MeasurementActivity::class.java)
+            )
+            (context as? android.app.Activity)?.overridePendingTransition(
+                R.anim.fade_in, R.anim.fade_out
+            )
+        }
+
         // Experimental
         val experimentalLockButton = findViewById<ImageButton>(R.id.experimentalLockButton)
         val experimentalCard = findViewById<View>(R.id.experimentalCard)

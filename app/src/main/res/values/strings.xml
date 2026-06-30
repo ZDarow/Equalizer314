@@ -295,4 +295,81 @@
 
     <!-- Error messages -->
     <string name="msg_err_parse_eq">Couldn\'t parse the generated EQ</string>
+
+    <!-- Frequency Response Measurement -->
+    <string name="measurement_title">Frequency Response Measurement</string>
+    <string name="measurement_instructions">This will play a test signal through your speaker/headphones and record it through the microphone to measure the frequency response.\n\nBased on the measurement, an EQ correction curve will be calculated and saved as a custom preset.\n\nMake sure:\n• You are in a quiet environment\n• Your headphones/speakers are connected\n• Volume is set to a comfortable level</string>
+    <string name="measurement_start">Start Measurement</string>
+    <string name="measurement_retry">Retry Measurement</string>
+    <string name="measurement_no_record_permission">Microphone permission is required to measure frequency response</string>
+    <string name="measurement_permission_rationale">This app needs microphone access to record the test signal and measure the acoustic frequency response of your headphones or speakers</string>
+    <string name="measurement_in_progress">A measurement is already in progress</string>
+    <string name="measurement_preparing">Preparing test signal…</string>
+    <string name="measurement_playing">Playing test signal and recording…</string>
+    <string name="measurement_processing">Processing frequency response…</string>
+    <string name="measurement_calculating_eq">Calculating EQ correction…</string>
+    <string name="measurement_done">Measurement complete!</string>
+    <string name="measurement_error">Measurement failed</string>
+    <string name="measurement_ref_curve">Reference Target Curve</string>
+    <string name="measurement_result_curve">Measurement Result</string>
+    <string name="measurement_result_info">Filters: %1$d | Total correction: %2$s dB | Samples: %3$d</string>
+    <string name="measurement_save_preset">Save as Preset</string>
+    <string name="measurement_preset_name_hint">Preset name</string>
+    <string name="measurement_saved">Preset \"%1$s\" saved</string>
+    <string name="measurement_card_desc">Measure frequency response with microphone and auto-generate EQ correction</string>
+    <string name="measurement_signal_type_label">Test signal type:</string>
+
+    <!-- Hardcoded strings from layouts (new keys) -->
+    <string name="title_gain_reduction">Gain Reduction</string>
+    <string name="cd_toggle_band_point_visibility">Toggle band point visibility</string>
+    <string name="cd_toggle_per_band_curves">Toggle per-band curves</string>
+    <string name="cd_toggle_eq_on_off">Toggle EQ on or off</string>
+    <string name="settings_session_detection">Session detection</string>
+    <string name="settings_session_detection_desc">Lists every app currently playing audio</string>
+    <string name="settings_device_auto_switch">Device auto-switch</string>
+    <string name="settings_device_auto_switch_desc">Uses selected preset for current output</string>
+    <string name="settings_skip_system_sounds">Skip system sounds</string>
+    <string name="settings_skip_system_sounds_desc">Turns processing off for system sounds</string>
+    <string name="value_na">N/A</string>
+    <string name="title_presets_conversions">Presets &amp; Conversions</string>
+    <string name="label_routing_mode">Routing mode</string>
+    <string name="routing_system_wide">System-wide</string>
+    <string name="routing_session_based">Session-based</string>
+    <string name="label_now_playing">Now playing</string>
+    <string name="status_no_sessions">No sessions detected</string>
+    <string name="label_apps">Apps</string>
+    <string name="filter_filtered">Filtered</string>
+    <string name="filter_show_all">Show All</string>
+    <string name="status_loading_apps">Loading apps…</string>
+    <string name="cd_app_icon">App icon</string>
+    <string name="cd_remove_device">Remove device</string>
+    <string name="cd_toggle_visibility">Toggle visibility</string>
+    <string name="cd_pipeline_info">Pipeline info</string>
+    <string name="cd_favorite">Favorite</string>
+    <string name="cd_toggle_effect">Toggle effect</string>
+    <string name="status_no_current_device">No current device</string>
+    <string name="label_current_output">Current output</string>
+    <string name="msg_eq_disabled_for">EQ disabled for %1$s</string>
+    <string name="output_disable_eq">Disable EQ</string>
+    <string name="msg_generating_eq">Generating</string>
+    <string name="msg_no_preset_applied">No preset applied yet</string>
+    <string name="msg_could_not_load_active_preset">Couldn\'t load the active preset</string>
+    <string name="msg_saved_to_presets">Saved \"%1$s\" to your presets</string>
+    <string name="msg_by_source">by %1$s</string>
+    <string name="msg_updated_preset">Updated \"%1$s\"</string>
+    <string name="msg_cannot_open_notification_settings">Could not open Notification access settings</string>
+    <string name="msg_dsp_start_failed">Failed to start DynamicsProcessing</string>
+    <string name="msg_backup_saved">Backup saved</string>
+    <string name="msg_backup_failed">Backup failed: %1$s</string>
+    <string name="msg_backup_restored">Backup restored</string>
+    <string name="msg_invalid_backup">Not a valid Equalizer314 backup</string>
+    <string name="msg_restore_failed">Restore failed: %1$s</string>
+    <string name="msg_applied_per_channel_filters">Applied L:%1$d R:%2$d filters</string>
+    <string name="dialog_backup_restore_message">Export or import settings, presets &amp; bindings to/from a .json file. Importing will override all current settings in the app.</string>
+    <string name="msg_no_apps_detected">No apps detected yet.</string>
+    <string name="label_routing_mode_title">Routing mode</string>
+    <string name="settings_session_detection_desc_v2">Lists apps playing audio using dumpsys</string>
+    <string name="cd_toggle_band_fill">Toggle band fill</string>
+    <string name="power_eq_title">Equalizer</string>
+    <string name="settings_visualizer">Visualizer</string>
 </resources>

@@ -1477,6 +1477,9 @@ class MainActivity : AppCompatActivity(), MainActivityContract {
                     eqViewModel.persistLeftRightIfCse()
                     eqViewModel.initBandSlots()
                     bandToggleManager.setupToggles()
+                    // Перестраиваем контроллеры Graphic/Table, если активен этот режим
+                    if (eqViewModel.currentEqUiMode.value == EqUiMode.TABLE) tableController.buildTable()
+                    if (eqViewModel.currentEqUiMode.value == EqUiMode.GRAPHIC) graphicController.buildSliders(graphicController.targetCardHeight)
                     // Apply the loaded preset's preamp. Read it from the raw
                     // preset JSON so the slider reflects what was saved even
                     // if the current in-memory preamp differs.
@@ -1610,7 +1613,7 @@ class MainActivity : AppCompatActivity(), MainActivityContract {
         // Initial state: eye dim (popout closed), points on.
         paintLit(bandPtsBtn, false)
         bandPtsBtn.iconTint = android.content.res.ColorStateList.valueOf(graphBtnLitContent)
-        onOffBtn.text = "ON"
+        onOffBtn.text = getString(R.string.toggle_on)
         paintLit(onOffBtn, true)
         paintLit(fillBtn, false)
 
@@ -1645,7 +1648,7 @@ class MainActivity : AppCompatActivity(), MainActivityContract {
             bandPointsVisible = !bandPointsVisible
             eqGraphView.showBandPoints = bandPointsVisible
             eqGraphView.invalidate()
-            onOffBtn.text = if (bandPointsVisible) "ON" else "OFF"
+            onOffBtn.text = getString(if (bandPointsVisible) R.string.toggle_on else R.string.toggle_off)
             paintLit(onOffBtn, bandPointsVisible)
         }
 
@@ -1891,7 +1894,7 @@ class MainActivity : AppCompatActivity(), MainActivityContract {
             statusText.setTextColor(com.google.android.material.color.MaterialColors.getColor(
                 statusText, com.google.android.material.R.attr.colorPrimary, 0xFFBB86FC.toInt()))
         } else {
-            statusText.text = "Select or import a preset"
+            statusText.text = getString(R.string.status_select_or_import_preset)
             statusText.setTextColor(com.google.android.material.color.MaterialColors.getColor(
                 statusText, com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFF888888.toInt()))
         }
@@ -1906,7 +1909,7 @@ class MainActivity : AppCompatActivity(), MainActivityContract {
             statusText.setTextColor(com.google.android.material.color.MaterialColors.getColor(
                 statusText, com.google.android.material.R.attr.colorPrimary, 0xFFBB86FC.toInt()))
         } else {
-            statusText.text = "Import a measurement and match to a specific target"
+            statusText.text = getString(R.string.status_import_measurement_match_target)
             statusText.setTextColor(com.google.android.material.color.MaterialColors.getColor(
                 statusText, com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFF888888.toInt()))
         }
@@ -2468,11 +2471,11 @@ class MainActivity : AppCompatActivity(), MainActivityContract {
     override fun animatePowerFab(on: Boolean) {
         // Don't duplicate — BottomNavHelper.updatePowerFab handles the full animation
         // Just update the text label
-        powerButton.text = if (on) "ON" else "OFF"
+        powerButton.text = getString(if (on) R.string.toggle_on else R.string.toggle_off)
     }
 
     private fun updatePowerUI() {
-        powerButton.text = if (eqViewModel.isProcessing.value) "ON" else "OFF"
+        powerButton.text = getString(if (eqViewModel.isProcessing.value) R.string.toggle_on else R.string.toggle_off)
     }
 
     override fun updateBottomBarHighlight(isEqPage: Boolean) {
@@ -2510,7 +2513,7 @@ class MainActivity : AppCompatActivity(), MainActivityContract {
     private fun applyEqToggleVisual(enabled: Boolean) {
         if (!::eqPowerToggle.isInitialized) return
         val d = resources.displayMetrics.density
-        eqPowerToggle.text = if (enabled) "ON" else "OFF"
+        eqPowerToggle.text = getString(if (enabled) R.string.toggle_on else R.string.toggle_off)
         if (enabled) {
             eqPowerToggle.setBackgroundColor(graphBtnLitBg)
             eqPowerToggle.strokeColor = android.content.res.ColorStateList.valueOf(graphBtnLitStroke)
@@ -2583,8 +2586,8 @@ class MainActivity : AppCompatActivity(), MainActivityContract {
         paint(rBtn, active == EqStateManager.ActiveChannel.RIGHT)
         badge?.let {
             when (active) {
-                EqStateManager.ActiveChannel.LEFT -> { it.text = "L"; it.visibility = View.VISIBLE }
-                EqStateManager.ActiveChannel.RIGHT -> { it.text = "R"; it.visibility = View.VISIBLE }
+                EqStateManager.ActiveChannel.LEFT -> { it.text = getString(R.string.channel_l); it.visibility = View.VISIBLE }
+                EqStateManager.ActiveChannel.RIGHT -> { it.text = getString(R.string.channel_r); it.visibility = View.VISIBLE }
                 else -> it.visibility = View.GONE
             }
             // Re-measure and re-anchor the badge so a subtle width change

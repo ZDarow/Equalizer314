@@ -87,11 +87,11 @@ class PresetIoController(
             context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use {
                 it.write(json)
             }
-            Toast.makeText(context, "Backup saved", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.msg_backup_saved), Toast.LENGTH_SHORT).show()
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Toast.makeText(
                 context,
-                "Backup failed: ${e.message}",
+                context.getString(R.string.msg_backup_failed, e.message),
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -106,7 +106,7 @@ class PresetIoController(
             val text = context.contentResolver.openInputStream(uri)
                 ?.bufferedReader()?.readText()
             if (text != null && BackupManager.importAll(context, text)) {
-                Toast.makeText(context, "Backup restored", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.msg_backup_restored), Toast.LENGTH_SHORT).show()
                 val light = context.getSharedPreferences("eq_settings", Activity.MODE_PRIVATE)
                     .getBoolean("lightTheme", false)
                 androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
@@ -117,14 +117,14 @@ class PresetIoController(
             } else {
                 Toast.makeText(
                     context,
-                    "Not a valid Equalizer314 backup",
+                    context.getString(R.string.msg_invalid_backup),
                     Toast.LENGTH_SHORT
                 ).show()
             }
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Toast.makeText(
                 context,
-                "Restore failed: ${e.message}",
+                context.getString(R.string.msg_restore_failed, e.message),
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -252,7 +252,7 @@ class PresetIoController(
             )
         }
         val title = TextView(context).apply {
-            text = "Backup & Restore"
+            text = context.getString(R.string.title_backup_restore)
             setTextColor(0xFFE2E2E2.toInt())
             textSize = 20f
             setPadding(0, 0, 0, (8 * density).toInt())
@@ -297,8 +297,8 @@ class PresetIoController(
                 insetTop = 0
                 insetBottom = 0
             }
-        val importBtn = outlinedBtn("Import", 0xFFDDDDDD.toInt())
-        val exportBtn = outlinedBtn("Export", 0xFFDDDDDD.toInt())
+        val importBtn = outlinedBtn(context.getString(R.string.action_import), 0xFFDDDDDD.toInt())
+        val exportBtn = outlinedBtn(context.getString(R.string.action_export), 0xFFDDDDDD.toInt())
         btnRow.addView(importBtn)
         btnRow.addView(exportBtn)
         dialogView.addView(title)

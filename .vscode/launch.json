@@ -8,6 +8,7 @@
   // Расширения: adelphes.android-dev-ext (type: android), vscjava.vscode-gradle, 343max.android-emulator-launcher
   "version": "0.2.0",
   "configurations": [
+  
     // === ANDROID: ЗАПУСК И ОТЛАДКА ===
     {
       "name": "Android: Запуск и отладка",

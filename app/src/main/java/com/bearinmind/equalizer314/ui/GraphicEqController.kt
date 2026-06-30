@@ -84,6 +84,13 @@ class GraphicEqController(
 
     fun updateSliderValues() {
         val eq = state.parametricEq
+        // Если количество полос или слайдеров не совпадает с sortedIndices —
+        // перестраиваем слайдеры, чтобы избежать IndexOutOfBounds и
+        // отображения устаревших значений
+        if (sliderRefs.size != sortedIndices.size || sortedIndices.size > eq.getBandCount()) {
+            buildSliders(targetCardHeight)
+            return
+        }
         isUpdating = true
         for (pos in sliderRefs.indices) {
             val bandIndex = sortedIndices.getOrNull(pos) ?: continue

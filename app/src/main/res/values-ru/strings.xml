@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- App -->
+    <!-- Приложение -->
     <string name="app_name">Equalizer314</string>
 
-    <!-- EQ Mode Selector -->
+    <!-- Выбор режима EQ -->
     <string name="eq_mode_parametric">Параметрический</string>
     <string name="eq_mode_graphic">Графический</string>
     <string name="eq_mode_table">Таблица</string>
     <string name="simple_eq_mode">Простой EQ</string>
 
-    <!-- Param Labels -->
+    <!-- Подписи параметров -->
     <string name="hz_label">Гц</string>
     <string name="db_label">дБ</string>
     <string name="q_label">Q</string>
     <string name="preamp_label">Предусиление (дБ)</string>
     <string name="offset_label">Смещение: %.1f дБ</string>
 
-    <!-- Navigation & Bottom Bar -->
-    <string name="nav_eq">ЭК</string>
+    <!-- Навигация и нижняя панель -->
+    <string name="nav_eq">Эквалайзер</string>
     <string name="nav_multiband_compression">Многополосная компрессия</string>
     <string name="nav_limiter">Лимитер</string>
     <string name="nav_power">Питание</string>
@@ -25,22 +25,22 @@
     <string name="toggle_on">ВКЛ</string>
     <string name="toggle_off">ВЫКЛ</string>
 
-    <!-- Screen Titles -->
+    <!-- Заголовки экранов -->
     <string name="title_settings">Настройки</string>
     <string name="title_autoeq_presets">AutoEQ и пресеты</string>
     <string name="title_generate_custom_eq">Создать пользовательский EQ</string>
     <string name="title_spectrum_control">Управление спектром</string>
     <string name="title_experimental">Экспериментальное</string>
     <string name="title_custom_presets">Пользовательские пресеты</string>
-    <string name="title_channel_side_options">Настройки каналов</string>
+    <string name="title_channel_side_options">Поканальные опции</string>
     <string name="title_convert_to_apo">Конвертировать в APO</string>
     <string name="title_audio_output">Аудиовыход</string>
-    <string name="title_audio_effects_pipeline">Цепочка аудиоэффектов</string>
+    <string name="title_audio_effects_pipeline">Конвейер аудиоэффектов</string>
     <string name="title_environmental_reverb">Окружающая реверберация</string>
     <string name="title_measurement">Измерение</string>
     <string name="title_target">Цель</string>
 
-    <!-- Common Actions -->
+    <!-- Общие действия -->
     <string name="action_back">Назад</string>
     <string name="action_search">Поиск…</string>
     <string name="action_import">Импорт</string>
@@ -48,62 +48,62 @@
     <string name="action_save">Сохранить</string>
     <string name="action_delete">Удалить</string>
     <string name="action_cancel">Отмена</string>
-    <string name="action_ok">OK</string>
+    <string name="action_ok">ОК</string>
     <string name="action_reset">Сбросить</string>
     <string name="action_add">Добавить</string>
     <string name="action_undo">Отменить</string>
-    <string name="action_redo">Повторить</string>
-    <string name="action_edit">Редактировать</string>
+    <string name="action_redo">Вернуть</string>
+    <string name="action_edit">Изменить</string>
     <string name="action_clear">Очистить</string>
 
-    <!-- Content Descriptions -->
+    <!-- Content Descriptions (доступность) -->
     <string name="cd_toggle_band_points">Переключить точки полос</string>
     <string name="cd_save_preset">Сохранить пресет</string>
     <string name="cd_toggle_channel_routing">Переключить маршрутизацию каналов</string>
     <string name="cd_open_settings">Открыть настройки</string>
     <string name="cd_left_channel">Левый канал</string>
     <string name="cd_right_channel">Правый канал</string>
-    <string name="cd_reset_to_defaults">Сбросить к стандартным</string>
+    <string name="cd_reset_to_defaults">Сбросить к значениям по умолчанию</string>
     <string name="cd_undo">Отменить</string>
-    <string name="cd_redo">Повторить</string>
-    <string name="cd_edit">Редактировать</string>
+    <string name="cd_redo">Вернуть</string>
+    <string name="cd_edit">Изменить</string>
     <string name="cd_toggle_visualizer">Переключить визуализатор</string>
-    <string name="cd_frequency_view">Частотный вид</string>
-    <string name="cd_gr_trace_view">Вид GR трейса</string>
+    <string name="cd_frequency_view">Вид частот</string>
+    <string name="cd_gr_trace_view">Вид трека GR</string>
     <string name="cd_expand_reverb_params">Развернуть параметры реверберации</string>
     <string name="cd_drag_handle">Ручка перетаскивания</string>
 
-    <!-- Status & Description Text -->
+    <!-- Тексты состояния и описания -->
     <string name="status_select_or_import_preset">Выберите или импортируйте пресет</string>
     <string name="status_import_measurement_match_target">Импортируйте измерение и сопоставьте с конкретной целью</string>
-    <string name="status_control_fft_settings">Управляйте сглаживанием БПФ и прочими настройками спектра</string>
+    <string name="status_control_fft_settings">Настройка сглаживания БПФ и других параметров спектра</string>
     <string name="status_no_measurement">Измерение не выбрано</string>
     <string name="status_no_target">Цель не выбрана</string>
     <string name="status_no_file">Файл не выбран</string>
     <string name="status_no_active_device">Нет активного устройства</string>
-    <string name="status_no_devices">Устройства не обнаружены. Подключите устройство, чтобы начать привязку.</string>
-    <string name="status_no_custom_presets">Ещё нет сохранённых пресетов.\nНажмите иконку сохранения на экране EQ, чтобы сохранить текущие настройки.</string>
+    <string name="status_no_devices">Устройств пока нет. Подключите устройство, чтобы начать привязку.</string>
+    <string name="status_no_custom_presets">Пользовательские пресеты ещё не сохранены.\nНажмите значок сохранения на экране EQ, чтобы сохранить текущие настройки.</string>
     <string name="status_current_device">Текущее устройство</string>
     <string name="status_devices">Устройства</string>
     <string name="status_clear_autoeq">Очистить AutoEQ</string>
     <string name="status_clear_measurement">Очистить измерение</string>
     <string name="status_clear_target">Очистить цель</string>
 
-    <!-- EQ Filters -->
-    <string name="filter_peak">PEAK (Пик)</string>
-    <string name="filter_low_shelf">НЧ полка</string>
-    <string name="filter_low_shelf_6db">НЧ полка 6дБ</string>
-    <string name="filter_high_shelf">ВЧ полка</string>
-    <string name="filter_high_shelf_6db">ВЧ полка 6дБ</string>
+    <!-- Фильтры EQ -->
+    <string name="filter_peak">ПИК</string>
+    <string name="filter_low_shelf">НЧ ПОЛКА</string>
+    <string name="filter_low_shelf_6db">НЧ ПОЛКА 6 дБ</string>
+    <string name="filter_high_shelf">ВЧ ПОЛКА</string>
+    <string name="filter_high_shelf_6db">ВЧ ПОЛКА 6 дБ</string>
     <string name="filter_low_pass">ФНЧ</string>
-    <string name="filter_low_pass_6db">ФНЧ 6дБ</string>
+    <string name="filter_low_pass_6db">ФНЧ 6 дБ</string>
     <string name="filter_high_pass">ФВЧ</string>
-    <string name="filter_high_pass_6db">ФВЧ 6дБ</string>
-    <string name="filter_band_pass">Полосовой</string>
-    <string name="filter_notch">Режекторный</string>
-    <string name="filter_bypass">Обход</string>
+    <string name="filter_high_pass_6db">ФВЧ 6 дБ</string>
+    <string name="filter_band_pass">ПОЛОСОВОЙ</string>
+    <string name="filter_notch">РЕЖЕКЦИЯ</string>
+    <string name="filter_bypass">ОБХОД</string>
 
-    <!-- MBC / Limiter / Compressor Parameters -->
+    <!-- Параметры MBC / Лимитер / Компрессор -->
     <string name="param_cutoff_hz">Частота среза (Гц)</string>
     <string name="param_pre_gain_db">Предусиление (дБ)</string>
     <string name="param_post_gain_db">Постусиление (дБ)</string>
@@ -118,7 +118,7 @@
     <string name="param_range_db">Диапазон (дБ)</string>
     <string name="param_band_label">Полоса %d</string>
 
-    <!-- Channel Side EQ -->
+    <!-- Поканальный EQ -->
     <string name="channel_balance">Баланс</string>
     <string name="channel_l">Л</string>
     <string name="channel_r">П</string>
@@ -129,7 +129,7 @@
     <string name="channel_preamp_r">Предусиление (П)</string>
     <string name="channel_side_eq">Поканальный EQ</string>
 
-    <!-- Environmental Reverb -->
+    <!-- Окружающая реверберация -->
     <string name="reverb_room_level">Уровень помещения</string>
     <string name="reverb_parameters">Параметры реверберации</string>
     <string name="reverb_pre_delay_ms">Предзадержка (мс)</string>
@@ -141,29 +141,29 @@
     <string name="reverb_hf_level_db">Уровень ВЧ (дБ)</string>
     <string name="reverb_hf_damping">Демпфирование ВЧ</string>
 
-    <!-- Audio Output / Binding -->
-    <string name="output_bind_preset_hint">Привяжите сохранённый пресет EQ к конкретному устройству вывода…</string>
+    <!-- Аудиовыход / Привязка -->
+    <string name="output_bind_preset_hint">Привязать сохранённый пресет EQ к устройству вывода…</string>
     <string name="output_preset_label">Пресет</string>
-    <string name="output_unbound">Отвязано</string>
-    <string name="output_bound">Привязано \"%1$s\" к %2$s</string>
+    <string name="output_unbound">Не привязано</string>
+    <string name="output_bound">Привязан «%1$s» к %2$s</string>
     <string name="output_none">(нет)</string>
     <string name="output_missing">(отсутствует)</string>
 
-    <!-- Pipeline -->
-    <string name="pipeline_channel_input">Вход канала</string>
-    <string name="pipeline_channel_input_desc">Системное аудио на сессии 0 — вход в цепочку эффектов</string>
-    <string name="pipeline_dynamics_processing">Dynamics Processing</string>
-    <string name="pipeline_dynamics_processing_desc">Основная цепочка обработки: EQ, MBC и лимитирование</string>
+    <!-- Конвейер -->
+    <string name="pipeline_channel_input">Канальный вход</string>
+    <string name="pipeline_channel_input_desc">Системный аудиовход на сессии 0 — вход в цепочку эффектов</string>
+    <string name="pipeline_dynamics_processing">Обработка динамики</string>
+    <string name="pipeline_dynamics_processing_desc">Основная цепочка обработки звука: EQ, MBC и лимитер</string>
     <string name="pipeline_environmental_reverb">Окружающая реверберация</string>
     <string name="pipeline_audio_output">Аудиовыход</string>
-    <string name="pipeline_audio_output_desc">Колонки, наушники или другое подключённое устройство</string>
+    <string name="pipeline_audio_output_desc">Колонки, наушники или другое подключённое устройство вывода</string>
 
-    <!-- AutoEQ / Target Curve / Measurement -->
+    <!-- AutoEQ / Целевая кривая / Измерение -->
     <string name="autoeq_import_poweramp">Импорт Poweramp EQ .json</string>
     <string name="autoeq_import_wavelet">Импорт Wavelet .txt</string>
-    <string name="autoeq_generated_eq">Созданный EQ</string>
+    <string name="autoeq_generated_eq">Сгенерированный EQ</string>
     <string name="autoeq_converted_eq">Конвертированный EQ</string>
-    <string name="autoeq_generate_eq">Создать EQ</string>
+    <string name="autoeq_generate_eq">Сгенерировать EQ</string>
     <string name="autoeq_filters_label">Фильтры</string>
     <string name="autoeq_add_to_presets">Добавить в AutoEQ и пресеты</string>
     <string name="autoeq_export_apo">Экспорт как APO</string>
@@ -171,31 +171,31 @@
     <string name="autoeq_77_targets">77 целей</string>
     <string name="autoeq_0_measurements">0 измерений</string>
 
-    <!-- Spectrum Control -->
-    <string name="spectrum_ppo_smoothing">PPO сглаживание</string>
-    <string name="spectrum_ppo_desc">По умолчанию использует сырые данные БПФ; включение даёт контроль над сглаживанием спектра</string>
+    <!-- Управление спектром -->
+    <string name="spectrum_ppo_smoothing">Сглаживание PPO</string>
+    <string name="spectrum_ppo_desc">По умолчанию используются сырые данные БПФ; при включении даёт контроль над сглаживанием спектра</string>
     <string name="spectrum_color">Цвет спектра</string>
 
-    <!-- Experimental -->
+    <!-- Экспериментальное -->
     <string name="experimental_dp_band_count">Количество полос DP</string>
-    <string name="experimental_dp_engine">Экспериментальный DP движок</string>
-    <string name="experimental_dp_engine_desc">32 полосы + FFT временного разрешения (вместо обычных 128 полос + частотное разрешение). Направлено на устранение гулких басов и тонких высоких. Переключение перезапускает аудиодвижок.</string>
+    <string name="experimental_dp_engine">Экспериментальный DP-движок</string>
+    <string name="experimental_dp_engine_desc">32 полосы + время-разрешающее БПФ (вместо 128 полос + частота-разрешающее). Направлено на исправление бубнящего баса и тонких высоких. Переключение перезапускает аудиодвижок.</string>
     <string name="experimental_gain_compensation">Компенсация усиления</string>
     <string name="experimental_gain_compensation_desc">снижает максимальное усиление до 0 дБ для предотвращения клиппирования</string>
 
-    <!-- Dialogs -->
+    <!-- Диалоги -->
     <string name="dialog_save_custom_preset">Сохранить пользовательский пресет</string>
-    <string name="dialog_save_simple_eq_preset">Сохранить простой EQ пресет</string>
-    <string name="dialog_edit_generated_eq">Редактировать созданный EQ</string>
+    <string name="dialog_save_simple_eq_preset">Сохранить простой EQ-пресет</string>
+    <string name="dialog_edit_generated_eq">Редактировать сгенерированный EQ</string>
     <string name="dialog_band_color">Цвет полосы</string>
     <string name="dialog_band_number">Полоса %1$d</string>
-    <string name="dialog_reset_all_values">Сбросить все значения на этом экране к стандартным?</string>
-    <string name="dialog_delete_preset">Удалить пресет \"%1$s\"?</string>
-    <string name="dialog_delete_item">Удалить \"%1$s\"?</string>
+    <string name="dialog_reset_all_values">Сбросить все значения этого экрана к стандартным?</string>
+    <string name="dialog_delete_preset">Удалить пресет «%1$s»?</string>
+    <string name="dialog_delete_item">Удалить «%1$s»?</string>
     <string name="dialog_add_to_autoeq">Добавить этот EQ в список AutoEQ и пресетов</string>
 
-    <!-- Colors -->
-    <string name="color_default">По умолчанию</string>
+    <!-- Цвета -->
+    <string name="color_default">Стандартный</string>
     <string name="color_white">Белый</string>
     <string name="color_green">Зелёный</string>
     <string name="color_blue">Синий</string>
@@ -204,7 +204,7 @@
     <string name="color_purple">Фиолетовый</string>
     <string name="color_indigo">Индиго</string>
 
-    <!-- Visualizer Labels -->
+    <!-- Подписи визуализатора -->
     <string name="viz_hf_level">Уровень ВЧ</string>
     <string name="viz_hf_damping">Демпфирование ВЧ</string>
     <string name="viz_pre_delay">Предзадержка</string>
@@ -219,80 +219,157 @@
     <string name="viz_khz">кГц</string>
     <string name="viz_hz">Гц</string>
 
-    <!-- Toast & Status Messages -->
-    <string name="msg_saved">Сохранено \"%1$s\"</string>
-    <string name="msg_loaded">Загружено \"%1$s\"</string>
-    <string name="msg_exported_success">Успешно экспортировано</string>
+    <!-- Сообщения (Toast и статус) -->
+    <string name="msg_eq_not_initialized">Параметрический EQ не инициализирован</string>
+    <string name="msg_saved">Сохранён «%1$s»</string>
+    <string name="msg_loaded">Загружен «%1$s»</string>
+    <string name="msg_exported_success">Экспорт выполнен успешно</string>
     <string name="msg_exported">Экспортировано</string>
     <string name="msg_export_failed">Ошибка экспорта: %1$s</string>
-    <string name="msg_parse_apo_failed">Не удалось разобрать APO пресет</string>
-    <string name="msg_applied_filters">Применено %1$d фильтров</string>
+    <string name="msg_parse_apo_failed">Не удалось разобрать APO-пресет</string>
+    <string name="msg_applied_filters">Применено фильтров: %1$d</string>
     <string name="msg_error">Ошибка: %1$s</string>
-    <string name="msg_eq_reset">EQ сброшен к стандартным</string>
-    <string name="msg_mbc_reset">MBC сброшен к стандартным</string>
-    <string name="msg_limiter_reset">Лимитер сброшен к стандартным</string>
-    <string name="msg_dsp_requires_api">DynamicsProcessing требует Android 9+</string>
-    <string name="msg_dsp_start">DynamicsProcessing запущен</string>
-    <string name="msg_dsp_stop">DynamicsProcessing остановлен</string>
-    <string name="msg_notifications_disabled">Уведомления отключены — EQ будет работать без уведомления о выключении.</string>
-    <string name="msg_generate_eq_first">Сначала создайте EQ</string>
-    <string name="msg_added_to_autoeq">Добавлено \"%1$s\" в пресеты AutoEQ</string>
-    <string name="msg_generated">Создано: %1$s</string>
+    <string name="msg_eq_reset">EQ сброшен к стандартным значениям</string>
+    <string name="msg_mbc_reset">MBC сброшен к стандартным значениям</string>
+    <string name="msg_limiter_reset">Лимитер сброшен к стандартным значениям</string>
+    <string name="msg_dsp_requires_api">DynamicsProcessing требуется Android 9+</string>
+    <string name="msg_dsp_start">Запуск DynamicsProcessing</string>
+    <string name="msg_dsp_stop">Остановка DynamicsProcessing</string>
+    <string name="msg_notifications_disabled">Уведомления отключены — EQ будет работать без уведомления «Выключить».</string>
+    <string name="msg_generate_eq_first">Сначала сгенерируйте EQ</string>
+    <string name="msg_added_to_autoeq">«%1$s» добавлен в пресеты AutoEQ</string>
+    <string name="msg_generated">Сгенерировано: %1$s</string>
     <string name="msg_failed_load_measurement">Не удалось загрузить измерение</string>
     <string name="msg_failed_load_target">Не удалось загрузить целевую кривую</string>
-    <string name="msg_eq_generation_failed">Ошибка создания EQ: %1$s</string>
+    <string name="msg_eq_generation_failed">Ошибка генерации EQ: %1$s</string>
     <string name="msg_failed_load_profile">Не удалось загрузить профиль</string>
     <string name="msg_applied">Применено: %1$s</string>
     <string name="msg_parse_target_failed">Не удалось разобрать целевой файл</string>
-    <string name="msg_parse_measurement_failed">Не удалось разобрать — нужно минимум 10 пар частота,дБ</string>
+    <string name="msg_parse_measurement_failed">Не удалось разобрать — требуется минимум 10 пар частота,дБ</string>
     <string name="msg_target_label">Цель: %1$s</string>
     <string name="msg_measurement_label">Измерение: %1$s</string>
     <string name="msg_error_reading_file">Ошибка чтения файла: %1$s</string>
-    <string name="msg_apo_import">APO импорт</string>
+    <string name="msg_apo_import">Импорт APO</string>
     <string name="msg_custom_preset_prefix">Пользовательский #%1$d</string>
     <string name="msg_reset_label">СБРОС</string>
     <string name="msg_12db">12 дБ</string>
-    <string name="msg_eq_not_initialized">Параметрический EQ не инициализирован</string>
 
-    <!-- Import/Conversion -->
+    <!-- Импорт / Конвертация -->
     <string name="convert_import_poweramp">Импорт Poweramp EQ .json</string>
     <string name="convert_import_wavelet">Импорт Wavelet .txt</string>
-    <string name="convert_to_apo">Конвертировать в APO</string>
-    <string name="convert_added_to_autoeq">Добавлено \"%1$s\" в AutoEQ и пресеты</string>
-    <string name="convert_desc">Конвертировать Wavelet и Poweramp EQ в формат APO</string>
+    <string name="convert_to_apo">Конвертировать в формат APO</string>
+    <string name="convert_added_to_autoeq">«%1$s» добавлен в AutoEQ и пресеты</string>
+    <string name="convert_desc">Конвертация wavelet и poweramp eq в формат APO</string>
 
-    <!-- Settings cards -->
+    <!-- Карточки настроек -->
     <string name="settings_simple_eq_desc">Простой 10-полосный графический EQ</string>
     <string name="settings_channel_side_desc">Баланс, поканальный EQ и перестановка каналов</string>
-    <string name="settings_pipeline_title">Цепочка аудиоэффектов — НЕ ГОТОВО</string>
-    <string name="settings_pipeline_desc">Настройка аудиоэффектов на основе сессии</string>
-    <string name="settings_experimental_desc">лучше пока не трогай это (ещё)</string>
+    <string name="settings_pipeline_title">Конвейер аудиоэффектов — НЕ ГОТОВО</string>
+    <string name="settings_pipeline_desc">Настройка конвейера аудиоэффектов на основе сессии</string>
+    <string name="settings_experimental_desc">лучше не трогай это (пока что)</string>
     <string name="cd_lock_experimental">Заблокировать экспериментальное</string>
     <string name="settings_auto_gain">Авто-усиление</string>
     <string name="settings_auto_gain_desc">Автоматически снижает усиление для предотвращения клиппирования</string>
     <string name="settings_offset_format">Смещение: %.1f дБ</string>
 
-    <!-- Pipeline long description -->
-    <string name="pipeline_reorder_desc">Перетащите ручку слева от каждой карточки эффектов, чтобы изменить порядок цепочки обработки. Аудиопоток начинается со входа канала и заканчивается на аудиовыходе. DynamicsProcessing — основной EQ, MBC и лимитер, доступные в приложении. Остальные аудиоэффекты можно открыть и редактировать на новом экране.</string>
+    <!-- Описание конвейера (длинный текст) -->
+    <string name="pipeline_reorder_desc">Перетащите ручку слева от каждой карточки эффекта, чтобы изменить порядок цепочки обработки. Аудиопоток начинается с канального входа и заканчивается аудиовыходом. DynamicsProcessing — это основной EQ, MBC и лимитер, доступные в приложении. Другие аудиоэффекты, подключаемые к канальному входу, можно нажать и редактировать прямо здесь, на новом экране.</string>
 
-    <!-- MBC extra -->
-    <string name="mbc_range_visual_only">Диапазон (только визуально)\nЧтобы достичь этого диапазона, настройте порог и соотношение</string>
+    <!-- MBC дополнение -->
+    <string name="mbc_range_visual_only">Диапазон (только визуально)\nЧтобы достичь этого диапазона, установите порог и соотношение соответствующим образом</string>
 
-    <!-- Spectrum extra -->
+    <!-- Спектр дополнение -->
     <string name="spectrum_release">Спад спектра</string>
-    <string name="spectrum_release_desc">Управляет скоростью спада спектра после пика. Меньше = медленнее, более плавный спад</string>
+    <string name="spectrum_release_desc">Управляет скоростью спада спектра после пика. Ниже = медленнее, более плавный спад</string>
 
-    <!-- EQ Mode -->
+    <!-- Режим EQ -->
     <string name="eq_mode_simple">Простой</string>
 
-    <!-- Settings: Light Theme -->
+    <!-- Настройки: светлая тема -->
     <string name="settings_light_theme">Светлая тема</string>
-    <string name="settings_light_theme_desc">Переключение между светлой и тёмной темой</string>
+    <string name="settings_light_theme_desc">Переключение между светлым и тёмным режимом</string>
 
-    <!-- Settings: Backup & Restore -->
+    <!-- Настройки: резервное копирование -->
     <string name="title_backup_restore">Резервное копирование</string>
-    <string name="backup_restore_desc">Сохранение и восстановление настроек, пресетов и привязок</string>
+    <string name="backup_restore_desc">Резервное копирование и восстановление настроек, пресетов и привязок</string>
 
-    <!-- Error messages -->
-    <string name="msg_err_parse_eq">Не удалось разобрать сгенерированный эквалайзер</string>
+    <!-- Сообщения об ошибках -->
+    <string name="msg_err_parse_eq">Не удалось разобрать сгенерированный EQ</string>
+
+    <!-- Измерение АЧХ -->
+    <string name="measurement_title">Измерение АЧХ</string>
+    <string name="measurement_instructions">Будет воспроизведён тестовый сигнал через динамик/наушники и записан через микрофон для измерения АЧХ.\n\nНа основе измерения будет рассчитана корректирующая кривая EQ и сохранена как пользовательский пресет.\n\nУбедитесь:\n• Вы находитесь в тихом помещении\n• Наушники/колонки подключены\n• Громкость установлена на комфортном уровне</string>
+    <string name="measurement_start">Начать измерение</string>
+    <string name="measurement_retry">Повторить измерение</string>
+    <string name="measurement_no_record_permission">Для измерения АЧХ требуется разрешение на доступ к микрофону</string>
+    <string name="measurement_permission_rationale">Этому приложению нужен доступ к микрофону для записи тестового сигнала и измерения АЧХ ваших наушников или колонок</string>
+    <string name="measurement_in_progress">Измерение уже выполняется</string>
+    <string name="measurement_preparing">Подготовка тестового сигнала…</string>
+    <string name="measurement_playing">Воспроизведение тестового сигнала и запись…</string>
+    <string name="measurement_processing">Обработка АЧХ…</string>
+    <string name="measurement_calculating_eq">Расчёт коррекции EQ…</string>
+    <string name="measurement_done">Измерение завершено!</string>
+    <string name="measurement_error">Ошибка измерения</string>
+    <string name="measurement_ref_curve">Целевая кривая</string>
+    <string name="measurement_result_curve">Результат измерения</string>
+    <string name="measurement_result_info">Фильтров: %1$d | Суммарная коррекция: %2$s дБ | Сэмплов: %3$d</string>
+    <string name="measurement_save_preset">Сохранить как пресет</string>
+    <string name="measurement_preset_name_hint">Имя пресета</string>
+    <string name="measurement_saved">Пресет «%1$s» сохранён</string>
+    <string name="measurement_card_desc">Измерение АЧХ с микрофона с автоматическим созданием EQ-коррекции</string>
+    <string name="measurement_signal_type_label">Тип тестового сигнала:</string>
+
+    <!-- Новые строки для хардкодных мест -->
+    <string name="title_gain_reduction">Уменьшение усиления</string>
+    <string name="cd_toggle_band_point_visibility">Переключить видимость точек полос</string>
+    <string name="cd_toggle_per_band_curves">Переключить поканальные кривые</string>
+    <string name="cd_toggle_eq_on_off">Включить или выключить EQ</string>
+    <string name="settings_session_detection">Обнаружение аудиосессий</string>
+    <string name="settings_session_detection_desc">Список приложений, воспроизводящих аудио</string>
+    <string name="settings_device_auto_switch">Авто-переключение устройств</string>
+    <string name="settings_device_auto_switch_desc">Использовать выбранный пресет для текущего вывода</string>
+    <string name="settings_skip_system_sounds">Пропускать системные звуки</string>
+    <string name="settings_skip_system_sounds_desc">Отключает обработку для системных звуков</string>
+    <string name="value_na">Н/Д</string>
+    <string name="title_presets_conversions">Пресеты и конвертация</string>
+    <string name="label_routing_mode">Режим маршрутизации</string>
+    <string name="routing_system_wide">Системный</string>
+    <string name="routing_session_based">По сессиям</string>
+    <string name="label_now_playing">Сейчас воспроизводится</string>
+    <string name="status_no_sessions">Сессии не обнаружены</string>
+    <string name="label_apps">Приложения</string>
+    <string name="filter_filtered">С фильтром</string>
+    <string name="filter_show_all">Показать все</string>
+    <string name="status_loading_apps">Загрузка приложений…</string>
+    <string name="cd_app_icon">Иконка приложения</string>
+    <string name="cd_remove_device">Удалить устройство</string>
+    <string name="cd_toggle_visibility">Переключить видимость</string>
+    <string name="cd_pipeline_info">Информация конвейера</string>
+    <string name="cd_favorite">Избранное</string>
+    <string name="cd_toggle_effect">Переключить эффект</string>
+    <string name="status_no_current_device">Нет текущего устройства</string>
+    <string name="label_current_output">Текущий вывод</string>
+    <string name="msg_eq_disabled_for">EQ отключён для %1$s</string>
+    <string name="output_disable_eq">Отключить EQ</string>
+    <string name="msg_generating_eq">Генерация</string>
+    <string name="msg_no_preset_applied">Пресет ещё не применён</string>
+    <string name="msg_could_not_load_active_preset">Не удалось загрузить активный пресет</string>
+    <string name="msg_saved_to_presets">«%1$s» сохранён в пресетах</string>
+    <string name="msg_by_source">от %1$s</string>
+    <string name="msg_updated_preset">Обновлён «%1$s»</string>
+    <string name="msg_cannot_open_notification_settings">Не удалось открыть настройки доступа к уведомлениям</string>
+    <string name="msg_dsp_start_failed">Не удалось запустить DynamicsProcessing</string>
+    <string name="msg_backup_saved">Резервная копия сохранена</string>
+    <string name="msg_backup_failed">Ошибка резервного копирования: %1$s</string>
+    <string name="msg_backup_restored">Резервная копия восстановлена</string>
+    <string name="msg_invalid_backup">Это недействительная резервная копия Equalizer314</string>
+    <string name="msg_restore_failed">Ошибка восстановления: %1$s</string>
+    <string name="msg_applied_per_channel_filters">Применено фильтров L:%1$d R:%2$d</string>
+    <string name="dialog_backup_restore_message">Экспорт или импорт настроек, пресетов и привязок в/из .json файла. Импорт перезапишет все текущие настройки приложения.</string>
+    <string name="msg_no_apps_detected">Приложения ещё не обнаружены.</string>
+    <string name="label_routing_mode_title">Режим маршрутизации</string>
+    <string name="settings_session_detection_desc_v2">Список приложений, воспроизводящих аудио (через dumpsys)</string>
+    <string name="cd_toggle_band_fill">Переключить заливку полос</string>
+    <string name="power_eq_title">Эквалайзер</string>
+    <string name="settings_visualizer">Визуализатор</string>
 </resources>
