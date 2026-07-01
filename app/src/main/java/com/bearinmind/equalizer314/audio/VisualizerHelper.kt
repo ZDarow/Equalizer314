@@ -3,6 +3,9 @@ package com.bearinmind.equalizer314.audio
 import android.content.Context
 import android.media.AudioManager
 import android.media.audiofx.Visualizer
+import android.media.session.MediaController
+import android.media.session.MediaSessionManager
+import android.media.session.PlaybackState
 import android.os.Build
 import android.util.Log
 import com.bearinmind.equalizer314.ui.EqGraphView
@@ -36,15 +39,32 @@ class VisualizerHelper {
         graphViewRef = graphView
 
         // Register AudioPlaybackCallback to detect play/pause (works on speaker AND Bluetooth)
-        val context = graphView.context
-        audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val ctx = graphView.context
+        audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         isMusicPlaying = true  // assume playing on start
 
         playbackCallback = object : AudioManager.AudioPlaybackCallback() {
             override fun onPlaybackConfigChanged(configs: MutableList<android.media.AudioPlaybackConfiguration>?) {
                 val wasPlaying = isMusicPlaying
-                // Check if ANY playback config exists (regardless of volume level)
-                isMusicPlaying = configs != null && configs.isNotEmpty()
+                // Определяем реальное состояние воспроизведения через MediaController,
+                // а не просто наличие конфигураций (баг: isMusicPlaying никогда не false).
+                val hasActiveConfigs = configs != null && configs.isNotEmpty()
+                isMusicPlaying = if (!hasActiveConfigs) {
+                    false
+                } else {
+                    val mediaManager = runCatching {
+                        ctx.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
+                    }.getOrNull()
+                    if (mediaManager != null) {
+                        val sessions = mediaManager.getActiveSessions(null)
+                        sessions.any { controller ->
+                            controller.playbackState?.state == PlaybackState.STATE_PLAYING
+                        }
+                    } else {
+                        // Fallback на configs (для устройств без MEDIA_SESSION_SERVICE)
+                        true
+                    }
+                }
                 if (wasPlaying && !isMusicPlaying) {
                     Log.d(TAG, "Playback stopped — fading spectrum")
                 }

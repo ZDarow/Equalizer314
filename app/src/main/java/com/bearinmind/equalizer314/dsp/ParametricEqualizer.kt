@@ -1,5 +1,6 @@
 package com.bearinmind.equalizer314.dsp
 
+import android.util.Log
 import kotlin.math.pow
 // tanh больше не используется — заменён на softClip (без toDouble конверсии)
 
@@ -14,6 +15,36 @@ import kotlin.math.pow
 // curve, auto-EQ) accept the default since their use is for response-
 // curve computation only.
 class ParametricEqualizer(private val sampleRate: Int = 48000) {
+
+    companion object {
+        private const val TAG = "ParametricEqualizer"
+
+        /** Compute n log-spaced frequencies across 10–22000 Hz */
+        fun logSpacedFrequencies(n: Int): FloatArray {
+            val logMin = kotlin.math.log10(10f)
+            val logMax = kotlin.math.log10(22000f)
+            return FloatArray(n) { i -> 10f.pow(logMin + i * (logMax - logMin) / (n - 1)) }
+        }
+
+        /**
+         * Быстрая soft-clip функция. Заменяет tanh для предотвращения клиппирования
+         * буфера: работает только с Float (без конверсии в Double и обратно),
+         * что даёт ~2x прирост производительности на ARM64.
+         *
+         * Алгоритм: кубический soft-clamp: f(x) = x - x³/3 для |x| ≤ 1,
+         *         sign(x) * 2/3 для |x| > 1.
+         * Производная непрерывна в x = ±1, гармоники ниже чем у hard-clip.
+         */
+        @JvmStatic
+        fun softClip(x: Float): Float {
+            val ax = kotlin.math.abs(x)
+            return if (ax >= 1f) {
+                kotlin.math.sign(x) * (2f / 3f)
+            } else {
+                x - (x * x * x) / 3f
+            }
+        }
+    }
 
     /**
      * A single parametric EQ band.
@@ -56,34 +87,6 @@ class ParametricEqualizer(private val sampleRate: Int = 48000) {
         }
     }
 
-    companion object {
-        /** Compute n log-spaced frequencies across 10–22000 Hz */
-        fun logSpacedFrequencies(n: Int): FloatArray {
-            val logMin = kotlin.math.log10(10f)
-            val logMax = kotlin.math.log10(22000f)
-            return FloatArray(n) { i -> 10f.pow(logMin + i * (logMax - logMin) / (n - 1)) }
-        }
-
-        /**
-         * Быстрая soft-clip функция. Заменяет tanh для предотвращения клиппирования
-         * буфера: работает только с Float (без конверсии в Double и обратно),
-         * что даёт ~2x прирост производительности на ARM64.
-         *
-         * Алгоритм: кубический soft-clamp: f(x) = x - x³/3 для |x| ≤ 1,
-         *         sign(x) * 2/3 для |x| > 1.
-         * Производная непрерывна в x = ±1, гармоники ниже чем у hard-clip.
-         */
-        @JvmStatic
-        fun softClip(x: Float): Float {
-            val ax = kotlin.math.abs(x)
-            return if (ax >= 1f) {
-                kotlin.math.sign(x) * (2f / 3f)
-            } else {
-                x - (x * x * x) / 3f
-            }
-        }
-    }
-
     /** Remove all bands and their corresponding filters. */
     fun clearBands() {
         bands.clear()
@@ -117,7 +120,12 @@ class ParametricEqualizer(private val sampleRate: Int = 48000) {
      *  @param gain gain in dB
      *  @param filterType filter topology
      *  @param q quality factor (default 0.707) */
+    /** Insert a band at [index]. No-op if [index] is out of range. */
     fun insertBand(index: Int, frequency: Float, gain: Float, filterType: BiquadFilter.FilterType, q: Double = 0.707) {
+        if (index !in 0..bands.size) {
+            Log.w(TAG, "insertBand: index $index out of range [0..${bands.size}] — no-op")
+            return
+        }
         val band = EqualizerBand(frequency, gain, filterType, q, true)
         bands.add(index, band)
 

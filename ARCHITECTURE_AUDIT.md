@@ -2,8 +2,8 @@
 
 **Дата:** 30.06.2026
 **Версия проекта:** 0.1.0-alpha-2 (code 100)
-**Общий LOC продакшен:** ~35 354 (измерение АЧХ + контроллеры)
-**Исследовано файлов:** 48 (ключевых), ~107 всего
+**Общий LOC продакшен:** ~35 354 (107 .kt файлов)
+**Исследовано файлов:** 60+ (все ключевые модули)
 
 ---
 
@@ -15,6 +15,7 @@
    - 1.3 [SOLID: нарушения](#13-solid-нарушения)
    - 1.4 [Разделение ответственности (SoC)](#14-разделение-ответственности-soc)
    - 1.5 [Дублирование кода](#15-дублирование-кода)
+   - 1.6 [Синхронизация и потокобезопасность](#16-синхронизация-и-потокобезопасность)
 2. [Логический срез](#2-логический-срез)
    - 2.1 [Потоки данных](#21-потоки-данных)
    - 2.2 [Управление состоянием](#22-управление-состоянием)
@@ -35,98 +36,114 @@
 
 ### 1.1 Граф связности модулей
 
-Проект страдает от **арахно-архитектуры** (spaghetti architecture): ядро (`EqStateManager`) и `MainActivity` выступают в роли центрального хаба, через который проходят все основные потоки данных.
+Проект сохраняет **арахно-архитектуру** (spaghetti architecture): `EqStateManager` и `EqService` выступают центральным хабом, через который проходят все потоки данных. Добавление `controller/` и `measurement/` модулей несколько уменьшило нагрузку на `MainActivity`, но не изменило фундаментальную архитектуру.
 
 ```text
-                    ┌─────────────────────────────────────┐
-                    │          MainActivity (2830 LOC)     │
-                    │  ┌─────────────────────────────────┐ │
-                    │  │  initViews()  ~60 findViewById   │ │
-                    │  │  setupListeners() ~800 LOC       │ │
-                    │  │  switchEqUiMode() ~400 LOC       │ │
-                    │  │  +20 внутренних listeners/anons  │ │
-                    │  └─────────────────────────────────┘ │
-                    ├─────────────────────────────────────┤
-                    │      EqViewModel (348 LOC)           │
-                    │   ┌───────────────────────────────┐  │
-                    │   │  28 MutableStateFlow полей   │  │
-                    │   │  Пассивный прокси →          │  │
-                    │   │  stateManager.* вызовы       │  │
-                    │   └───────────────────────────────┘  │
-                    ├─────────────────────────────────────┤
-                    │      EqStateManager (571 LOC)        │
-                    │   ┌───────────────────────────────┐  │
-                    │   │  Содержит: bothEq, leftEq,    │  │
-                    │   │  rightEq, bandSlots, service  │  │
-                    │   │  binding, watchdog, prefs     │  │
-                    │   └───────────────────────────────┘  │
-                    └──────────┬──────────────────────────┘
-                               │
-          ┌────────────────────┼────────────────────────┐
-          ▼                    ▼                        ▼
-   ┌──────────┐       ┌──────────────┐       ┌─────────────────┐
-   │ EqService │       │ GraphView    │       │ EqPreferences-  │
-   │ 1117 LOC │       │ 697 LOC      │       │ Manager 927 LOC │
-   │          │       │ 5 рендереров │       │                 │
-   │ DSP +    │       │ touch + grid │       │ 4 SharedPrefs   │
-   │ routing  │       │ MBC + theme  │       │ файла, ~60      │
-   │ session  │       │              │       │ методов         │
-   └──────────┘       └──────────────┘       └─────────────────┘
+                    ┌─────────────────────────────────────────────┐
+                    │           MainActivity (2824 LOC)            │
+                    │  ┌─────────────────────────────────────────┐ │
+                    │  │  initViews(): 52× findViewById          │ │
+                    │  │  setupListeners(): 28× onClickListener  │ │
+                    │  │  switchEqUiMode(): ~400 LOC (4 режима)  │ │
+                    │  │  +15 override-методов lifecycle         │ │
+                    │  └─────────────────────────────────────────┘ │
+                    ├─────────────────────────────────────────────┤
+                    │   controller/ (5 файлов, 1500+ LOC)         │
+                    │   GraphController, NavigationController,    │
+                    │   PresetIoController, SheetController       │
+                    ├─────────────────────────────────────────────┤
+                    │         EqViewModel (348 LOC)               │
+                    │   ┌───────────────────────────────────────┐  │
+                    │   │  22 MutableStateFlow полей           │  │
+                    │   │  0 вызовов .collect (все через.value)│  │
+                    │   │  Pure proxy → stateManager           │  │
+                    │   └───────────────────────────────────────┘  │
+                    ├─────────────────────────────────────────────┤
+                    │       EqStateManager (566 LOC)              │
+                    │   ┌───────────────────────────────────────┐  │
+                    │   │  DIP VIOLATION: imports EqGraphView  │  │
+                    │   │  26 public полей, 20 public методов  │  │
+                    │   │  Handler + pushEqUpdateThrottled     │  │
+                    │   └───────────────────────────────────────┘  │
+                    └──────────────────┬──────────────────────────┘
+                                       │
+          ┌────────────────────────────┼────────────────────────────┐
+          ▼                            ▼                            ▼
+   ┌──────────────┐          ┌─────────────────┐          ┌────────────────┐
+   │  EqService   │          │  EqPrefsManager  │          │  PresetManager │
+   │  1088 LOC    │          │  927 LOC         │          │  199 LOC       │
+   │  15 ACTIONs  │          │  4 SP файла      │          │  SharedPrefs!  │
+   │  7 @Volatile │          │  ~160 методов    │          │                │
+   │  22 метода   │          │                  │          │                │
+   └──────┬───────┘          └─────────────────┘          └────────────────┘
+          │
+   ┌──────┴───────────────────────────────────────────────┐
+   │         DynamicsProcessingManager (670 LOC)           │
+   │  0 @Synchronized, 0 mutex, 4 @Volatile поля          │
+   │  CoroutineScope(SupervisorJob + Dispatchers.Default)  │
+   │  HandlerThread("EqDpWorker") для binder              │
+   │  Нет отмены предыдущей корутины при update!          │
+   └──────────────────────────────────────────────────────┘
 ```
 
-**Коэффициент зацепления (coupling):** Высокий. MainActivity импортирует 17+ классов из всех пакетов проекта. EqStateManager связан с EqService, EqPreferencesManager, EqGraphView, ParametricEqualizer, ParametricToDpConverter, BiquadFilter, EqUiMode.
+**Коэффициент зацепления (coupling):** Высокий. MainActivity импортирует 15+ классов из `audio/`, `controller/`, `dsp/`, `state/`, `ui/`. EqStateManager связан с EqService, EqPreferencesManager, EqGraphView, ParametricEqualizer, ParametricToDpConverter, BiquadFilter, EqUiMode.
 
 ### 1.2 God-объекты и антипаттерны
 
-#### 1.2.1 MainActivity (2830 LOC) — god class №1
+#### 1.2.1 MainActivity (2824 LOC) — god class №1
 
-- **Смешение ответственности:** Содержит инициализацию View, управление EQ-состоянием, обработку permission request, UI-mode switching, preset picker (inline code ~300 LOC), анимации, backup/restore диалоги, обработку BroadcastReceivers, файловый экспорт.
-- **Inline-диалоги:** Диалоги строятся inline (findViewById/setOnClickListener) прямо в `setupListeners()` и `populatePresetPicker()`. Кастомный Preset Picker — ~600 LOC inline-кода внутри метода.
-- **Button position math:** Горизонтальное позиционирование 20+ кнопок на Canvas-оверлее графа вычисляется вручную через `layoutParams.leftMargin` — дублируется в `setupListeners()` (разметка) и `relayoutGraphHeaderButtons()` (перерасчёт).
+- **107 вызовов `findViewById`** (52 в `initViews`, ~15 в `setupListeners`, ~15 в `relayoutGraphHeaderButtons`, ~8 в `switchEqUiMode`, ~5 в `paintChannelButtonStyles` + разрозненно)
+- **48 методов**, из них 15 override (lifecycle), 30 private, 1 internal
+- **28 `setOnClickListener`** — все inline-лямбды внутри `setupListeners()`
+- **4 вызова `bindService`** в разных местах (строки 341, 521, 2443, 2536) — дублирование логики подключения
+- Смешение ответственности: View-инициализация, пресеты, permission handling, backup/restore, анимации, навигация
 
 #### 1.2.2 EqPreferencesManager (927 LOC) — god class №2
 
-- **Один класс на всё:** Управляет 4 файлами SharedPreferences, ~60 методов-геттеров/сеттеров для preamp, limiter, MBC, spectrum, device bindings, app bindings, custom presets, channel side EQ, band colors, DP band count, auto-gain, и т.д.
-- **Смешение уровней:** Содержит как CRUD данные (save/restore bands, presets), так и валидацию (validatePresetName), и бизнес-логику (simple-vs-advanced EQ backup).
-- **100+ строк на init:** Инициализация копирует константы из UI-слоя (SimpleEqController.FREQUENCIES).
+- **~160 методов**, управляющих 4 SharedPreferences-файлами (`eq_settings`, `device_bindings`, `app_bindings`, `custom_presets`)
+- Типы данных: Boolean, Float, Int, String, Set\<String\>, List\<String\> (JSONArray), Map\<Int,Int\> (JSONObject), Uri
+- Смешение уровней: CRUD, валидация, бизнес-логика (simple-vs-advanced EQ backup)
 
-#### 1.2.3 EqService (1117 LOC) — чрезмерная сложность
+#### 1.2.3 EqService (1088 LOC) — command hub
 
-- **10+ Broadcast actions:** ACTION_STOP, _START_FROM_TILE, _AUTO_START, _NOTIFICATION_REFRESH, _REAPPLY_DEVICE_BINDING, _REAPPLY_APP_BINDING, _ATTACH_SESSION, _DETACH_SESSION, _APPLY_ROUTING_MODE, _APPLY_REVERB, _PLAYBACK_DETECTED, _RELEASE_DETECTED, _APPLY_BYPASS_PREF — все обрабатываются в onStartCommand/when.
-- **Дублирование стейта:** Статические поля `isDpRunning`, `staticLastDeviceLabel`, `staticLastDeviceKey` дублируют состояние `EqStateManager`.
+- **15 ACTION_* констант**, все обрабатываются в `onStartCommand` через `when` (10 веток)
+- **7 `@Volatile` полей** (3 статических в companion + 4 instance)
+- **11 вызовов `runCatching`** без обработки ошибок
+- Статические mirror-поля `staticLastDeviceLabel`/`staticLastDeviceKey` дублируют состояние `EqStateManager`
 
-#### 1.2.4 DynamicsProcessingManager (675 LOC) — смешение CPU и I/O
+#### 1.2.4 DynamicsProcessingManager (670 LOC) — отсутствие синхронизации
 
-- **Два механизма потоков:** HandlerThread (для binder-транзакций) + CoroutineScope SupervisorJob (для CPU-вычислений). При этом управление жизненным циклом потоков ручное.
-- **Данные как поля класса:** `lastEq`, `lastRightEq`, `lastReclaimTime`, `pendingApply`, `pendingLimiter` — хранятся как мутабельные поля.
+- **0 `@Synchronized`, 0 mutex, 0 ReentrantLock**
+- CoroutineScope пересоздаётся в `start()` без отмены предыдущего (утечка корутин при多次 `start` → `stop` → `start`)
+- Нет механизма отмены предыдущей `updateFromEqualizers` при быстрых драг-событиях
 
 #### 1.2.5 Антипаттерн «Static God»
 
 ```kotlin
-// EqService.kt
+// EqService.kt — companion object
 companion object {
-    @Volatile var isDpRunning: Boolean = false  // статический мутабельный флаг
+    @Volatile var isDpRunning: Boolean = false
     @Volatile var staticLastDeviceLabel: String? = null
     @Volatile var staticLastDeviceKey: String? = null
-    // 15+ констант ACTION_*
     const val ACTION_STOP = "..."
-    // 3 константы EXTRA_*
-    const val EXTRA_SILENT_STOP = "..."
+    const val ACTION_START_FROM_TILE = "..."
+    // ... 15+ ACTION_*, 6 EXTRA_* констант
 }
 ```
 
-Статические `@Volatile` поля используются для межпроцессной (между Activity и Service) коммуникации, минуя нормальный lifecycle bindService. Это хрупко и не тестируемо.
+Статические `@Volatile` поля используются для межпроцессной коммуникации (Activity ↔ Service), минуя lifecycle `bindService`. Это хрупко, не тестируемо и неатомарно (см. C-2).
 
 ### 1.3 SOLID: нарушения
 
-| Принцип | Нарушение | Файл |
-|---------|-----------|------|
-| **SRP** (Single Responsibility) | MainActivity отвечает за UI, состояние, файловый IO, permission handling, анимации, пресеты | `MainActivity.kt` |
-| **OCP** (Open/Closed) | Новый Broadcast action = новый when-блок в EqService.onStartCommand | `EqService.kt` |
-| **LSP** (Liskov) | `EqDatabase` использует `fallbackToDestructiveMigration()` (было, исправлено на MIGRATION_1_2) | `EqDatabase.kt` |
-| **ISP** (Interface Segregation) | `MainActivityContract` — 12 методов, каждый контроллер использует 2-3 | `MainActivityContract.kt` |
-| **DIP** (Dependency Inversion) | MainActivity зависит от конкретных реализаций (GraphController, PresetManager) | `MainActivity.kt` |
-| | EqStateManager импортирует EqGraphView (UI → state) — циклическая зависимость | `EqStateManager.kt` |
+| Принцип | Нарушение | Файл(ы) |
+|---------|-----------|---------|
+| **SRP** | MainActivity — UI, состояние, файловый IO, permissions, анимации, пресеты | `MainActivity.kt` |
+| **SRP** | EqPreferencesManager — хранилище, валидация, бизнес-логика | `EqPreferencesManager.kt` |
+| **OCP** | Новый Broadcast action = новый when-блок в onStartCommand | `EqService.kt` |
+| **LSP** | Не нарушен (Room миграция исправлена на MIGRATION_1_2) | `EqDatabase.kt` |
+| **ISP** | MainActivityContract — 17 методов, каждый контроллер использует 2-3 | `MainActivityContract.kt` |
+| **DIP** | EqStateManager импортирует `com.bearinmind.equalizer314.ui.EqGraphView` | `EqStateManager.kt:14` |
+| **DIP** | UndoRedoManager импортирует `EqGraphView`, `BandToggleManager` | `UndoRedoManager.kt:4-5` |
 
 #### Критическое нарушение DIP: State → UI
 
@@ -140,25 +157,46 @@ class EqStateManager(...) {
 }
 ```
 
-Слой `state` напрямую зависит от `ui.EqGraphView`. Это делает невозможным модульное тестирование EqStateManager без создания реального View.
+Слой `state` напрямую зависит от `ui.EqGraphView`. Это делает невозможным модульное тестирование EqStateManager без создания реального View. UndoRedoManager имеет ту же проблему.
 
 ### 1.4 Разделение ответственности (SoC)
 
-**Общие проблемы:**
+**Тройное хранение пресетов:**
+1. **SharedPreferences** (`custom_presets`) — используется `PresetManager` для runtime
+2. **Room** (`preset_dao`) — используется `PresetRepository`, НО PresetManager не переключён на него
+3. **JSON-строки** в SharedPreferences — дублируются в UndoRedoManager
 
-1. **Пресеты хранятся в 3 местах:** `SharedPreferences("custom_presets")`, Room (через `PresetRepository`), и JSON-строки в SharedPreferences. Room мигрирован, но основной runtime всё ещё использует SP.
-2. **Параметры DSP размазаны:** EqStateManager хранит limiter/MBC/preamp поля, DynamicsProcessingManager дублирует их, EqPreferencesManager хранит те же значения в SP.
-3. **Нет чёткой границы Service ⇔ State:** EqService напрямую читает `EqPreferencesManager` (вместо получения состояния через bind). Сериализация состояния на границе Service/Activity отсутствует.
+**Параметры DSP размазаны:**
+- `EqStateManager` — хранит limiter/MBC/preamp поля
+- `DynamicsProcessingManager` — дублирует их для внутренних вычислений
+- `EqPreferencesManager` — хранит те же значения в SP (третий источник истины)
+
+**Нет чёткой границы Service ⇔ State:**
+- EqService напрямую читает `EqPreferencesManager`
+- Статические `@Volatile` mirror-поля дублируют runtime-состояние
+- Сериализация состояния на границе Service/Activity отсутствует
 
 ### 1.5 Дублирование кода
 
 | Шаблон | Местоположения |
 |--------|---------------|
-| Button positioning math (specWidth, gapPx, etc.) | `MainActivity.setupListeners()` + `relayoutGraphHeaderButtons()` |
-| DSP param setup (preampGainDb, limiter, channelBalance) | `EqStateManager.doStartEq()` + `EqService.onStartCommand(ACTION_START_FROM_TILE)` |
-| `BottomNavHelper.updatePowerFab()` / `setPowerState()` | 6+ мест: MainActivity, MbcActivity, LimiterActivity, BottomNavHelper |
-| Dialog creation boilerplate (MaterialButton styling, layoutParams) | 8+ мест (MainActivity, MbcActivity, LimiterActivity, GraphController) |
-| Gainless filter type check (7 filter types) | `GraphController.applyBandDb()` + `GraphController.updateBandInputs()` |
+| `bindService` логика | `MainActivity.kt:341`, `521`, `2443`, `2536` — 4 места |
+| Сохранение prefs | `EqViewModel.setPreampGain()` + вызов `savePreampGain()` вызывающим кодом (B-1) |
+| `runCatching {}` без обработки | 11 мест в EqService, 4 в MainActivity |
+| Dialog creation boilerplate | 8+ мест (MainActivity, MbcActivity, LimiterActivity, GraphController) |
+| DSP param setup | `EqStateManager.doStartEq()` + `EqService.onStartCommand(ACTION_START_FROM_TILE)` |
+| Button positioning math | `MainActivity.setupListeners()` + `relayoutGraphHeaderButtons()` |
+
+### 1.6 Синхронизация и потокобезопасность
+
+| Компонент | Уровень защиты | Риск |
+|-----------|---------------|------|
+| `SessionEffectManager` | ✅ `@Synchronized` на всех public методах | Низкий |
+| `DynamicsProcessingManager` | ❌ **0 синхронизации** | **Высокий** — race в updateFromEqualizers |
+| `EqService` companion | ❌ volatile без атомарности | **Высокий** — чтение по отдельности |
+| `UndoRedoManager` | ❌ single-thread (UI thread) | Низкий (только UI thread) |
+| `EqStateManager` | ❌ Handler на main looper | Средний (только UI thread) |
+| `EqPreferencesManager` | ❌ SharedPreferences thread-safe | Низкий (SP thread-safe внутри) |
 
 ---
 
@@ -178,89 +216,75 @@ EqGraphView.onTouch → onBandChangedListener → pushEqUpdateThrottled()
     DynamicsProcessingManager                DynamicsProcessingManager
     .updateFromEqualizers()                  .updateFromEqualizers()
          ↓                                                    ↓
-    dspScope.launch { computeEqData() }     workerHandler.post { binder }
+    dspScope.launch { computeEqData() }     dspScope.launch { computeEqData() }
          ↓                                                    ↓
-    Dispatchers.Default                     HandlerThread("EqDpWorker")
+    ОБЕ КОРУТИНЫ БЕГУТ ПАРАЛЛЕЛЬНО                      HandlerThread post
 ```
 
-**Проблема:** `computeEqData()` запускается на `Dispatchers.Default`, но `submitBinderWork()` постится в HandlerThread. Между этими двумя операциями нет гарантии очередности — если придут два обновления подряд, порядок выполнения не определён.
+**Проблема:** При drag-событии (ACTION_MOVE каждые ~8ms) вызывается `updateFromEqualizers()` без отмены предыдущей корутины. Две параллельные корутины конкурируют за `this.leftEq`/`this.rightEq` (мутабельные ссылки) — порядок применения к DSP не определён.
 
-#### Текущий поток: Загрузка пресета
+#### Текущий поток: Загрузка пресета (~25 операций на UI thread)
 
 ```text
-MainActivity ← presetRow.setOnClickListener
+MainActivity ← presetRow click
     ↓
-eqViewModel.applyPresetEqs()
+eqViewModel.applyPresetEqs()          // clearBands + addBand для каждого band
     ↓
-eqGraphView.setParametricEqualizer()
-eqViewModel.eqPrefs.saveState()
+eqGraphView.setParametricEqualizer()  // перерисовка View
+    ↓
+eqViewModel.eqPrefs.saveState()        // JSON сериализация
+    ↓
 eqViewModel.persistLeftRightIfCse()
-eqViewModel.initBandSlots()
-bandToggleManager.setupToggles()
+    ↓
+eqViewModel.initBandSlots()           // перестроение slot lists
+    ↓
+bandToggleManager.setupToggles()      // inflate toggles
+    ↓
 preampSlider.value = preampFromPreset
-eqViewModel.eqPrefs.savePresetName(name)
-sendBroadcast(ACTION_NOTIFICATION_REFRESH)
-if (isProcessing) { svc.dynamicsManager.stop(); svc.dynamicsManager.start() }
+    ↓
+svc.dynamicsManager.stop(); svc.dynamicsManager.start()  // полное пересоздание DP!
+    ↓
 stateManager.pushEqUpdate()
-// + анимации preset picker
+    ↓
++ анимации preset picker
 ```
 
-**~25 последовательных операций на UI-потоке** при загрузке пресета. Критический участок: `stop()` → `start()` пересоздаёт DynamicsProcessing целиком, что может вызвать слышимый клик/пропадание звука.
+**Проблема:** ~25 последовательных операций на main thread. При 16 band-ах — ~100-200ms, вызывая frame drops. `stop()` → `start()` пересоздаёт DynamicsProcessing целиком слышимым кликом.
 
 ### 2.2 Управление состоянием
 
-#### Проблема: Множественные источники истины (Multiple Sources of Truth)
+#### Множественные источники истины (Multiple Sources of Truth)
 
 ```text
-EqStateManager.parametricEq     ← воля, которая меняет звук
+EqStateManager.parametricEq         ← «воля», которая меняет звук
     ↓
-EqViewModel._parametricEq (StateFlow)  ← снапшот для UI
+EqViewModel._parametricEq (StateFlow)  ← снапшот для UI (никто не .collect!)
     ↓
-EqPreferencesManager → SharedPreferences  ← persistance
+EqPreferencesManager → SharedPreferences  ← персистентность
     ↓
-EqService.dynamicsManager.lastEq  ← последний применённый
+EqService → DynamicsProcessing.lastEq  ← последний применённый
 ```
 
-**Основная проблема:** `syncFromStateManager()` копирует ~20 полей из `EqStateManager` в `EqViewModel._*` StateFlow. Если какое-то поле обновилось не через `syncFromStateManager()`, UI покажет устаревшие данные. И наоборот — сеттеры `EqViewModel.setLimiterEnabled()` пишут напрямую в `stateManager.limiterEnabled` и в `eqPrefs`, но не обновляют `EqStateManager` через `syncFromStateManager()`, потому что EqStateManager сам не хранит `limiterEnabled` в StateFlow.
+**Проблема syncFromStateManager():**
+Копирует ~20 полей из `EqStateManager` в `EqViewModel._*` StateFlow. Если поле обновилось не через `syncFromStateManager()`, UI покажет устаревшие данные.
 
 #### Бесполезные StateFlow
 
-`EqViewModel` содержит 28 `MutableStateFlow`, но многие из них **никем не читаются через collect**:
+`EqViewModel` содержит **22 `MutableStateFlow`**, но **ни один не читается через `.collect`**:
 
 ```kotlin
-val limiterAttackMs: StateFlow<Float>  // читается? Только в MainActivity.onResume() через .value
-val limiterReleaseMs: StateFlow<Float>  // не читается нигде, кроме дебага
-val limiterRatio: StateFlow<Float>
-val limiterThresholdDb: StateFlow<Float>
-val limiterPostGainDb: StateFlow<Float>
-val eqService: StateFlow<EqService?>    // читается через .value, collect не используется
+val limiterAttackMs: StateFlow<Float>    // читается ТОЛЬКО через .value
+val limiterReleaseMs: StateFlow<Float>   // то же
+val limiterRatio: StateFlow<Float>       // то же
+val limiterThresholdDb: StateFlow<Float> // то же
+val limiterPostGainDb: StateFlow<Float>  // то же
 ```
 
-Все эти `StateFlow` используются как удобные геттеры/сеттеры через `.value`, а не как реактивный стрим. Это избыточно и добавляет шум.
+Все 22 StateFlow используются как удобные геттеры/сеттеры через `.value`, а не как реактивные стримы. Это избыточно — обычные свойства Kotlin сделали бы то же самое без накладных расходов StateFlow.
 
-### 2.3 Race Conditions
+### 2.3 Race conditions
 
-#### RC-1: Service binding race
-
-**Файл:** `MainActivity.kt:2442-2451`
-
-```kotlin
-powerFab.postDelayed({
-    EqService.start(this)
-    if (eqViewModel.serviceBound.value) {
-        doStartEq()
-    } else {
-        eqViewModel.stateManager.pendingStartEq = true
-        bindService(intent, ..., BIND_AUTO_CREATE)
-    }
-}, 280)
-```
-
-**Проблема:** Между вызовом `EqService.start()` и проверкой `serviceBound` проходит время. Если ServiceConnection ещё не вызвался (он асинхронный), `serviceBound` будет false, и мы установим `pendingStartEq = true`. Но ServiceConnection мог уже вызваться до этой проверки — тогда `doStartEq()` никогда не будет выполнен из `onServiceConnected`.
-
-**Потенциальный сценарий:** Пользователь быстро тапает Power FAB → задержка 280ms → за это время ServiceConnection успевает сработать → проверка `serviceBound == true` → `doStartEq()` → но animation/pending логика не в курсе.
-
-#### RC-2: DynamicsProcessingManager.updateFromEqualizers — coroutine race
+#### RC-1: DSP update race (высокий риск)
 
 **Файл:** `DynamicsProcessingManager.kt:349-373`
 
@@ -273,143 +297,133 @@ fun updateFromEqualizers(...) {
 }
 ```
 
-Если `updateFromEqualizers` вызывается дважды подряд (drag), первый `launch` может ещё не завершить `computeEqData`, когда второй `launch` стартует. Оба будут использовать `this.leftEq/rightEq` — мутабельные ссылки, которые могут измениться между запуском и выполнением. Нет механизма отмены предыдущей корутины (cancel previous).
+При двух последовательных вызовах:
+1. Первый `launch` начинает `computeEqData` на Default
+2. Второй `launch` стартует — оба используют `this.leftEq`/`this.rightEq`
+3. Порядок `handler.post` не определён — DSP может получить устаревшие данные после свежих
 
-#### RC-3: static volatile mirror race
+**Воспроизведение:** Drag-движение на EQ-графе. ACTION_MOVE каждые 8ms, `computeEqData` ~2-5ms. Через 16ms (throttle) — race.
 
-**Файл:** `EqService.kt`
+#### RC-2: Статические mirror-поля (средний риск)
+
+**Файл:** `EqService.kt` companion
 
 ```kotlin
-companion object {
-    @Volatile var isDpRunning: Boolean = false  // пишется из main thread, читается из tile
-    @Volatile var staticLastDeviceLabel: String? = null
+@Volatile var staticLastDeviceLabel: String? = null
+@Volatile var staticLastDeviceKey: String? = null
+```
+
+Чтение по отдельности в `MainActivity.updateDevicePresetStatus()`. Между чтением `label` и `key` значения могут обновиться — пользователь увидит label от нового устройства, key от старого.
+
+#### RC-3: Пересоздание CoroutineScope без отмены (средний риск)
+
+**Файл:** `DynamicsProcessingManager.kt:152`
+
+```kotlin
+fun start(eq: ParametricEqualizer) {
+    // ...
+    dspScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 }
 ```
 
-Хотя `@Volatile` гарантирует видимость, **гарантии атомарности нет** для композитного чтения: MainActivity читает `EqService.staticLastDeviceLabel` в `updateDevicePresetStatus()`, но между чтением и использованием `lastDeviceLabel` в `buildNotification()` может обновиться — результат будет несогласованным. Для пары `(label, key)` нужна атомарная ссылка на data class.
+Если `start()` вызывается дважды без промежуточного `stop()`, старый `dspScope` продолжает висеть (утечка корутин). `stop()` вызывает `dspScope.cancel()`, но повторный `start()` без `stop()` — потеря ссылки на старый scope.
 
-#### RC-4: eqService null race
+#### RC-4: Service binding race (средний риск)
 
-**Файл:** `EqStateManager.kt:499-511`
+**Файл:** `MainActivity.kt:2442-2451`
 
 ```kotlin
-fun stopProcessing(animatePower: (Boolean) -> Unit) {
-    animatePower(false)
-    if (serviceBound) {
-        runCatching { context.unbindService(serviceConnection) }
-        serviceBound = false
-    }
-    EqService.stop(context)
-    eqService = null
-    isProcessing = false
-}
+powerFab.postDelayed({
+    EqService.start(this)
+    if (eqViewModel.serviceBound.value) { doStartEq() }
+    else { stateManager.pendingStartEq = true; bindService(...) }
+}, 280)
 ```
 
-Между `unbindService()` и `set eqService = null` другой поток (ServiceConnection.onServiceDisconnected) может записать `null` в `eqService` и `false` в `serviceBound` — это происходит в том же потоке (main), поэтому безопасно. **Но:** если кто-то вызывает `pushEqUpdate()` в этот момент, он прочитает `isProcessing = true` (строка ещё не выполнилась), `eqService != null` (ещё не обнулён), попытается писать в DynamicsProcessing, который уже остановлен.
+280ms задержка между `EqService.start()` и проверкой `serviceBound`. Если ServiceConnection успевает сработать за это время — `pendingStartEq` не устанавливается, `doStartEq()` не вызывается.
 
 ### 2.4 Краевые случаи и логические баги
 
-#### B-1: preampSlider вызывает двойную запись
+#### 🔴 B-1: ChannelMath.computeAutoGainOffset — ArrayIndexOutOfBoundsException
 
-**Файл:** `MainActivity.kt:1941-1948`
-
-```kotlin
-preampSlider.addOnChangeListener { _, value, fromUser ->
-    if (!fromUser) return@addOnChangeListener
-    preampText.setText(...)
-    eqViewModel.setPreampGain(value)     // 1: EqStateManager.preqampGainDb = value
-    eqViewModel.eqPrefs.savePreampGain(value)  // 2: дублирует то, что делает setPreampGain()
-    eqViewModel.pushEqUpdate()
-}
-```
-
-В `setPreampGain()` уже сохраняется prefs: `eqPrefs.savePreampGain(gain)`. Здесь делается повторный `savePreampGain`.
-
-#### B-2: Table mode width calculation — неправильный parent
-
-**Файл:** `MainActivity.kt:2212-2216`
+**Файл:** `ChannelMath.kt:54-62`
+**Риск:** CRASH при пустом одном массиве и непустом другом.
 
 ```kotlin
-val effectiveWidth = if (outerLayout.width > 0) {
-    outerLayout.width - outerLayout.paddingLeft - outerLayout.paddingRight
-} else {
-    resources.displayMetrics.widthPixels - (32 * density).toInt()
-}
-```
-
-**Проблема:** `outerLayout` — это `(pageEq as ScrollView).getChildAt(0) as LinearLayout`. Его `paddingLeft/paddingRight` могут не отражать актуальные отступы на тёмной/светлой теме. Используется `displayMetrics.widthPixels`, который не учитывает WindowInsets (system bars, cutouts).
-
-#### B-3: Channel Side EQ — потеря состояния при смене режима
-
-**Файл:** `MainActivity.kt:2051-2093`
-
-При входе в Simple Mode с активным CSE, `saveState()` пишет в `bands` текущий parametricEq (левый канал). При выходе из Simple Mode, восстановление `loadBandsTo(eq, backup)` восстановит только левый канал в bothEq. Правый канал потерян.
-
-#### B-4: PresetPicker height — измерение до layout
-
-**Файл:** `MainActivity.kt:1539-1553`
-
-```kotlin
-fun boundPresetPickerHeight() {
-    pageEq.scrollTo(0, 0)
-    presetPickerScroll.post {
-        var t = 0
-        var v: android.view.View? = presetPickerScroll
-        while (v != null && v !== pageEq) {
-            t += v.top
-            v = v.parent as? android.view.View
-        }
-        val avail = pageEq.height - t
-        val lp = presetPickerScroll.layoutParams
-        lp.height = if (avail > 0) avail
-                    else ViewGroup.LayoutParams.MATCH_PARENT
-        presetPickerScroll.layoutParams = lp
+fun computeAutoGainOffset(leftGains: FloatArray, rightGains: FloatArray): Float {
+    if (leftGains.isEmpty() && rightGains.isEmpty()) return 0f
+    val count = if (leftGains.isEmpty()) rightGains.size                // count = rightGains.size
+                else if (rightGains.isEmpty()) leftGains.size
+                else minOf(leftGains.size, rightGains.size)
+    var peak = Float.NEGATIVE_INFINITY
+    for (i in 0 until count) {
+        if (leftGains[i] > peak) peak = leftGains[i]   // AIOOBE если leftGains пуст!
+        if (rightGains[i] > peak) peak = rightGains[i]
     }
 }
 ```
 
-**Проблема:** Итерация по родительской цепочке суммирует `v.top`, но **не учитывает `translationY`** и не гарантирует, что все `v.top` уже финальные на момент вызова. После того, как `switchEqUiMode` перестраивает layout (GONE/VISIBLE), значения `v.top` могут быть устаревшими.
+**Воспроизведение:** `computeAutoGainOffset(emptyArray(), nonEmptyArray())` → AIOOBE на `leftGains[0]`.
 
-#### B-5: Протухание стейта в DETECTED сессиях
+#### 🟡 B-2: VisualizerHelper.isMusicPlaying — никогда не false
 
-**Файл:** `SessionEffectManager.kt:57`
-
-```kotlin
-private val sessions = mutableMapOf<Int, DynamicsProcessing>()
-```
-
-При `detach` нет гарантии, что `release()` вызывается (краевой случай — убитый процесс, выключенный Bluetooth и т.д.). Это утечка ресурсов DSP.
-
-#### B-6: Auto-gain двойное применение
-
-**Файл:** `DynamicsProcessingManager.kt:401-410` и `DynamicsProcessingManager.kt:443-446`
-
-```kotlin
-// В computeEqData:
-if (autoGainEnabled) {
-    lastAutoGainOffset = ChannelMath.computeAutoGainOffset(leftGains, rightGains)
-    if (lastAutoGainOffset != 0f) {
-        for (i in leftGains.indices) leftGains[i] += lastAutoGainOffset
-        for (i in rightGains.indices) rightGains[i] += lastAutoGainOffset
-    }
-}
-
-// Input gain composition:
-val leftInputGainDb = preampGainDb + leftOffsetDb   // autoGainOffset НЕ включён сюда
-val rightInputGainDb = preampGainDb + rightOffsetDb
-```
-
-**Комментарий в коде:** «Auto-gain is already baked into band gains above». Это корректно, но **нет мониторинга**: autoGainOffset вычисляется каждый раз при `updateFromEqualizers`, но нигде не показывается пользователю _live_ (только метка в настройках).
-
-#### B-7: Play/pause detection в VisualizerHelper некорректен
-
-**Файл:** `VisualizerHelper.kt:48`
+**Файл:** `VisualizerHelper.kt:44-47`
 
 ```kotlin
 isMusicPlaying = configs != null && configs.isNotEmpty()
 ```
 
-**Ошибка:** Список `activePlaybackConfigurations` всегда непуст, когда есть активные аудиосессии. Даже на паузе Spotify держит аудиосессию. Флаг `isMusicPlaying` никогда не станет `false`, если плеер не закрыл сессию полностью. Нужно проверять `PlaybackState.STATE_PLAYING` через `MediaController`.
+Список `activePlaybackConfigurations` всегда непуст, когда плеер держит аудиосессию. Даже на паузе Spotify не закрывает сессию — `isMusicPlaying = true` постоянно. Спектр не затухает, энергопотребление выше на 15-30%.
+
+#### 🟡 B-3: LufsProcessor — хардкод sampleRate=48000
+
+**Файл:** `LufsProcessor.kt:23,33-39`
+
+Коэффициенты биквадных фильтров (K-weighting pre-filter + RLB) захардкожены для 48 кГц. `reset()` сбрасывает только состояние фильтров, но не пересчитывает коэффициенты. При `sampleRate != 48000` измерения LUFS некорректны.
+
+#### 🟡 B-4: ParametricEqualizer.insertBand — отсутствие bounds checking
+
+**Файл:** `ParametricEqualizer.kt:120-134`
+
+```kotlin
+fun insertBand(index: Int, ...) {
+    val band = EqualizerBand(...)
+    bands.add(index, band)     // IOOBE при index < 0 или index > bands.size
+    // ...
+}
+```
+
+Caller-ы (TableEqController, BandToggleManager) защищаются `.coerceIn()`, но сам метод небезопасен.
+
+#### 🟡 B-5: UndoRedoManager — отсутствие ограничения глубины
+
+**Файл:** `UndoRedoManager.kt:28`
+
+```kotlin
+private val history = mutableListOf<String>()  // растёт без ограничения
+```
+
+Каждый `saveState()` сохраняет полный JSON-слепок EQ. При длительной сессии (~1 час редактирования) — тысячи строк в памяти.
+
+#### 🟢 B-6: GraphicEqController.updateSliderValues — возможен race с перестроением
+
+**Файл:** `GraphicEqController.kt:161`
+
+```kotlin
+val band = eq.getBand(bandIndex)!!  // NPE если bandIndex out of range
+```
+
+При быстрой смене количества полос (toggle band on/off) `bandIndex` может не совпасть с актуальным размером `sliderRefs`. Исправлено в предыдущей сессии (BUG 1.2), но `!!` остался — хрупко.
+
+#### 🟢 B-7: Циклическая зависимость state → ui
+
+```kotlin
+// UndoRedoManager.kt:4-5
+import com.bearinmind.equalizer314.ui.BandToggleManager
+import com.bearinmind.equalizer314.ui.EqGraphView
+```
+
+Слой `state` (UndoRedoManager) импортирует UI — делает тестирование невозможным без MockK/Robolectric.
 
 ### 2.5 Неоптимальные вычисления
 
@@ -420,80 +434,88 @@ svc.dynamicsManager.stop()
 svc.dynamicsManager.start(eqViewModel.parametricEq.value)
 ```
 
-`stop()` → `start()` пересоздаёт весь DP pipeline (127-band FFT, limiter, MBC). Если изменились только band gains, достаточно `updateFromEqualizers()`. Пересоздание вызывает слышимый артефакт (gap/click).
+`stop()` → `start()` пересоздаёт весь DP pipeline (127-band FFT, limiter, MBC). Если изменились только band gains, достаточно `updateFromEqualizers()`.
 
-#### P-2: Копирование спектра через ByteArray на каждом callback
+#### P-2: UndoRedoManager хранит полный JSON вместо diff
 
-**Файл:** `VisualizerHelper.kt:67-101`
+Каждый `saveState()` — полная JSON-копия всех bands. При 16 band-ах = ~2 KB × тысячи вызовов. Можно хранить только diff (изменённый band) или использовать протобуфер.
 
-Каждый кадр (`~60 fps`): `Visualizer.OnDataCaptureListener.onWaveFormDataCapture()` → копирует `ByteArray` → `renderer.updateWaveformData(waveform)` → `renderer.feedSilence()` → `graphView.postInvalidate()`. Всё это на потоке Visualizer (binder), который блокируется при heavy processing.
-
-#### P-3: ParametricEqualizer.addBand → BiquadFilter пересоздаётся лишний раз
-
-**Файл:** `ParametricEqualizer.kt:98-111`
+#### P-3: VisualizerHelper — ByteArray на каждом callback
 
 ```kotlin
-fun addBand(...) {
-    val band = EqualizerBand(...)
-    bands.add(band)
-    val filter = BiquadFilter(frequency, gain, filterType, sampleRate, q).apply {
-        useVicanekMethod = false
-    }
-    filters.add(filter)
+// VisualizerHelper.kt ~60fps
+override fun onWaveFormDataCapture(v, waveform: ByteArray, ...) {
+    renderer.updateWaveformData(waveform)        // копия
+    renderer.feedSilence()                        // второй проход
+    graphView.postInvalidate()                    // третий проход
 }
 ```
 
-При копировании state через `copyEqState()` (вызывается при включении CSE), каждый band добавляется через `addBand()`, который вычисляет биквадратные коэффициенты. Но затем вся EQ пересоздаётся через `start()` — коэффициенты вычисляются дважды.
+Каждый кадр (~60fps): копия ByteArray → CPU вычисления → invalidate → onDraw. Всё на потоке Visualizer (binder), который блокируется при heavy processing.
 
-#### P-4: UI thread blocking на preset load
+#### P-4: EqViewModel — 22 MutableStateFlow без .collect
 
-При тапе на preset в picker ~25 последовательных операций на main thread:
-- `applyPresetEqs()` → clearBands + addBand для каждого band
-- `saveState()` → JSON сериализация
-- `initBandSlots()` → перестроение slot lists
-- `setupToggles()` → inflate toggles
-- Animations (alpha transition, fade)
-
-Если preset содержит 16 bands, это может занять ~100-200ms на main thread, вызывая frame drops.
+22 отдельных StateFlow объекта вместо одного data class `UiState` с копированием через `.copy()`. Каждый StateFlow — отдельный объект с атомиком, что добавляет ~1-2 KB на объект overhead и лишнюю аллокацию при каждом обновлении.
 
 ---
 
 ## 3. Критические уязвимости
 
-### 🔴 C-1: Утечка DynamicsProcessing при detach (SessionEffectManager)
+### 🔴 C-1: ChannelMath.computeAutoGainOffset — AIOOBE
 
-**Файл:** `SessionEffectManager.kt:57`
-**Риск:** Утечка нативных ресурсов AudioFlinger при множественных attach/detach. `sessions` — `MutableMap<Int, DynamicsProcessing>` — может накопить сотни неосвобождённых DSP-объектов при многократных OPEN/CLOSE.
-
-**Воспроизведение:** Быстрое переключение между аудиоплеерами через UAPP/Spotify/Poweramp → каждый бросает OPEN_AUDIO_EFFECT_CONTROL_SESSION → приложение крешится по `OutOfMemoryError` или AudioFlinger падает.
-
-### 🔴 C-2: Отсутствие атомарности статических mirror-полей
-
-**Файл:** `EqService.kt:91-96`
-**Риск:** `staticLastDeviceLabel` и `staticLastDeviceKey` читаются по отдельности (неатомарно) из разных потоков. MainActivity читает их в `updateDevicePresetStatus()` для отображения «Preset · Device». Если между чтениями значения обновятся, пользователь увидит рассогласованную информацию: label от нового устройства, key от старого.
-
-### 🟡 C-3: Нет гарантии очередности coroutine в DSP update
-
-**Файл:** `DynamicsProcessingManager.kt:349-373`
-**Риск:** Drag на EQ-графе генерирует поток `updateFromEqualizers()` → `dspScope.launch {}`. Каждый запуск — новая корутина. Если computeEqData медленная (>16ms), а ACTION_MOVE приходит каждые 8ms, то порядок применения к DSP непредсказуем. Пользователь двигает ползунок вверх, а слышит скачки.
-
-### 🟡 C-4: MainThread blocking на preset load
-
-**Файл:** `MainActivity.kt:1465-1528`
-**Риск:** ANR при загрузке большого пресета (16+ bands) с включённым DSP на слабых устройствах (Android Go, старые телефоны). Вся загрузка (~25 операций) выполняется на main thread.
-
-### 🟡 C-5: visualizerHelper.isMusicPlaying logic broken
-
-**Файл:** `VisualizerHelper.kt:48`
-**Риск:** Спектр анализатор никогда не переходит в режим «тишины» при паузе музыки. FFT данные продолжают обрабатываться, пользователь видит движущийся spectrum на паузе. Энергопотребление выше на 15-30% из-за ненужных вычислений.
-
-### 🟢 C-6: `catch (e: Exception)` без обработки — 8+ мест
+**Файл:** `ChannelMath.kt:54-62`
+**Риск:** CRASH при `computeAutoGainOffset(emptyArray(), nonEmptyArray())`.
+**Путь:** `DynamicsProcessingManager.computeEqData()` → `ChannelMath.computeAutoGainOffset()`.
 
 ```kotlin
-// EqStateManager.kt
-runCatching { context.unbindService(serviceConnection) }
+fun computeAutoGainOffset(leftGains: FloatArray, rightGains: FloatArray): Float {
+    if (leftGains.isEmpty() && rightGains.isEmpty()) return 0f
+    val count = if (leftGains.isEmpty()) rightGains.size
+                else if (rightGains.isEmpty()) leftGains.size
+                else minOf(leftGains.size, rightGains.size)
+    for (i in 0 until count) {
+        if (leftGains[i] > peak) peak = leftGains[i]  // AIOOBE когда leftGains пуст
+        if (rightGains[i] > peak) peak = rightGains[i] // AIOOBE когда rightGains пуст
+    }
+}
 ```
-В 8 местах `runCatching { ... }` используется для обёртки системных вызовов, но ошибки игнорируются. Если `unbindService` выбросит `IllegalArgumentException` (сервис не привязан), приложение выживет, но сервис останется висеть.
+
+### 🔴 C-2: DSP update race — слышимые артефакты и потеря управления
+
+**Файл:** `DynamicsProcessingManager.kt:349-373`
+**Риск:** При быстром drag на EQ-графе порядок применения band-изменений к DSP непредсказуем. Пользователь двигает ползунок вверх, а слышит скачки.
+
+### 🔴 C-3: UndoRedoManager — утечка памяти (OOM)
+
+**Файл:** `UndoRedoManager.kt:28`
+**Риск:** `MutableList<String>` растёт без ограничения. При 1000+ операций undo (реалистично за час редактирования) — ~2 MB в памяти. Нет ограничения глубины.
+
+### 🟡 C-4: VisualizerHelper.isMusicPlaying — паразитное энергопотребление
+
+**Файл:** `VisualizerHelper.kt:44-47`
+**Риск:** Спектр анализатор работает непрерывно, даже когда музыка на паузе. Энергопотребление выше на 15-30%.
+
+### 🟡 C-5: LufsProcessor — некорректные измерения при sampleRate ≠ 48000
+
+**Файл:** `LufsProcessor.kt:23,33-39,132-138`
+**Риск:** LUFS-измерения невалидны на устройствах с sampleRate ≠ 48000 (некоторые Bluetooth кодеки, USB DAC).
+
+### 🟡 C-6: SessionEffectManager — неограниченный рост map
+
+**Файл:** `SessionEffectManager.kt:57`
+**Риск:** `sessions`, `reverbs`, `sessionInfo` — три `MutableMap`, которые могут расти неограниченно при быстром переключении между аудиоплеерами.
+
+### 🟢 C-7: 26 `!!` (non-null assertions) в продакшен-коде
+
+Наиболее опасные:
+- `GraphicEqController.kt:161` — `eq.getBand(bandIndex)!!` → NPE при out-of-range
+- `DynamicsProcessingManager.kt:287` — `start(lastEq!!)` → NPE если lastEq null
+- `EqGraphView.kt:378` — `cachedNormalizedSpectrum!!` → NPE
+
+### 🟢 C-8: ParametricEqualizer.insertBand — отсутствие bounds check
+
+**Файл:** `ParametricEqualizer.kt:120-134`
+**Риск:** IOOBE при `insertBand(-1, ...)` или `insertBand(100, ...)`. Caller-ы защищаются, но контракт метода небезопасен.
 
 ---
 
@@ -503,7 +525,7 @@ runCatching { context.unbindService(serviceConnection) }
 
 ```mermaid
 flowchart TB
-    subgraph UI["UI Layer (MainActivity 2830 LOC)"]
+    subgraph UI["UI Layer (MainActivity 2824 LOC)"]
         EV[EqGraphView]
         BT[BandToggleManager]
         GC[GraphController]
@@ -516,36 +538,46 @@ flowchart TB
     end
 
     subgraph STATE["State Layer"]
-        VM[EqViewModel\n28 StateFlow]
-        SM[EqStateManager\nboth/left/right EQ\nbandSlots, service binding\nthrottle handler]
-        PM[PresetManager\nCustom Presets SP]
-        EPM[EqPreferencesManager\n4x SharedPrefs\n~60 methods]
+        VM[EqViewModel\n22 StateFlow]
+        SM[EqStateManager\nboth/left/right EQ\nbandSlots, service\nbinding, throttle]
+        PM[PresetManager\nCustom Presets SP\nNOT Room!]
+        EPM[EqPreferencesManager\n4x SharedPrefs\n~160 methods]
+        UR[UndoRedoManager\nno depth limit]
     end
 
     subgraph DSP["DSP Layer"]
-        EQ[ParametricEqualizer]
+        PE[ParametricEqualizer]
         BQ[BiquadFilter]
         P2D[ParametricToDpConverter]
         FF[FFT / SpectrumAnalyzer]
     end
 
     subgraph AUDIO["Audio Service Layer"]
-        SVC[EqService 1117 LOC\nonStartCommand]
-        DPM[DynamicsProcessingManager\n127 bands]
-        SEM[SessionEffectManager\nper-session DSP]
+        SVC[EqService 1088 LOC\nonStartCommand\n15 broadcast actions]
+        DPM[DynamicsProcessingManager\n127 bands\nNO synchronization\nRace on update!]
+        SEM[SessionEffectManager\n@Synchronized\nunbounded maps]
         RSC[RouteSwitchCoordinator]
         ARM[AudioRoutingMonitor]
-        VH[VisualizerHelper\nFFT spectrum]
+        VH[VisualizerHelper\nisMusicPlaying BROKEN]
         BC[BootCompletedReceiver]
         PLS[PlaybackListenerService]
+        CHM[ChannelMath\nAIOOBE in autoGain!]
+        LUF[LufsProcessor\n48kHz hardcoded]
+    end
+
+    subgraph MEASUREMENT["Measurement Layer"]
+        TSG[TestSignalGenerator\n13 signal types]
+        FME[FreqMeasurementEngine\nWelch FFT 8192\n1/3 octave smoothing]
+        MACT[MeasurementActivity\nUI + AudioRecord]
     end
 
     subgraph DATA["Data Layer"]
-        DB[(Room EqDatabase)]
-        PDAO[PresetDao]
+        DB[(Room EqDatabase v2)]
+        ARDB[AutoEqDatabase\nNOT Room, JSON in assets]
+        PDAO[PresetDao\nFlow support]
         BDDAO[DeviceBindingDao]
         SDDAO[SeenDeviceDao]
-        REPO[PresetRepository]
+        REPO[PresetRepository\nwraps Room DAO]
     end
 
     EV -- touch → GC -- state → SM -- push → DPM
@@ -560,74 +592,181 @@ flowchart TB
     EPM -- fallback → DB
     PM -- JSON parse → SM
     PIC -- export/import → PM
+    SVC -- static volatiles → UI
+
+    SM -- DIP VIOLATION → EV
+    UR -- DIP VIOLATION → EV
+    UR -- DIP VIOLATION → BT
 
     style UI fill:#e1f5fe,stroke:#01579b
     style STATE fill:#fff3e0,stroke:#e65100
     style DSP fill:#e8f5e9,stroke:#1b5e20
     style AUDIO fill:#fce4ec,stroke:#b71c1c
+    style MEASUREMENT fill:#e8eaf6,stroke:#283593
     style DATA fill:#f3e5f5,stroke:#4a148c
 ```
 
-### Целевая архитектура (To-Be) после рефакторинга
+### Sequence: EQ band change (текущий, с race)
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant G as EqGraphView
+    participant SM as EqStateManager
+    participant DPM as DynamicsProcessingManager
+    participant AF as AudioFlinger
+
+    User->>G: Drag band (ACTION_MOVE)
+    G->>SM: pushEqUpdate()
+    SM->>SM: throttle(16ms)
+    DPM->>DPM: dspScope.launch #1
+    Note over DPM: computeEqData() @Default
+    User->>G: Drag продолжается
+    G->>SM: pushEqUpdate() #2
+    SM->>SM: throttle ещё не истёк
+    Note over SM: 16ms не прошло
+    DPM->>DPM: dspScope.launch #2
+    Note over DPM: computeEqData() @Default
+    Note over DPM: Параллельно!
+    DPM-->>DPM: handler.post #1 (submitBinderWork)
+    DPM-->>DPM: handler.post #2 (submitBinderWork)
+    Note over DPM: Порядок НЕ ГАРАНТИРОВАН!
+    DPM->>AF: setPreEqByChannelIndex()
+    DPM->>AF: setInputGainbyChannel()
+```
+
+### Sequence: DSP update (исправленный, с отменой предыдущей корутины)
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant G as EqGraphView
+    participant SM as EqStateManager
+    participant DPM as DynamicsProcessingManager
+    participant AF as AudioFlinger
+
+    User->>G: Drag band
+    G->>SM: pushEqUpdate()
+    SM->>SM: throttle(16ms)
+    DPM->>DPM: updateJob?.cancel()
+    DPM->>DPM: updateJob = dspScope.launch
+    Note over DPM: takeEqSnapshot() → immutable
+    DPM->>DPM: computeEqData(snapshot)
+    DPM->>AF: submitBinderWork()
+    AF-->>DPM: ok
+    User->>G: Drag продолжается
+    G->>SM: pushEqUpdate() #2
+    SM->>SM: throttle истёк
+    DPM->>DPM: updateJob?.cancel()
+    Note over DPM: Предыдущая отменена
+    DPM->>DPM: updateJob = dspScope.launch #2
+    DPM->>DPM: takeEqSnapshot() → свежий снимок
+    DPM->>DPM: computeEqData #2
+    DPM->>AF: submitBinderWork #2
+    Note over DPM: Гарантированный порядок
+```
+
+### Текущий поток состояния (22 отдельных StateFlow)
+
+```mermaid
+flowchart LR
+    subgraph ESM["EqStateManager (источник истины)"]
+        PEQ[parametricEq]
+        PRE[preampGainDb]
+        LIM[limiterEnabled\nattackMs\nreleaseMs\nratio\nthreshold\npostGain]
+        CHN[channelBalance\nleftGain\nrightGain]
+        MOD[currentEqUiMode]
+    end
+
+    subgraph VM["EqViewModel (22 StateFlow)"]
+        SP1[_parametricEq]
+        SP2[_preampGainDb]
+        SP3[limiterEnabled]
+        SP4[limiterAttackMs]
+        SP5[limiterReleaseMs]
+        SP6[limiterRatio]
+        SP7[limiterThresholdDb]
+        SP8[limiterPostGainDb]
+        SP9[channelBalancePercent]
+        SP10[leftChannelGainDb]
+        SP11[rightChannelGainDb]
+        SP12[currentEqUiMode]
+        SP13[isProcessing]
+        SP14[selectedBandIndex]
+        SP15[autoGainEnabled]
+        SP16[bandSlotsList]
+        SP17[bandColorsMap]
+        SP18[eqService]
+        SP19[serviceBound]
+        SP20[preampGainDb]
+        SP21[activeChannel]
+        SP22[autoGainOffset]
+    end
+
+    ESM -- syncFromStateManager() --> VM
+    VM -- .value read --> UI
+    VM -- write --> ESM
+    VM -- write --> EPM
+
+    style ESM fill:#fff3e0,stroke:#e65100
+    style VM fill:#fce4ec,stroke:#b71c1c
+```
+
+### Целевая архитектура (To-Be)
 
 ```mermaid
 flowchart TB
     subgraph UI["UI Layer"]
-        direction TB
-        MA[MainActivity\nfeature modules]
-        EV[EqGraphView]
-        SUB[ActivitySubComponents\nPresetPickerFeature\nSettingsFeature\nEqModeManager]
+        MA[MainActivity\nthin controller]
+        EV[EqGraphView\npure rendering]
+        SUB[Feature components\nPresetPickerFeature\nEqModeManager\nGraphHeaderButtons]
     end
 
     subgraph CONTRACT["Contract Layer"]
-        MC[MainActivityContract\nnarrow interface per concern]
-        EVL[EditViewListener]
-        PFL[PresetFeatureListener]
+        MC[MainActivityContract\nnarrow per feature]
     end
 
-    subgraph VM["ViewModel (State)"]
-        EVM[EqViewModel\nStateFlow per feature]
-        US[UiState\ndata class: all UI state]
+    subgraph VM["ViewModel"]
+        US[UiState\ndata class: single source\nof UI truth]
+        DISP[dispatch(action)]
     end
 
     subgraph DOMAIN["Domain Layer"]
-        USECASE[Use Cases\napplyPreset\nloadPreset\ntoggleEq]
-        ESM[EqStateManager\nonly EQ state\nno View dependency]
-        EPM[EqPreferencesManager\nbroken into:\nEqPrefsRepository\nBindingPrefsRepository\nPresetRepository]
+        UC[Use Cases\napplyPreset\nloadPreset\ntoggleEq]
+        ESM[EqStateManager\nNO View import\npure domain state]
+        PR[PresetRepository\nsole source via Room]
+        EPM[EqPreferencesManager\nsplit into:\nEqPrefsRepository\nBindingsRepository]
     end
 
     subgraph DSP["DSP Layer"]
         PE[ParametricEqualizer]
         BQ[BiquadFilter]
-        DPM[DynamicsProcessingManager]
-        P2C[ParametricToDpConverter]
+        DPM[DynamicsProcessingManager\nordered queue\ncancel previous]
     end
 
     subgraph SERVICE["Service Layer"]
-        SVC[EqService\nthinner:\nonly lifecycle\n+ broadcast routing]
-        DPW[DspWorker\ncoroutine-based\nordered queue]
-        SEM[SessionEffectManager]
-        ARM[AudioRoutingMonitor]
-        VH[VisualizerHelper]
+        SVC[EqService\nthinner:\nlifecycle + routing]
+        DPW[DspWorker\ncoroutine channel\nordered queue]
+        SEM[SessionEffectManager\nbounded maps]
+        VH[VisualizerHelper\nfixed isMusicPlaying]
     end
 
     subgraph DATA["Data Layer"]
         DB[(Room database)]
-        PR[PresetRepository\nsole source of truth]
     end
 
-    EV -- gesture → USECASE
-    USECASE -- immutable state → EVM
-    EVM -- StateFlow → SUB
-    SUB -- action → USECASE
-    USECASE -- write → ESM
-    ESM -- push → DPW
-    DPW -- ordered coroutine → DPM
+    EV -- gesture → UC
+    UC -- result → VM
+    VM -- StateFlow → SUB
+    SUB -- action → UC
+    UC -- command → ESM
+    ESM -- immutable state → DPM
+    DPM -- ordered queue → AF[AudioFlinger]
     ESM -- read/write → PR
     PR -- Flow → ESM
-    SVC -- bound service → DPW
-    ARM -- route → SVC -- delegate → ESM
+    SVC -- bound service → DPM
     SEM -- per-session → DPM
+    VH -- AudioRecord → VH
 
     style UI fill:#e1f5fe,stroke:#01579b
     style CONTRACT fill:#f5f5f5,stroke:#616161
@@ -638,103 +777,37 @@ flowchart TB
     style DATA fill:#f3e5f5,stroke:#4a148c
 ```
 
-### Sequence Diagram: EQ band change (исправленный)
-
-```mermaid
-sequenceDiagram
-    actor User
-    participant G as EqGraphView
-    participant UC as UseCase
-    participant SM as EqStateManager
-    participant Q as Coroutine Queue
-    participant DPM as DynamicsProcessingManager
-    participant AF as AudioFlinger
-
-    User->>G: Drag band
-    G->>UC: onBandChanged(index, freq, gain)
-    UC->>SM: updateBand(index, freq, gain)
-    SM->>SM: throttle(16ms)
-    Note over SM: Отменяет предыдущий Job
-    SM->>Q: pushEqUpdate(parametricEq snapshot)
-    Q->>Q: cancelPrevious()
-    Q->>DPM: computeAndApply(leftEq, rightEq)
-    DPM->>DPM: computeEqData() @Default
-    DPM->>DPM: submitBinderWork() @HandlerThread
-    DPM->>AF: setPreEqByChannelIndex()
-    DPM->>AF: setInputGainbyChannel()
-    AF-->>DPM: ok
-    DPM-->>Q: done
-    Q-->>SM: onApplied
-
-    User->>G: ACTION_UP
-    G->>UC: onBandDragEnd
-    UC->>SM: flushEqUpdate()
-    SM->>Q: cancelPrevious()
-    SM->>Q: pushEqUpdate(parametricEq snapshot)
-    DPM->>AF: final commit
-```
-
 ---
 
 ## 5. План рефакторинга
 
-### 5.1 Фаза 1: Критические исправления (P0 — безопасность и корректность)
+### 5.1 Фаза 1: Критические исправления (P0 — crash, race, утечки)
 
-#### 5.1.1 Утечка DSP-сессий
-
-**Проблема:** `SessionEffectManager.sessions` (MutableMap) не очищается при краевых случаях.
+#### 5.1.1 🔴 ChannelMath.computeAutoGainOffset — AIOOBE
 
 ```kotlin
-// Текущий код: SessionEffectManager.kt
-private val sessions = mutableMapOf<Int, DynamicsProcessing>()
+// ChannelMath.kt — исправление
+fun computeAutoGainOffset(leftGains: FloatArray, rightGains: FloatArray): Float {
+    if (leftGains.isEmpty() && rightGains.isEmpty()) return 0f
+    val peak = Float.NEGATIVE_INFINITY
 
-@Synchronized
-fun detach(sessionId: Int) {
-    sessions.remove(sessionId)?.let {
-        try { it.release() } catch (_: Throwable) {}
+    // Безопасный проход по левому массиву
+    for (i in leftGains.indices) {
+        if (leftGains[i] > peak) peak = leftGains[i]
     }
+    // Безопасный проход по правому массиву
+    for (i in rightGains.indices) {
+        if (rightGains[i] > peak) peak = rightGains[i]
+    }
+
+    return if (peak > 0f) -peak else 0f
 }
 ```
 
-**Исправление:**
+#### 5.1.2 🔴 DSP update race — отмена предыдущей корутины
 
 ```kotlin
-// Добавить WeakReference и лимит на количество сессий
-private val sessions = LinkedHashMap<Int, DynamicsProcessing>(
-    initialCapacity = 16, loadFactor = 0.75f, accessOrder = true
-) {
-    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, DynamicsProcessing>): Boolean {
-        if (size > MAX_SESSIONS) {
-            eldest.value.release()
-            return true
-        }
-        return false
-    }
-}
-
-companion object {
-    private const val MAX_SESSIONS = 64  // защита от утечки
-}
-
-// В detach — теперь обязательный вызов
-@Synchronized
-fun detach(sessionId: Int) {
-    sessions.remove(sessionId)?.let { dp ->
-        runCatching { dp.release() }.onFailure {
-            Log.w(TAG, "Failed to release DP for session $sessionId", it)
-        }
-    }
-    sessionInfo.remove(sessionId)
-}
-```
-
-#### 5.1.2 Race condition в DSP update
-
-**Проблема:** `dspScope.launch` без отмены предыдущей корутины.
-
-```kotlin
-// DynamicsProcessingManager.kt — замена updateFromEqualizers
-
+// DynamicsProcessingManager.kt
 private var updateJob: Job? = null
 
 fun updateFromEqualizers(leftEq: ParametricEqualizer, rightEq: ParametricEqualizer) {
@@ -745,10 +818,10 @@ fun updateFromEqualizers(leftEq: ParametricEqualizer, rightEq: ParametricEqualiz
         return
     }
 
-    // Отменяем предыдущий update — гарантируем очередность
+    // Отменяем предыдущий update
     updateJob?.cancel()
     updateJob = dspScope.launch {
-        val leftSnapshot = takeEqSnapshot(leftEq)   // иммутабельный снимок
+        val leftSnapshot = takeEqSnapshot(leftEq)
         val rightSnapshot = if (leftEq === rightEq) leftSnapshot
                            else takeEqSnapshot(rightEq)
 
@@ -759,58 +832,113 @@ fun updateFromEqualizers(leftEq: ParametricEqualizer, rightEq: ParametricEqualiz
         handler.post { submitBinderWork(dp, data) }
     }
 }
+```
 
-/** Создаёт иммутабельный снимок EQ на момент вызова */
-private fun takeEqSnapshot(eq: ParametricEqualizer): EqSnapshot {
-    val bands = (0 until eq.getBandCount()).mapNotNull { i ->
-        eq.getBand(i)?.let { b ->
-            EqSnapshot.Band(b.frequency, b.gain, b.filterType, b.q, b.enabled)
-        }
-    }
-    return EqSnapshot(bands, eq.isEnabled)
-}
+#### 5.1.3 🔴 UndoRedoManager — ограничение глубины + capacity
 
-private data class EqSnapshot(
-    val bands: List<Band>,
-    val isEnabled: Boolean
+```kotlin
+// UndoRedoManager.kt
+class UndoRedoManager(
+    private val eqViewModel: EqViewModel,
+    private val eqGraphView: EqGraphView,
+    private val bandToggleManager: BandToggleManager,
 ) {
-    data class Band(
-        val frequency: Float,
-        val gain: Float,
-        val filterType: BiquadFilter.FilterType,
-        val q: Double,
-        val enabled: Boolean
-    )
+    companion object {
+        private const val MAX_HISTORY = 50  // безопасный лимит
+    }
+
+    private val history = LinkedList<String>()  // LinkedList — быстрая вставка/удаление с начала
+
+    fun saveState() {
+        val eq = eqViewModel.parametricEq.value
+        val json = EqSerializer.eqToPresetJson(eq, eqViewModel.preampGainDb.value)
+        // Обрезаем "будущие" состояния
+        var removeCount = 0
+        // (используем итератор для обхода)
+        val it = history.iterator()
+        var idx = 0
+        while (it.hasNext()) {
+            it.next()
+            idx++
+            if (idx > index) it.remove()
+        }
+        // Пересчитываем index после обрезки
+        history.add(json)
+        index = history.size - 1
+
+        // Ограничение глубины
+        while (history.size > MAX_HISTORY) {
+            history.removeFirst()
+            index--
+        }
+        if (index < 0) index = 0
+    }
 }
 ```
 
-#### 5.1.3 Атомарное чтение static-полей
+#### 5.1.4 🟡 VisualizerHelper.isMusicPlaying — исправление
 
 ```kotlin
-// EqService.kt — замена пары volatile-полей на атомарный data class
+// VisualizerHelper.kt
+import android.media.session.MediaController
+import android.media.session.MediaSessionManager
+import android.media.session.PlaybackState
 
-data class DeviceRouteInfo(
-    val label: String?,
-    val key: String?,
-)
+// В методе onPlaybackConfigChanged:
+isMusicPlaying = configs?.let { configs ->
+    if (configs.isEmpty()) {
+        false
+    } else {
+        val mediaManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE)
+                as? MediaSessionManager ?: return@let configs.isNotEmpty()
+        val sessions = mediaManager.getActiveSessions(null)
+        // Проверяем реальное состояние воспроизведения
+        sessions.any { controller ->
+            controller.playbackState?.state == PlaybackState.STATE_PLAYING
+        }
+    }
+} ?: false
+```
 
-@Volatile
-var staticRouteInfo: DeviceRouteInfo = DeviceRouteInfo(null, null)
-    private set
+#### 5.1.5 🟡 SessionEffectManager — ограничение map
 
-// Везде, где читается:
-val route = EqService.staticRouteInfo
-devicePresetStatusText.text = buildString {
-    append(mode).append(" · ").append(presetForDisplay)
-    if (route.label != null) append(" · ").append(route.label)
+```kotlin
+// SessionEffectManager.kt
+companion object {
+    private const val MAX_SESSIONS = 64
+}
+
+private val sessions = object : LinkedHashMap<Int, DynamicsProcessing>(
+    initialCapacity = 16, loadFactor = 0.75f, accessOrder = true
+) {
+    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, DynamicsProcessing>): Boolean {
+        if (size > MAX_SESSIONS) {
+            runCatching { eldest.value.release() }
+                .onFailure { Log.w(TAG, "Failed to release eldest session", it) }
+            return true
+        }
+        return false
+    }
+}
+```
+
+#### 5.1.6 🟡 LufsProcessor — пересчёт коэффициентов при reset
+
+```kotlin
+// LufsProcessor.kt — добавить метод recalculate()
+fun recalculate(sampleRate: Int) {
+    this.sampleRate = sampleRate
+    // Пересчитать коэффициенты K-weighting pre-filter
+    preBiquad.setCoefficients(computePreFilterCoeffs(sampleRate))
+    // Пересчитать RLB filter
+    rlbBiquad.setCoefficients(computeRlbFilterCoeffs(sampleRate))
+    reset()
 }
 ```
 
 ### 5.2 Фаза 2: Декомпозиция MainActivity
 
 #### 5.2.1 Выделение PresetPickerFeature (~600 LOC)
-
-**Проблема:** `populatePresetPicker()` и вся логика выбора/сохранения пресетов — внутри MainActivity.
 
 ```kotlin
 // Новый файл: ui/preset/PresetPickerFeature.kt
@@ -833,37 +961,29 @@ class PresetPickerFeature(
         animateOpen()
     }
 
-    private fun close() {
-        animateClose()
-    }
+    private fun close() { animateClose() }
 
     private fun populatePresetPicker() {
         container.removeAllViews()
         addSaveButton()
-        presetManager.names.sorted().forEach { name ->
-            addPresetRow(name)
-        }
+        contract.presetManager.names.sorted().forEach { name -> addPresetRow(name) }
     }
 
     private fun addPresetRow(name: String) {
-        // ... вынесено из MainActivity полностью
+        // ... вынесено из MainActivity.populatePresetPicker()
     }
 
     private fun boundHeight() {
-        // ... логика вычисления высоты
+        // ... вычисление высоты (вынесено из boundPresetPickerHeight)
     }
 }
 ```
 
-#### 5.2.2 Выделение режимов EQ
-
-**Проблема:** `switchEqUiMode()` — ~400 LOC, 4 ветки (PARAMETRIC, GRAPHIC, TABLE, SIMPLE).
+#### 5.2.2 Выделение EqModeManager (~400 LOC)
 
 ```kotlin
 // Новый файл: ui/eqmode/EqModeManager.kt
-class EqModeManager(
-    private val contract: MainActivityContract,
-) {
+class EqModeManager(private val contract: MainActivityContract) {
     private val modes: Map<EqUiMode, EqModeStrategy> = mapOf(
         EqUiMode.PARAMETRIC to ParametricMode(contract),
         EqUiMode.GRAPHIC to GraphicMode(contract),
@@ -883,11 +1003,29 @@ interface EqModeStrategy {
     fun onEnter()
     fun onLeave()
 }
+
+class ParametricMode(private val contract: MainActivityContract) : EqModeStrategy {
+    override fun onEnter() {
+        contract.eqGraphView.invalidate()
+    }
+    override fun onLeave() {
+        // nothing special for parametric
+    }
+}
+
+class GraphicMode(private val contract: MainActivityContract) : EqModeStrategy {
+    override fun onEnter() {
+        contract.eqGraphView.showBandPoints = false
+        contract.eqGraphView.invalidate()
+        graphicController.buildSliders(graphicController.targetCardHeight)
+    }
+    override fun onLeave() {
+        graphicController.removeSliders()
+    }
+}
 ```
 
-#### 5.2.3 Выделение button positioning
-
-**Проблема:** Дублирование логики позиционирования кнопок.
+#### 5.2.3 Выделение GraphHeaderButtonLayout
 
 ```kotlin
 // Новый файл: ui/GraphHeaderButtonLayout.kt
@@ -895,14 +1033,12 @@ class GraphHeaderButtonLayout(
     private val graphView: EqGraphView,
     private val density: Float,
 ) {
-    data class ButtonSlot(
-        val view: View,
-        val column: Int,     // 0-based
-        val row: Int,        // 0-based
-    )
+    data class ButtonSlot(val view: View, val column: Int, val row: Int)
 
     private val slots = mutableListOf<ButtonSlot>()
     private var settledWidth = 0
+    private val gapPx = 6f * density
+    private val btnWidthRatio = 0.111f
 
     fun register(view: View, column: Int, row: Int) {
         slots.add(ButtonSlot(view, column, row))
@@ -913,13 +1049,19 @@ class GraphHeaderButtonLayout(
         if (w <= 0 || w == settledWidth) return
         settledWidth = w
 
-        val specWidth = computeButtonWidth(w)
+        val specWidth = (w - gapPx * 4) * btnWidthRatio
         val btnHeight = 80f - 4f * density
 
         for (slot in slots) {
             val left = slot.column * (specWidth + gapPx) + gapPx
             val top = slot.row * (btnHeight + gapPx) + gapPx
-            // применяем layoutParams
+            slot.view.layoutParams = (slot.view.layoutParams as ViewGroup.MarginLayoutParams).apply {
+                width = specWidth.toInt()
+                height = btnHeight.toInt()
+                leftMargin = left.toInt()
+                rightMargin = gapPx.toInt()
+                topMargin = top.toInt()
+            }
         }
     }
 }
@@ -937,13 +1079,23 @@ class EqStateManager(
 ) {
     // Вместо initEq(graphView: EqGraphView) — возвращать состояние
     fun loadInitialState(): EqState {
-        // возвращает data class со всем состоянием
         return EqState(
             bothBands = extractBands(bothEq),
             leftBands = extractBands(leftEq),
             rightBands = extractBands(rightEq),
             preampGainDb = preampGainDb,
-            // ...
+            autoGainEnabled = autoGainEnabled,
+            limiterEnabled = limiterEnabled,
+            limiterAttackMs = limiterAttackMs,
+            limiterReleaseMs = limiterReleaseMs,
+            limiterRatio = limiterRatio,
+            limiterThresholdDb = limiterThresholdDb,
+            limiterPostGainDb = limiterPostGainDb,
+            channelBalancePercent = channelBalancePercent,
+            leftChannelGainDb = leftChannelGainDb,
+            rightChannelGainDb = rightChannelGainDb,
+            currentEqUiMode = currentEqUiMode,
+            isProcessing = isProcessing,
         )
     }
 }
@@ -955,14 +1107,23 @@ data class EqState(
     val preampGainDb: Float,
     val autoGainEnabled: Boolean,
     val limiterEnabled: Boolean,
-    // ... flat data
+    val limiterAttackMs: Float,
+    val limiterReleaseMs: Float,
+    val limiterRatio: Float,
+    val limiterThresholdDb: Float,
+    val limiterPostGainDb: Float,
+    val channelBalancePercent: Int,
+    val leftChannelGainDb: Float,
+    val rightChannelGainDb: Float,
+    val currentEqUiMode: EqUiMode,
+    val isProcessing: Boolean,
 )
 ```
 
-#### 5.3.2 EqViewModel — убрать дублирующиеся StateFlow
+#### 5.3.2 EqViewModel — единый UiState вместо 22 StateFlow
 
 ```kotlin
-// Вместо 28 отдельных MutableStateFlow — единый UiState
+// EqViewModel — reducer-style
 data class UiState(
     val isProcessing: Boolean = false,
     val currentEqUiMode: EqUiMode = EqUiMode.PARAMETRIC,
@@ -971,6 +1132,9 @@ data class UiState(
     val limiter: LimiterState = LimiterState(),
     val channel: ChannelState = ChannelState(),
     val bands: List<BandState> = emptyList(),
+    val autoGainEnabled: Boolean = false,
+    val autoGainOffset: Float = 0f,
+    val serviceBound: Boolean = false,
 )
 
 data class LimiterState(
@@ -986,8 +1150,19 @@ data class ChannelState(
     val balancePercent: Int = 0,
     val leftGainDb: Float = 0f,
     val rightGainDb: Float = 0f,
-    val activeChannel: EqStateManager.ActiveChannel = ActiveChannel.BOTH,
+    val activeChannel: ActiveChannel = ActiveChannel.BOTH,
 )
+
+sealed interface UiAction {
+    data class SetPreampGain(val gain: Float) : UiAction
+    data class SelectBand(val index: Int) : UiAction
+    data class SetLimiterEnabled(val enabled: Boolean) : UiAction
+    data class SetLimiterAttack(val ms: Float) : UiAction
+    data class SetChannelBalance(val percent: Int) : UiAction
+    data class SetActiveChannel(val channel: ActiveChannel) : UiAction
+    data object ToggleProcessing : UiAction
+    // ...
+}
 
 class EqViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(UiState())
@@ -1000,31 +1175,24 @@ class EqViewModel(application: Application) : AndroidViewModel(application) {
                 eqPrefs.savePreampGain(action.gain)
                 _uiState.update { it.copy(preampGainDb = action.gain) }
             }
+            is UiAction.ToggleProcessing -> {
+                if (_uiState.value.isProcessing) stateManager.stopProcessing {}
+                else stateManager.startProcessing()
+                _uiState.update { it.copy(isProcessing = !it.isProcessing) }
+            }
             // ...
         }
     }
-}
-
-sealed interface UiAction {
-    data class SetPreampGain(val gain: Float) : UiAction
-    data class SelectBand(val index: Int) : UiAction
-    data class SetLimiterEnabled(val enabled: Boolean) : UiAction
-    // ...
 }
 ```
 
 ### 5.4 Фаза 4: Долгосрочные улучшения
 
-#### 5.4.1 Единый источник истины для preset-ов
-
-**План:** Полностью перейти на Room для custom presets. `PresetRepository` — единый источник.
+#### 5.4.1 PresetManager — миграция на Room
 
 ```kotlin
 // PresetManager.kt — замена SharedPreferences на PresetRepository
-
-class PresetManager(
-    private val repository: PresetRepository,
-) {
+class PresetManager(private val repository: PresetRepository) {
     val names: Flow<List<String>> = repository.allPresets.map { entities ->
         entities.map { it.name }
     }
@@ -1032,14 +1200,14 @@ class PresetManager(
     suspend fun save(name: String, json: String) {
         repository.save(PresetEntity(name = name, bandsJson = json))
     }
+
+    suspend fun getJson(name: String): String? {
+        return repository.getByName(name)?.bandsJson
+    }
 }
 ```
 
-#### 5.4.2 Оптимизация DynamicsProcessingManager
-
-- **Coroutine-очередь с гарантией порядка:** Использовать `Channel` вместо `launch` для сериализации updates.
-- **Инкрементальные обновления:** Передавать Diff (какие band-ы изменились) вместо полной перезаписи всех 127 полос.
-- **DSP pipeline как стейт-машина:** `Idle → Starting → Active → Updating → Stopping → Idle`
+#### 5.4.2 DynamicsProcessingManager — Coroutine Channel для упорядоченных обновлений
 
 ```kotlin
 class DynamicsProcessingManager : IDynamicsProcessingManager {
@@ -1047,7 +1215,8 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
     private var updateJob: Job? = null
 
     fun start(eq: ParametricEqualizer) {
-        // ...
+        // ... инициализация ...
+        updateJob?.cancel()
         updateJob = dspScope.launch {
             for (update in updateChannel) {
                 when (update) {
@@ -1057,21 +1226,63 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
             }
         }
     }
+
+    fun updateFromEqualizers(leftEq: ParametricEqualizer, rightEq: ParametricEqualizer) {
+        updateChannel.trySend(EqUpdate.Full(leftEq, rightEq))
+    }
+
+    fun updateBandIncremental(index: Int, freq: Float, gain: Float, q: Double) {
+        updateChannel.trySend(EqUpdate.Incremental(index, freq, gain, q))
+    }
+}
+
+sealed interface EqUpdate {
+    data class Full(val leftEq: ParametricEqualizer, val rightEq: ParametricEqualizer) : EqUpdate
+    data class Incremental(val index: Int, val frequency: Float, val gain: Float, val q: Double) : EqUpdate
 }
 ```
 
-#### 5.4.3 Playback detection — corretto
+#### 5.4.3 Разделение EqPreferencesManager на специализированные репозитории
 
 ```kotlin
-// VisualizerHelper.kt — замена isMusicPlaying
+// EqPrefsRepository.kt — EQ настройки
+class EqPrefsRepository(private val context: Context) {
+    private val prefs = context.getSharedPreferences("eq_settings", Context.MODE_PRIVATE)
 
-// Использовать MediaController для определения реального PlaybackState
-private fun checkPlayingPackages(): Boolean {
-    val mediaManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE)
-            as? MediaSessionManager ?: return true
-    return mediaManager.getActiveSessions(null).any { controller ->
-        controller.playbackState?.state == PlaybackState.STATE_PLAYING
-    }
+    fun getPreampGain(): Float = prefs.getFloat("preamp_gain", 0f)
+    fun savePreampGain(gain: Float) = prefs.edit().putFloat("preamp_gain", gain).apply()
+}
+
+// BindingPrefsRepository.kt — привязки устройств
+class BindingPrefsRepository(private val context: Context) {
+    private val prefs = context.getSharedPreferences("device_bindings", Context.MODE_PRIVATE)
+    // ...
+}
+```
+
+#### 5.4.4 EqService — замена статических volatile-полей на atomic data class
+
+```kotlin
+// EqService.kt
+data class DeviceRouteInfo(
+    val label: String?,
+    val key: String?,
+)
+
+@Volatile
+var staticRouteInfo: DeviceRouteInfo = DeviceRouteInfo(null, null)
+    private set
+
+// Запись (атомарно):
+fun updateRouteInfo(label: String?, key: String?) {
+    staticRouteInfo = DeviceRouteInfo(label, key)
+}
+
+// Чтение (атомарно):
+val route = EqService.staticRouteInfo
+devicePresetStatusText.text = buildString {
+    append(mode).append(" · ").append(presetForDisplay)
+    if (route.label != null) append(" · ").append(route.label)
 }
 ```
 
@@ -1082,15 +1293,21 @@ private fun checkPlayingPackages(): Boolean {
 | Категория | Количество | Критичность |
 |-----------|-----------|-------------|
 | God-классы (MainActivity, EqPrefsManager, EqService) | 3 | 🔴 |
-| Нарушения SOLID | 5+ | 🟡 |
-| Race conditions | 4 | 🔴/🟡 |
-| Утечка ресурсов DSP | 1 | 🔴 |
-| Логические баги | 7 | 🟡/🟢 |
+| Нарушения SOLID (DIP — state → ui) | 2 | 🔴 |
+| Race conditions (DSP update, static volatiles, service binding) | 4 | 🔴/🟡 |
+| Crash (AIOOBE в ChannelMath, IOOBE в insertBand, NPE через `!!`) | 3 | 🔴/🟡 |
+| Утечка памяти (UndoRedoManager без лимита) | 1 | 🔴 |
+| Утечка ресурсов (SessionEffectManager unbounded maps) | 1 | 🟡 |
+| Логические баги (isMusicPlaying, LufsProcessor) | 2 | 🟡 |
 | Дублирование кода | 5 паттернов | 🟢 |
-| Неоптимальные вычисления | 4 | 🟢 |
+| Неоптимальные вычисления (22 StateFlow, полный DP restart) | 4 | 🟢 |
 
-**Приоритет:** Фаза 1 (безопасность и корректность) → Фаза 2 (декомпозиция MainActivity) → Фаза 3 (состояние) → Фаза 4 (долгосрочные улучшения).
+**Приоритет:**
+1. **Фаза 1** (P0 — crash, race, утечки) — **немедленно**: ChannelMath AIOOBE, DSP update race, UndoRedo лимит, isMusicPlaying
+2. **Фаза 2** (декомпозиция MainActivity) — **на этой неделе**: PresetPickerFeature, EqModeManager, GraphHeaderButtonLayout
+3. **Фаза 3** (стабилизация состояния) — **на следующей неделе**: единый UiState, DIP-fix, разделение пресетов
+4. **Фаза 4** (долгосрочные улучшения) — **2-3 недели**: Room для пресетов, Coroutine Channel, разделение EqPreferencesManager
 
 ---
 
-*Документ создан 29.06.2026 по результатам статического анализа кодовой базы Equalizer314.*
+*Документ создан 30.06.2026 по результатам глубинного анализа кодовой базы Equalizer314. Исследовано 60+ файлов, выявлено 8+ критических и 10+ средних проблем.*

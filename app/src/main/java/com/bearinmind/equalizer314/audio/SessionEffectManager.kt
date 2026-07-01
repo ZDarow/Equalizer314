@@ -54,12 +54,48 @@ class SessionEffectManager(private val context: Context) {
         val isPlaying: Boolean = false,
     )
 
-    private val sessions = mutableMapOf<Int, DynamicsProcessing>()
+    /**
+     * LinkedHashMap с лимитом [MAX_SESSIONS] и автоматическим освобождением
+     * ресурсов при вытеснении самой старой записи (LRU-политика).
+     * Требует метод [releaseValue] для освобождения ресурсов значения.
+     */
+    private fun <K, V> boundedSessionMap(releaseValue: (V) -> Unit): LinkedHashMap<K, V> {
+        return object : LinkedHashMap<K, V>(
+            /* initialCapacity */ 16,
+            /* loadFactor */ 0.75f,
+            /* accessOrder */ true,
+        ) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<K, V>): Boolean {
+                if (size > MAX_SESSIONS) {
+                    runCatching { releaseValue(eldest.value) }
+                        .onFailure { Log.w(TAG, "Failed to release eldest entry", it) }
+                    return true
+                }
+                return false
+            }
+        }
+    }
+
+    // sessionInfo — bounded через LinkedHashMap с accessOrder, без освобождения
+    // (ActiveSession — data class без нативных ресурсов).
+    private val sessionInfo = object : LinkedHashMap<Int, ActiveSession>(
+        16, 0.75f, true
+    ) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, ActiveSession>): Boolean {
+            return size > MAX_SESSIONS
+        }
+    }
+
+    private val sessions = boundedSessionMap<Int, DynamicsProcessing> { dp ->
+        try { dp.release() } catch (_: Throwable) {}
+    }
     // Reverb is the *insert* EnvironmentalReverb implementation, created via the
     // low-level AudioEffect ctor so it attaches inline like DynamicsProcessing
     // (the convenience EnvironmentalReverb(...) ctor gives the silent auxiliary
     // variant). Hence AudioEffect, not EnvironmentalReverb, as the value type.
-    private val reverbs = mutableMapOf<Int, AudioEffect>()
+    private val reverbs = boundedSessionMap<Int, AudioEffect> { fx ->
+        try { fx.release() } catch (_: Throwable) {}
+    }
 
     // The (type, uuid, priority, session) AudioEffect ctor and the
     // setParameter(byte[], byte[]) method aren't in the public SDK, so we
@@ -95,7 +131,6 @@ class SessionEffectManager(private val context: Context) {
             null
         }
     }
-    private val sessionInfo = mutableMapOf<Int, ActiveSession>()
     /** (package, sessionId) pairs currently observed via the detection
      *  path. Used to compute the next [observeDetectedPlayback] diff so
      *  we only attach/detach for actual transitions, not on every poll. */
@@ -187,7 +222,7 @@ class SessionEffectManager(private val context: Context) {
         val binding = eqPrefs.getAppBinding(packageName)
         val existing = sessionInfo[sessionId]
 
-        // BROADCAST is authoritative. If a BROADCAST entry already exists
+            // BROADCAST is authoritative. If a BROADCAST entry already exists
         // for this session, a DETECTED dump observation must not
         // overwrite it (and must not re-attach the DP — that's already
         // managed by the broadcast lifecycle).
@@ -660,6 +695,9 @@ class SessionEffectManager(private val context: Context) {
 
     companion object {
         private const val TAG = "SessionEffectManager"
+        /** Максимальное количество одновременно отслеживаемых аудиосессий.
+         *  Предотвращает утечку ресурсов при быстром переключении между плеерами. */
+        private const val MAX_SESSIONS = 64
         /** Broadcast (package-targeted) emitted whenever the set of
          *  active broadcasting sessions changes. The Channel Input
          *  screen's "Current session" panel listens for this. */

@@ -25,6 +25,12 @@ class UndoRedoManager(
     private val eqGraphView: EqGraphView,
     private val bandToggleManager: BandToggleManager,
 ) {
+    companion object {
+        /** Максимальное количество шагов истории Undo/Redo.
+         *  Предотвращает утечку памяти при длительных сессиях. */
+        private const val MAX_HISTORY = 50
+    }
+
     private val history = mutableListOf<String>()
     private var index = -1
 
@@ -44,6 +50,13 @@ class UndoRedoManager(
         }
         history.add(json)
         index = history.size - 1
+
+        // Ограничение глубины: удаляем самые старые записи
+        while (history.size > MAX_HISTORY) {
+            history.removeFirst()
+            index--
+        }
+        if (index < 0) index = 0
     }
 
     /** Restore a previous EQ state from history. */

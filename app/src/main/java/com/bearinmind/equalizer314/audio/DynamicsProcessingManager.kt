@@ -101,6 +101,14 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
     @Volatile private var pendingLimiter: Runnable? = null
 
     /**
+     * Job handle for the current async EQ update. Отменяет предыдущую
+     * корутину при новом вызове [updateFromEqualizers], гарантируя
+     * порядок обновлений при быстрых drag-событиях.
+     */
+    private var updateJob: kotlinx.coroutines.Job? = null
+    private var channelUpdateJob: kotlinx.coroutines.Job? = null
+
+    /**
      * Coroutine scope for CPU-bound DSP computation (convertFeatureAware,
      * auto-gain, channel offsets). SupervisorJob so a failure in one
      * computation doesn't cancel subsequent updates. Runs on
@@ -121,6 +129,58 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
         val leftInputGainDb: Float,
         val rightInputGainDb: Float,
     )
+
+    /**
+     * Иммутабельный снимок состояния [ParametricEqualizer].
+     * Захватывает все параметры полос для безопасной передачи между корутинами,
+     * исключая доступ к мутабельным ссылкам исходного эквалайзера (RC-1).
+     */
+    data class EqSnapshot(
+        val bands: List<ParametricEqualizer.EqualizerBand>,
+        val isEnabled: Boolean,
+    )
+
+    /**
+     * Снимает иммутабельный снимок с [ParametricEqualizer] на момент вызова.
+     * Каждый [EqualizerBand] копируется глубоко, так как исходные поля var.
+     */
+    private fun takeEqSnapshot(eq: ParametricEqualizer): EqSnapshot {
+        val bandCopies = eq.getAllBands().map { original ->
+            ParametricEqualizer.EqualizerBand(
+                frequency = original.frequency,
+                gain = original.gain,
+                filterType = original.filterType,
+                q = original.q,
+                enabled = original.enabled,
+            )
+        }
+        return EqSnapshot(bands = bandCopies, isEnabled = eq.isEnabled)
+    }
+
+    /**
+     * Вычисляет [ComputedEqData] из иммутабельных снимков.
+     * Создаёт временные [ParametricEqualizer] на основе снимков,
+     * заполняет их полосами и вызывает [computeEqData].
+     * Безопасно выполнять на [Dispatchers.Default].
+     */
+    private fun computeEqDataFromSnapshot(
+        leftSnapshot: EqSnapshot,
+        rightSnapshot: EqSnapshot,
+    ): ComputedEqData {
+        fun createFromSnapshot(snapshot: EqSnapshot): ParametricEqualizer {
+            return ParametricEqualizer().apply {
+                clearBands()
+                for (band in snapshot.bands) {
+                    addBand(band.frequency, band.gain, band.filterType, band.q)
+                    setBandEnabled(getBandCount() - 1, band.enabled)
+                }
+                isEnabled = snapshot.isEnabled
+            }
+        }
+        val leftEq = createFromSnapshot(leftSnapshot)
+        val rightEq = createFromSnapshot(rightSnapshot)
+        return computeEqData(leftEq, rightEq)
+    }
 
     /**
      * Создаёт [DynamicsProcessing] с перебором приоритетов от higher к lower.
@@ -284,7 +344,8 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             if (isActive && lastEq != null) {
                 Log.d(TAG, "Reclaiming DynamicsProcessing")
-                start(lastEq!!)
+                @Suppress("UnsafeCallOnNullable") // guarded by if (lastEq != null) выше
+                lastEq?.let { eq -> start(eq) }
             }
         }, 100)
     }
@@ -340,7 +401,8 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
     }
 
     /** Apply potentially-different EQs to the two channels. Pass the same
-     *  instance for both in shared/BOTH mode. */
+     *  instance for both in shared/BOTH mode. Отменяет предыдущую корутину
+     *  для гарантии порядка обновлений (fix race condition RC-1). */
     override fun updateFromEqualizers(leftEq: ParametricEqualizer, rightEq: ParametricEqualizer) {
         val dp = dynamicsProcessing ?: return
 
@@ -355,10 +417,21 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
         try {
             lastEq = leftEq
             lastRightEq = if (leftEq !== rightEq) rightEq else null
-            // Вычисляем CPU-bound DSP на фоновом потоке, а binder-работу
-            // отправляем в worker-поток через Handler.
-            dspScope.launch {
-                val data = withContext(Dispatchers.Default) { computeEqData(leftEq, rightEq) }
+
+            // Отменяем предыдущую корутину — гарантируем, что только
+            // последний update будет применён к DSP. Без этого при
+            // быстрых drag-событиях несколько корутин конкурируют за
+            // this.leftEq/this.rightEq (мутабельные ссылки), и порядок
+            // применения к AudioFlinger не определён (RC-1).
+            updateJob?.cancel()
+            updateJob = dspScope.launch {
+                // Снимаем иммутабельные снимки на момент вызова,
+                // чтобы параллельные корутины не мешали друг другу.
+                val leftSnapshot = takeEqSnapshot(leftEq)
+                val rightSnapshot = if (leftEq === rightEq) leftSnapshot
+                                   else takeEqSnapshot(rightEq)
+
+                val data = withContext(Dispatchers.Default) { computeEqDataFromSnapshot(leftSnapshot, rightSnapshot) }
                 val handler = workerHandler ?: return@launch
                 handler.post { submitBinderWork(dp, data) }
             }
@@ -521,14 +594,23 @@ class DynamicsProcessingManager : IDynamicsProcessingManager {
         submitBinderWork(dp, data)
     }
 
-    /** Re-apply the current EQ with fresh channel settings (balance, preamp). */
+    /** Re-apply the current EQ with fresh channel settings (balance, preamp).
+     *  Отменяет предыдущую корутину, чтобы при быстрых изменениях баланса
+     *  (drag-события) не было race condition между обновлениями. */
     override fun updateChannelSettings() {
         val dp = dynamicsProcessing ?: return
         val eq = lastEq ?: return
         val rightEq = lastRightEq ?: eq
         try {
-            dspScope.launch {
-                val data = withContext(Dispatchers.Default) { computeEqData(eq, rightEq) }
+            channelUpdateJob?.cancel()
+            channelUpdateJob = dspScope.launch {
+                // Снимаем снимки для защиты от параллельных updateFromEqualizers
+                val leftSnapshot = takeEqSnapshot(eq)
+                val rightSnapshot = if (eq === rightEq) leftSnapshot
+                                   else takeEqSnapshot(rightEq)
+                val data = withContext(Dispatchers.Default) {
+                    computeEqDataFromSnapshot(leftSnapshot, rightSnapshot)
+                }
                 val handler = workerHandler ?: return@launch
                 handler.post { submitBinderWork(dp, data) }
             }

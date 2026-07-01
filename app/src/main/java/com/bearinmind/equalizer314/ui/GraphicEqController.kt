@@ -158,7 +158,7 @@ class GraphicEqController(
 
     private fun createSliderCard(bandIndex: Int, targetHeight: Int = 0): com.google.android.material.card.MaterialCardView {
         val eq = state.parametricEq
-        val band = eq.getBand(bandIndex)!!
+        val band = eq.getBand(bandIndex) ?: error("Band $bandIndex not found (EQ has ${eq.getBandCount()} bands)")
         // Gainless = slider will drive Q instead of Gain (same rule used in
         // Parametric mode to disable the dB slider).
         val isGainless = when (band.filterType) {

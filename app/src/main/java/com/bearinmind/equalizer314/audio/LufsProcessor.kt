@@ -1,7 +1,8 @@
 package com.bearinmind.equalizer314.audio
 
+import kotlin.math.PI
 import kotlin.math.log10
-import kotlin.math.sqrt
+import kotlin.math.pow
 
 /**
  * LUFS = Loudness Units relative to Full Scale
@@ -19,8 +20,9 @@ import kotlin.math.sqrt
  *
  * Then: RMS over a 400ms sliding window → LUFS = -0.691 + 10 * log10(meanSquare)
  *
- * Coefficients for 48 kHz sample rate from ITU-R BS.1770-4.
- * For other sample rates, coefficients must be recalculated.
+ * Коэффициенты вычисляются через bilinear transform из аналоговых прототипов
+ * ITU-R BS.1770-4, что позволяет работать на любой частоте дискретизации.
+ * Ранее коэффициенты были захардкожены для 48 кГц (баг C-6).
  *
  * Documentation & references used:
  * - ITU-R BS.1770-4 (the actual standard defining K-weighting and LUFS measurement)
@@ -28,38 +30,30 @@ import kotlin.math.sqrt
  *   Source of the exact biquad coefficients used here
  * - libebur128 (github.com/jiixyj/libebur128) — MIT, C implementation of EBU R128
  *   Cross-referenced filter coefficients and sliding window approach
- * - FabFilter Pro-L 2 documentation — confirmed LUFS Momentary (400ms) for loudness line
- *
- * Pre-filter coefficients (48 kHz):
- *   b0=1.53512485958697, b1=-2.69169618940638, b2=1.19839281085285
- *   a1=-1.69065929318241, a2=0.73248077421585
- *
- * RLB highpass coefficients (48 kHz):
- *   b0=1.0, b1=-2.0, b2=1.0
- *   a1=-1.99004745483398, a2=0.99007225036621
  */
-class LufsProcessor(private val sampleRate: Int = 48000) {
+class LufsProcessor(sampleRate: Int = 48000) {
 
-    // ── Pre-filter (high shelf) biquad coefficients ──
-    // ITU-R BS.1770-4 coefficients for 48 kHz
-    private val preB0 = 1.53512485958697
-    private val preB1 = -2.69169618940638
-    private val preB2 = 1.19839281085285
-    private val preA1 = -1.69065929318241
-    private val preA2 = 0.73248077421585
+    // ── K-weighting filter coefficients (var, пересчитываются при [recalculate]) ──
+
+    // Pre-filter (high shelf)
+    private var preB0 = 0.0
+    private var preB1 = 0.0
+    private var preB2 = 0.0
+    private var preA1 = 0.0
+    private var preA2 = 0.0
+
+    // RLB (revised low-frequency B-curve) highpass
+    private var rlbB0 = 0.0
+    private var rlbB1 = 0.0
+    private var rlbB2 = 0.0
+    private var rlbA1 = 0.0
+    private var rlbA2 = 0.0
 
     // Pre-filter state
     private var preX1 = 0.0
     private var preX2 = 0.0
     private var preY1 = 0.0
     private var preY2 = 0.0
-
-    // ── RLB (revised low-frequency B-curve) highpass biquad ──
-    private val rlbB0 = 1.0
-    private val rlbB1 = -2.0
-    private val rlbB2 = 1.0
-    private val rlbA1 = -1.99004745483398
-    private val rlbA2 = 0.99007225036621
 
     // RLB filter state
     private var rlbX1 = 0.0
@@ -74,6 +68,58 @@ class LufsProcessor(private val sampleRate: Int = 48000) {
     private val windowBuffer = FloatArray(windowSize)
     private var windowIdx = 0
     private var windowFilled = false
+
+    init {
+        recalculate(sampleRate)
+    }
+
+    /**
+     * Пересчитывает коэффициенты K-weighting фильтров для новой [sampleRate].
+     * Использует DeMan-вариант high_shelf/high_pass (bilinear transform с prewarping
+     * через K = tan(π·fc/fs)), который даёт точное совпадение с pyloudnorm/ITU-R BS.1770-4.
+     * Безопасно вызывать в любое время; сбрасывает состояние фильтров.
+     */
+    fun recalculate(sampleRate: Int) {
+        val fs = sampleRate.toDouble()
+
+        // ── Pre-filter (high shelf DeMan) ──
+        // Параметры из pyloudnorm: G=3.99984385397 dB, Q=0.7071752369554193, fc=1681.9744509555319 Hz
+        val preFc = 1681.9744509555319
+        val preG = 3.99984385397
+        val preQ = 0.7071752369554193
+
+        val preK = kotlin.math.tan(PI * preFc / fs)
+        val preVh = 10.0.pow(preG / 20.0)
+        val preVb = preVh.pow(0.499666774155)
+        val preK2 = preK * preK
+        val preKOverQ = preK / preQ
+        val preDen = 1.0 + preKOverQ + preK2
+
+        preB0 = (preVh + preVb * preKOverQ + preK2) / preDen
+        preB1 = 2.0 * (preK2 - preVh) / preDen
+        preB2 = (preVh - preVb * preKOverQ + preK2) / preDen
+        preA1 = 2.0 * (preK2 - 1.0) / preDen
+        preA2 = (1.0 - preKOverQ + preK2) / preDen
+
+        // ── RLB (high pass DeMan) ──
+        // Параметры из pyloudnorm: Q=0.5003270373253953, fc=38.13547087613982 Hz
+        val rlbFc = 38.13547087613982
+        val rlbQ = 0.5003270373253953
+
+        val rlbK = kotlin.math.tan(PI * rlbFc / fs)
+        val rlbK2 = rlbK * rlbK
+        val rlbKOverQ = rlbK / rlbQ
+        val rlbDen = 1.0 + rlbKOverQ + rlbK2
+
+        // DeMan high_pass: b = [1, -2, 1] (не зависит от fs)
+        rlbB0 = 1.0
+        rlbB1 = -2.0
+        rlbB2 = 1.0
+        rlbA1 = 2.0 * (rlbK2 - 1.0) / rlbDen
+        rlbA2 = (1.0 - rlbKOverQ + rlbK2) / rlbDen
+
+        reset()
+    }
 
     /**
      * Process a waveform capture from the Visualizer.

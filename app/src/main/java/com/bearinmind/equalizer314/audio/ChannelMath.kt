@@ -50,14 +50,15 @@ object ChannelMath {
      * @return negative offset (or 0 if no band exceeds 0 dB).
      */
     fun computeAutoGainOffset(leftGains: FloatArray, rightGains: FloatArray): Float {
-        // Защита от ArrayIndexOutOfBounds при несовпадающих размерах массивов
+        // Защита от ArrayIndexOutOfBounds при пустых массивах.
+        // Проходим по каждому массиву независимо, чтобы избежать AIOOBE
+        // при несовпадающих размерах (см. ревью кода B-1).
         if (leftGains.isEmpty() && rightGains.isEmpty()) return 0f
-        val count = if (leftGains.isEmpty()) rightGains.size
-                    else if (rightGains.isEmpty()) leftGains.size
-                    else minOf(leftGains.size, rightGains.size)
         var peak = Float.NEGATIVE_INFINITY
-        for (i in 0 until count) {
+        for (i in leftGains.indices) {
             if (leftGains[i] > peak) peak = leftGains[i]
+        }
+        for (i in rightGains.indices) {
             if (rightGains[i] > peak) peak = rightGains[i]
         }
         return if (peak > 0f) -peak else 0f

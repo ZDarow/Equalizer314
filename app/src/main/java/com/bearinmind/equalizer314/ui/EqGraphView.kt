@@ -374,8 +374,9 @@ class EqGraphView @JvmOverloads constructor(
         spectrumFillPath.reset()
 
         val spectrumHash = spectrum.contentHashCode()
-        val normalizedSpectrum = if (spectrumHash == cachedSpectrumHash && cachedNormalizedSpectrum != null) {
-            cachedNormalizedSpectrum!!
+        val cached = cachedNormalizedSpectrum
+        val normalizedSpectrum = if (spectrumHash == cachedSpectrumHash && cached != null) {
+            cached
         } else {
             val smoothed = analyzer.smoothSpectrum(spectrum, windowSize = 3)
             val normalized = analyzer.normalizeSpectrum(smoothed, minDb = -90f, maxDb = 0f)
